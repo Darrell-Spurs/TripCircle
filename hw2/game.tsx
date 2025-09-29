@@ -298,6 +298,7 @@ class Game {
         this.launchTimer = 0; // Timer for delayed ball launches
         this.launchDirectionIndex = 3; // Index for launch directions (starts at middle)
         this.ballsLaunched = false; // Track if balls have been launched
+        this.showHelpGuide = false; // Track if help guide is shown
         
         console.log('Game initialized with state:', this.state);
         this.setupEventListeners();
@@ -338,6 +339,7 @@ class Game {
         document.getElementById('startBtn').addEventListener('click', () => this.startGame());
         document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+        document.getElementById('helpBtn').addEventListener('click', () => this.toggleHelpGuide());
     }
 
     generateBricks() {
@@ -841,6 +843,16 @@ class Game {
         const overlay = document.getElementById('gameOverlay');
         overlay.classList.add('hidden');
     }
+
+    toggleHelpGuide() {
+        this.showHelpGuide = !this.showHelpGuide;
+        const helpGuide = document.getElementById('helpGuide');
+        if (this.showHelpGuide) {
+            helpGuide.classList.remove('hidden');
+        } else {
+            helpGuide.classList.add('hidden');
+        }
+    }
 }
 
 // React component for the game
@@ -880,12 +892,50 @@ const BrickBreakerGame = () => {
                         </div>
                     </div>
                 </div>
+                
+                <div className="help-guide hidden" id="helpGuide">
+                    <div className="help-content">
+                        <h3>Brick Guide</h3>
+                        <div className="brick-guide">
+                            <div className="brick-item">
+                                <div className="brick-color" style={{backgroundColor: '#87CEEB'}}></div>
+                                <span>Normal<br></br>1 hit, 10 pts</span>
+                            </div>
+                            <div className="brick-item">
+                                <div className="brick-color" style={{backgroundColor: '#4169E1'}}></div>
+                                <span>Strong<br></br>3 hits, 30 pts</span>
+                            </div>
+                            <div className="brick-item">
+                                <div className="brick-color" style={{backgroundColor: '#32CD32'}}></div>
+                                <span>Very Strong<br></br>5 hits, 50 pts</span>
+                            </div>
+                            <div className="brick-item">
+                                <div className="brick-color" style={{backgroundColor: '#87CEEB'}}></div>
+                                <span>Moving<br></br>1 hit, moves, 15 pts</span>
+                            </div>
+                            <div className="brick-item">
+                                <div className="brick-color" style={{backgroundColor: '#1E90FF'}}></div>
+                                <span>Moving Strong<br></br>2 hits, moves, 25 pts</span>
+                            </div>
+                            <div className="brick-item">
+                                <div className="brick-color" style={{backgroundColor: '#808080'}}></div>
+                                <span>Unbreakable<br></br>Cannot be destroyed</span>
+                            </div>
+                        </div>
+                        <p className="color-note">Colors change from red → orange → yellow → green → blue as bricks take damage</p>
+                        <button className="close-help-x" onClick={() => {
+                            const helpGuide = document.getElementById('helpGuide');
+                            helpGuide.classList.add('hidden');
+                        }}>×</button>
+                    </div>
+                </div>
             </div>
             
             <div className="game-footer">
                 <button id="startBtn">Start Game</button>
                 <button id="pauseBtn">Pause</button>
                 <button id="resetBtn">Restart</button>
+                <button className="help-button" id="helpBtn">?</button>
             </div>
         </div>
     );
