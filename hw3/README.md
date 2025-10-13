@@ -1,6 +1,5 @@
 # HW3 商品目錄系統 
-> B11705054
-一個純前端的商品目錄與暫存容器系統，使用 React + TypeScript 建構，資料來源為 CSV 檔案。
+> 一個純前端的商品目錄與暫存容器系統，使用 React + TypeScript 建構，資料來源為 CSV 檔案。
 
 ## 安裝及執行
 
@@ -156,9 +155,4 @@ id,name,category,price,brand,warranty,color
 ## 📄 授權
 
 MIT License
-
----
-
-**開發者**：資深前端工程師  
-**最後更新**：2025-10-07
 
