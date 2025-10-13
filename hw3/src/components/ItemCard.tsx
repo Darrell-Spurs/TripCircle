@@ -7,13 +7,10 @@ import {
   Button,
   Chip,
   Box,
-  IconButton,
-  Checkbox,
 } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoIcon from '@mui/icons-material/Info';
-import CompareIcon from '@mui/icons-material/Compare';
 import type { ItemBase } from '../types';
 
 interface ItemCardProps {
@@ -21,9 +18,6 @@ interface ItemCardProps {
   onAddToContainer: () => void;
   onViewDetails: () => void;
   isInContainer: boolean;
-  isComparing?: boolean;
-  onToggleCompare?: () => void;
-  canAddToCompare?: boolean;
 }
 
 export function ItemCard({
@@ -31,9 +25,6 @@ export function ItemCard({
   onAddToContainer,
   onViewDetails,
   isInContainer,
-  isComparing = false,
-  onToggleCompare,
-  canAddToCompare = true,
 }: ItemCardProps) {
   return (
     <Card
@@ -41,23 +32,8 @@ export function ItemCard({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
       }}
     >
-      {onToggleCompare && (
-        <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
-          <Checkbox
-            icon={<CompareIcon />}
-            checkedIcon={<CompareIcon color="primary" />}
-            checked={isComparing}
-            onChange={onToggleCompare}
-            disabled={!canAddToCompare && !isComparing}
-            aria-label="加入比較"
-            sx={{ bgcolor: 'rgba(255,255,255,0.8)', borderRadius: 1 }}
-          />
-        </Box>
-      )}
-
       <CardMedia
         component="img"
         height="200"
@@ -123,7 +99,7 @@ export function ItemCard({
           startIcon={isInContainer ? <CheckCircleIcon /> : <AddShoppingCartIcon />}
           onClick={onAddToContainer}
           disabled={isInContainer}
-          aria-label={isInContainer ? '已在容器' : '加入容器'}
+          aria-label={isInContainer ? '已在購物車' : '加入購物車'}
         >
           {isInContainer ? '已加入' : '加入'}
         </Button>

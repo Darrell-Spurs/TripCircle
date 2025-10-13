@@ -14,7 +14,7 @@ export function ContainerPage() {
 
   const handleSubmit = () => {
     if (entries.length === 0) {
-      alert('容器為空，無法送出');
+      alert('購物車為空，無法送出');
       return;
     }
     navigate('/submit');
@@ -23,7 +23,7 @@ export function ContainerPage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">暫存容器</Typography>
+        <Typography variant="h4">購物車</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             startIcon={<DeleteIcon />}
@@ -31,7 +31,7 @@ export function ContainerPage() {
             onClick={clearContainer}
             disabled={entries.length === 0}
           >
-            清空容器
+            清空購物車
           </Button>
           <Button
             startIcon={<SendIcon />}

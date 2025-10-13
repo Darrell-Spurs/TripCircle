@@ -1475,7 +1475,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { getTotalItems } = useContainer();
 
   const menuItems = [
-    { text: '瀏覽項目', icon: <ViewListIcon />, path: '/' },
+    { text: '瀏覽商品', icon: <ViewListIcon />, path: '/' },
     { text: '暫存容器', icon: <ShoppingCartIcon />, path: '/container' },
     { text: '歷史記錄', icon: <HistoryIcon />, path: '/records' },
     { text: '項目比較', icon: <CompareArrowsIcon />, path: '/compare' },
@@ -1908,9 +1908,7 @@ const sortOptions: SortOption[] = [
   { value: 'price-desc', label: '價格：高到低', field: 'price', order: 'desc' },
   { value: 'rating-desc', label: '評分：高到低', field: 'rating', order: 'desc' },
   { value: 'rating-asc', label: '評分：低到高', field: 'rating', order: 'asc' },
-  { value: 'name-asc', label: '名稱：A-Z', field: 'name', order: 'asc' },
-  { value: 'name-desc', label: '名稱：Z-A', field: 'name', order: 'desc' },
-  { value: 'stock-desc', label: '庫存：高到低', field: 'stock', order: 'desc' },
+  { value: 'stock-desc', label: '庫存：多到少', field: 'stock', order: 'desc' },
 ];
 
 export function SortSelect({ value, onChange }: SortSelectProps) {
@@ -2471,7 +2469,7 @@ export function BrowsePage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">瀏覽項目</Typography>
+        <Typography variant="h4">瀏覽商品</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           {compareIds.length > 0 && (
             <Button variant="outlined" onClick={() => navigate('/compare')}>
@@ -3508,7 +3506,7 @@ https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?w=400
 
 ## 🗺️ 頁面說明
 
-### 1. 瀏覽項目（`/`）
+### 1. 瀏覽商品（`/`）
 
 - 搜尋框（300ms debounce）
 - 分類多選篩選
@@ -3722,7 +3720,7 @@ npm run format      # Prettier 格式化
 
 ## 🎯 首次使用流程
 
-1. **瀏覽項目**（首頁 `/`）
+1. **瀏覽商品**（首頁 `/`）
    - 查看範例商品
    - 使用搜尋與篩選功能
    - 點擊「加入」將項目加入容器

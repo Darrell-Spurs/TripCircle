@@ -27,7 +27,7 @@ function setItem<T>(key: string, value: T): void {
 }
 
 /**
- * 容器（暫存區）操作
+ * 購物車（暫存區）操作
  */
 export const containerStorage = {
   get: (): ContainerEntry[] => getItem(STORAGE_KEYS.CONTAINER, []),

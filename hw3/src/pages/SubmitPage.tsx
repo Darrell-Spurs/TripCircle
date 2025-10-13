@@ -13,7 +13,7 @@ export function SubmitPage() {
   const { entries, clearContainer } = useContainer();
   const { createRecord } = useRecords();
 
-  // 若容器為空，重導向至容器頁
+  // 若購物車為空，重導向至購物車頁
   useEffect(() => {
     if (entries.length === 0) {
       navigate('/container');
@@ -23,7 +23,7 @@ export function SubmitPage() {
   const handleSubmit = () => {
     // 建立記錄
     createRecord(entries, items);
-    // 清空容器
+    // 清空購物車
     clearContainer();
     // 3 秒後導向記錄頁
     setTimeout(() => {
@@ -38,9 +38,9 @@ export function SubmitPage() {
   if (entries.length === 0) {
     return (
       <Alert severity="warning">
-        容器為空，無法送出。
+        購物車為空，無法送出。
         <Button onClick={() => navigate('/container')} sx={{ ml: 2 }}>
-          返回容器
+          返回購物車
         </Button>
       </Alert>
     );
@@ -51,12 +51,12 @@ export function SubmitPage() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">送出記錄</Typography>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/container')}>
-          返回容器
+          返回購物車
         </Button>
       </Box>
 
       <Alert severity="warning" sx={{ mb: 3 }}>
-        提交後記錄將永久儲存，無法直接修改。如需變更，可複製記錄為新容器。
+        提交後記錄將永久儲存，無法直接修改。如需變更，可複製記錄為新購物車。
       </Alert>
 
       <SubmitStepper

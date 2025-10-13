@@ -14,7 +14,7 @@ export type ItemBase = {
 };
 
 /**
- * 容器（暫存區）項目
+ * 購物車（暫存區）項目
  */
 export type ContainerEntry = {
   itemId: string;

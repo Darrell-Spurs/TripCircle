@@ -8,7 +8,6 @@ import { BrowsePage } from './pages/BrowsePage';
 import { ContainerPage } from './pages/ContainerPage';
 import { SubmitPage } from './pages/SubmitPage';
 import { RecordsPage } from './pages/RecordsPage';
-import { ComparePage } from './pages/ComparePage';
 
 const theme = createTheme({
   palette: {
@@ -35,7 +34,6 @@ function App() {
                   <Route path="/container" element={<ContainerPage />} />
                   <Route path="/submit" element={<SubmitPage />} />
                   <Route path="/records" element={<RecordsPage />} />
-                  <Route path="/compare" element={<ComparePage />} />
                 </Routes>
               </LayoutShell>
             </RecordsProvider>

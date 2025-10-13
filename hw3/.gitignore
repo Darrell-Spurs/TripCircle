@@ -22,7 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# CSV sync target (auto-generated)
-public/data/
-

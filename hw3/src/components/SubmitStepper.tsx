@@ -91,7 +91,7 @@ export function SubmitStepper({ entries, items, onSubmit, onCancel }: SubmitStep
                 .toLocaleString()}
             </Typography>
             <Alert severity="warning">
-              確認送出後，記錄將被永久儲存。如需修改，可複製此記錄為新容器。
+              確認送出後，記錄將被永久儲存。如需修改，可複製此記錄為新購物車。
             </Alert>
           </Box>
         );

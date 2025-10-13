@@ -12,9 +12,7 @@ const sortOptions: SortOption[] = [
   { value: 'price-desc', label: '價格：高到低', field: 'price', order: 'desc' },
   { value: 'rating-desc', label: '評分：高到低', field: 'rating', order: 'desc' },
   { value: 'rating-asc', label: '評分：低到高', field: 'rating', order: 'asc' },
-  { value: 'name-asc', label: '名稱：A-Z', field: 'name', order: 'asc' },
-  { value: 'name-desc', label: '名稱：Z-A', field: 'name', order: 'desc' },
-  { value: 'stock-desc', label: '庫存：高到低', field: 'stock', order: 'desc' },
+  { value: 'stock-desc', label: '庫存：多到少', field: 'stock', order: 'desc' },
 ];
 
 export function SortSelect({ value, onChange }: SortSelectProps) {

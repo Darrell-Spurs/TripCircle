@@ -18,7 +18,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import HistoryIcon from '@mui/icons-material/History';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useContainer } from '../context/ContainerContext';
 
@@ -33,10 +32,9 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { getTotalItems } = useContainer();
 
   const menuItems = [
-    { text: '瀏覽項目', icon: <ViewListIcon />, path: '/' },
-    { text: '暫存容器', icon: <ShoppingCartIcon />, path: '/container' },
+    { text: '瀏覽商品', icon: <ViewListIcon />, path: '/' },
+    { text: '購物車', icon: <ShoppingCartIcon />, path: '/container' },
     { text: '歷史記錄', icon: <HistoryIcon />, path: '/records' },
-    { text: '項目比較', icon: <CompareArrowsIcon />, path: '/compare' },
   ];
 
   const handleNavigation = (path: string) => {
@@ -63,7 +61,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
           <IconButton
             color="inherit"
             onClick={() => navigate('/container')}
-            aria-label="前往容器"
+            aria-label="前往購物車"
           >
             <Badge badgeContent={getTotalItems()} color="error">
               <ShoppingCartIcon />

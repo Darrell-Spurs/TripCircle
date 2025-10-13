@@ -30,7 +30,7 @@ export function RecordsProvider({ children }: RecordsProviderProps) {
   }, []);
 
   const createRecord = useCallback((entries: ContainerEntry[], items: ItemBase[]) => {
-    // 產生快照（只保留容器中的項目）
+    // 產生快照（只保留購物車中的項目）
     const snapshot = entries
       .map((entry) => items.find((item) => item.id === entry.itemId))
       .filter((item): item is ItemBase => item !== undefined);

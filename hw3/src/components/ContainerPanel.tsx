@@ -33,7 +33,7 @@ export function ContainerPanel({
   if (entries.length === 0) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="text.secondary">容器為空，請從瀏覽頁面加入項目</Typography>
+        <Typography color="text.secondary">購物車為空，請從瀏覽頁面加入項目</Typography>
       </Paper>
     );
   }

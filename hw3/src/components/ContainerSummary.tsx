@@ -26,7 +26,7 @@ export function ContainerSummary({ entries, items }: ContainerSummaryProps) {
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="h6" gutterBottom>
-        容器摘要
+        購物車摘要
       </Typography>
 
       <Box sx={{ my: 2 }}>

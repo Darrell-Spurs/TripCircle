@@ -1,11 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Box, Grid, Typography, Button, Alert, CircularProgress, Pagination } from '@mui/material';
+import { Box, Grid, Typography, Button, Alert, CircularProgress, Pagination, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useContainer } from '../context/ContainerContext';
 import { useFilters } from '../hooks/useFilters';
-import { useCompare } from '../hooks/useCompare';
 import { getNumericRange } from '../utils/csvParser';
 import { ItemCard } from '../components/ItemCard';
 import { ItemDetailsDialog } from '../components/ItemDetailsDialog';
@@ -13,39 +11,34 @@ import { CatalogFilters } from '../components/CatalogFilters';
 import { SortSelect } from '../components/SortSelect';
 import type { ItemBase } from '../types';
 
-const ITEMS_PER_PAGE = 12;
-
 export function BrowsePage() {
-  const navigate = useNavigate();
   const { items, categories, loadState, reloadData } = useData();
   const { addItem, hasItem } = useContainer();
-  const { compareIds, toggleCompare, isComparing, canAddMore } = useCompare(4);
 
   const [selectedItem, setSelectedItem] = useState<ItemBase | null>(null);
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // 篩選與排序
   const {
     filters,
     filteredItems,
-    setKeyword,
     toggleCategory,
     setPriceRange,
     setRatingMin,
     setSortBy,
     resetFilters,
-    isFiltering,
   } = useFilters(items);
 
   // 價格區間
   const priceRange = useMemo(() => getNumericRange(items, 'price'), [items]);
 
   // 分頁
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
   const paginatedItems = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE;
-    return filteredItems.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredItems, page]);
+    const start = (page - 1) * itemsPerPage;
+    return filteredItems.slice(start, start + itemsPerPage);
+  }, [filteredItems, page, itemsPerPage]);
 
   const handleAddToContainer = (itemId: string) => {
     addItem(itemId, 1);
@@ -54,6 +47,11 @@ export function BrowsePage() {
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    setPage(1); // Reset to first page when changing items per page
   };
 
   const currentSortValue = filters.sortBy
@@ -82,42 +80,42 @@ export function BrowsePage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">瀏覽項目</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          {compareIds.length > 0 && (
-            <Button variant="outlined" onClick={() => navigate('/compare')}>
-              比較 ({compareIds.length})
-            </Button>
-          )}
-          <Button startIcon={<RefreshIcon />} onClick={reloadData}>
-            重新載入
-          </Button>
-        </Box>
+        <Typography variant="h4">瀏覽商品</Typography>
+        <Button startIcon={<RefreshIcon />} onClick={reloadData}>
+          重新載入
+        </Button>
       </Box>
-
-      {loadState.lastUpdated && (
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-          最後更新：{new Date(loadState.lastUpdated).toLocaleString()}
-        </Typography>
-      )}
 
       <CatalogFilters
         filters={filters}
         categories={categories}
-        onKeywordChange={setKeyword}
         onCategoryToggle={toggleCategory}
         onPriceRangeChange={setPriceRange}
         onRatingMinChange={setRatingMin}
         onReset={resetFilters}
         priceRange={priceRange}
-        isFiltering={isFiltering}
       />
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="body2" color="text.secondary">
           顯示 {paginatedItems.length} / {filteredItems.length} 項目
         </Typography>
-        <SortSelect value={currentSortValue} onChange={setSortBy} />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>每頁顯示</InputLabel>
+            <Select
+              value={itemsPerPage}
+              label="每頁顯示"
+              onChange={(e) => handleItemsPerPageChange(e.target.value as number)}
+            >
+              <MenuItem value={5}>5 項</MenuItem>
+              <MenuItem value={10}>10 項</MenuItem>
+              <MenuItem value={20}>20 項</MenuItem>
+              <MenuItem value={50}>50 項</MenuItem>
+            </Select>
+          </FormControl>
+          <SortSelect value={currentSortValue} onChange={setSortBy} />
+        </Box>
       </Box>
 
       {filteredItems.length === 0 ? (
@@ -132,9 +130,6 @@ export function BrowsePage() {
                   onAddToContainer={() => handleAddToContainer(item.id)}
                   onViewDetails={() => setSelectedItem(item)}
                   isInContainer={hasItem(item.id)}
-                  isComparing={isComparing(item.id)}
-                  onToggleCompare={() => toggleCompare(item.id)}
-                  canAddToCompare={canAddMore}
                 />
               </Grid>
             ))}

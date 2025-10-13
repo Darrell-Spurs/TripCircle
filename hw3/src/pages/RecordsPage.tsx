@@ -34,13 +34,13 @@ export function RecordsPage() {
   const [viewingRecord, setViewingRecord] = useState<SubmitRecord | null>(null);
 
   const handleCopyToContainer = (record: SubmitRecord) => {
-    // 清空容器
+    // 清空購物車
     clearContainer();
-    // 複製項目到容器
+    // 複製項目到購物車
     record.entries.forEach((entry) => {
       addItem(entry.itemId, entry.quantity || 1);
     });
-    // 導向容器頁
+    // 導向購物車頁
     navigate('/container');
   };
 
@@ -122,7 +122,7 @@ export function RecordsPage() {
                     <IconButton
                       size="small"
                       onClick={() => handleCopyToContainer(record)}
-                      aria-label="複製到容器"
+                      aria-label="複製到購物車"
                     >
                       <ContentCopyIcon />
                     </IconButton>

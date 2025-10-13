@@ -173,7 +173,7 @@ https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?w=400
 
 ## 🗺️ 頁面說明
 
-### 1. 瀏覽項目（`/`）
+### 1. 瀏覽商品（`/`）
 
 - 搜尋框（300ms debounce）
 - 分類多選篩選
