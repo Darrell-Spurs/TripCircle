@@ -94,7 +94,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
 
       <Box component="footer" sx={{ py: 2, textAlign: 'center', bgcolor: 'grey.200' }}>
         <Typography variant="body2" color="text.secondary">
-          © 2025 商品目錄系統 - 純前端示範
+          © 2025 商品目錄系統
         </Typography>
       </Box>
     </Box>
