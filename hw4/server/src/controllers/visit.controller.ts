@@ -155,7 +155,31 @@ export const createVisit = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    res.status(201).json({ success: true, data: { id: visitId }, message: 'Visit created successfully' });
+    // 回傳完整的 visit 紀錄
+    const visit = db.prepare('SELECT * FROM visit_records WHERE id = ?').get(visitId) as any;
+    
+    // 加上餐點和照片資料
+    const dishesData = db.prepare('SELECT * FROM dishes WHERE visit_id = ?').all(visitId);
+    const photoUrls = db.prepare('SELECT photo_url FROM visit_photos WHERE visit_id = ?')
+      .all(visitId)
+      .map((row: any) => row.photo_url);
+
+    // 轉換為 camelCase
+    const formattedVisit = {
+      id: visit.id,
+      restaurantId: visit.restaurant_id,
+      userId: visit.user_id,
+      visitDate: new Date(visit.visit_date),
+      rating: visit.rating,
+      comment: visit.comment,
+      dishes: dishesData,
+      totalSpent: visit.total_spent,
+      photos: photoUrls.length > 0 ? photoUrls : undefined,
+      createdAt: new Date(visit.created_at),
+      updatedAt: new Date(visit.updated_at)
+    };
+
+    res.status(201).json({ success: true, data: formattedVisit, message: 'Visit created successfully' });
   } catch (error) {
     console.error('Error creating visit:', error);
     res.status(500).json({ success: false, error: 'Failed to create visit' });

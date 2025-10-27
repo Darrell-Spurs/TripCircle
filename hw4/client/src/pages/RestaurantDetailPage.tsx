@@ -379,23 +379,23 @@ const AddVisitForm: React.FC<{
   const [comment, setComment] = useState('');
   const [totalSpent, setTotalSpent] = useState(0);
 
-  const handleSubmit = () => {
-    const newVisit = {
-      id: Date.now().toString(),
-      restaurantId: restaurant.id,
-      userId: '1',
-      visitDate: new Date(visitDate),
-      rating,
-      comment,
-      dishes: [],
-      totalSpent,
-      photos: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  const handleSubmit = async () => {
+    try {
+      const newVisit = {
+        restaurantId: restaurant.id,
+        visitDate: visitDate, // Just send the string, not Date object
+        rating,
+        comment: comment || undefined,
+        dishes: [],
+        totalSpent: totalSpent || 0,
+        photos: [],
+      };
 
-    addVisitRecord(newVisit);
-    onSave();
+      await addVisitRecord(newVisit as any);
+      onSave();
+    } catch (error) {
+      console.error('Failed to add visit:', error);
+    }
   };
 
   return (

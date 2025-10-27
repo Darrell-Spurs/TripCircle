@@ -243,8 +243,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const newRecord = await visitService.createVisit(record);
       setVisitRecords(prev => [...prev, newRecord]);
       
-      // Refresh restaurant data to update statistics
-      await fetchData();
+      // Update restaurant statistics without full refresh
+      // Just update the specific restaurant's stats
+      const updatedRestaurants = await restaurantService.getRestaurants();
+      setRestaurants(updatedRestaurants);
+      setFilteredRestaurants(updatedRestaurants);
       
       return newRecord;
     } catch (err: any) {
