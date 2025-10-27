@@ -54,7 +54,7 @@ const RestaurantDetailPage: React.FC = () => {
 
   const restaurant = restaurants.find(r => r.id === id);
   
-  if (!restaurant) {
+  if (!restaurant && restaurants.length > 0) {
     return (
       <Container maxWidth="lg">
         <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -71,6 +71,24 @@ const RestaurantDetailPage: React.FC = () => {
         </Box>
       </Container>
     );
+  }
+
+  // Show loading state if restaurants are still being loaded
+  if (!restaurant && restaurants.length === 0) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="body1" color="text.secondary">
+            載入中...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  // This should not happen, but handle it gracefully
+  if (!restaurant) {
+    return null;
   }
 
   const restaurantVisits = visitRecords
@@ -177,7 +195,7 @@ const RestaurantDetailPage: React.FC = () => {
               )}
 
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                {restaurant.tags.map((tag) => (
+                {(restaurant.tags || []).map((tag) => (
                   <Chip key={tag} label={tag} variant="outlined" />
                 ))}
               </Box>
@@ -222,7 +240,7 @@ const RestaurantDetailPage: React.FC = () => {
                   總拜訪次數:
                 </Typography>
                 <Typography variant="body2">
-                  {restaurant.totalVisits}
+                  {(restaurant.totalVisits || 0)}
                 </Typography>
               </Box>
 
@@ -231,7 +249,7 @@ const RestaurantDetailPage: React.FC = () => {
                   總花費:
                 </Typography>
                 <Typography variant="body2">
-                  NT$ {restaurant.totalSpent.toLocaleString()}
+                  NT$ {(restaurant.totalSpent || 0).toLocaleString()}
                 </Typography>
               </Box>
 
@@ -240,7 +258,7 @@ const RestaurantDetailPage: React.FC = () => {
                   平均花費:
                 </Typography>
                 <Typography variant="body2">
-                  NT$ {restaurant.totalVisits > 0 ? Math.round(restaurant.totalSpent / restaurant.totalVisits).toLocaleString() : 0}
+                  NT$ {(restaurant.totalVisits || 0) > 0 ? Math.round((restaurant.totalSpent || 0) / (restaurant.totalVisits || 1)).toLocaleString() : 0}
                 </Typography>
               </Box>
             </CardContent>

@@ -2,6 +2,9 @@ import axios from 'axios';
 
 const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
+// Debug logging
+console.log('Google Maps API Key loaded:', API_KEY ? `Yes (${API_KEY.substring(0, 10)}...)` : 'No');
+
 interface LatLng {
   lat: number;
   lng: number;
@@ -90,17 +93,18 @@ export class GoogleMapsService {
     try {
       this.apiCallCount++;
       const params: any = {
-        query: `餐廳 ${query}`,
+        query: query,  // 直接使用查詢字串，不強制加上「餐廳」
         key: API_KEY,
         language: 'zh-TW',
-        type: 'restaurant',
       };
 
-      // 如果有指定位置，加入 locationbias
+      // 如果有指定位置，使用 near-by search 或 location bias
       if (location) {
         params.location = `${location.lat},${location.lng}`;
         params.radius = 10000; // 10km
       }
+
+      console.log('Searching with params:', { query: params.query, key: params.key ? 'Set' : 'Not set' });
 
       const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
         params,

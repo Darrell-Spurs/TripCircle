@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RestaurantListPage from './pages/RestaurantListPage';
+import RestaurantSearchPage from './pages/RestaurantSearchPage';
 import RestaurantDetailPage from './pages/RestaurantDetailPage';
 import VisitRecordsPage from './pages/VisitRecordsPage';
 import CalendarPage from './pages/CalendarPage';
@@ -41,6 +42,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
                   <Route path="/restaurants" element={<ProtectedRoute><RestaurantListPage /></ProtectedRoute>} />
+                  <Route path="/restaurants/search" element={<ProtectedRoute><RestaurantSearchPage /></ProtectedRoute>} />
                   <Route path="/restaurants/:id" element={<ProtectedRoute><RestaurantDetailPage /></ProtectedRoute>} />
                   <Route path="/visits" element={<ProtectedRoute><VisitRecordsPage /></ProtectedRoute>} />
                   <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />

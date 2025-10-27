@@ -1,6 +1,10 @@
+import dotenv from 'dotenv';
+
+// Load environment variables FIRST, before any other imports
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 // Routes
 import authRoutes from './routes/auth.routes';
@@ -11,8 +15,6 @@ import statsRoutes from './routes/stats.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
-
-dotenv.config();
 
 const app = express();
 
@@ -31,6 +33,15 @@ app.use('/api/stats', statsRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
+});
+
+// Debug: Check environment variables
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY ? 'Set' : 'Not set',
+    API_KEY_LENGTH: process.env.GOOGLE_MAPS_API_KEY?.length || 0,
+    PORT: process.env.PORT || 'Not set',
+  });
 });
 
 // Error handling

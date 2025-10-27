@@ -1,8 +1,11 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User, Restaurant, VisitRecord, Tag, FilterOptions } from '../types';
 import { RestaurantStatus } from '../types';
-import { mockUser, mockRestaurants, mockVisitRecords, mockTags } from '../data/mockData';
+import * as authService from '../services/auth.service';
+import * as restaurantService from '../services/restaurant.service';
+import * as visitService from '../services/visit.service';
+import * as tagService from '../services/tag.service';
 
 interface AppContextType {
   user: User | null;
@@ -12,13 +15,15 @@ interface AppContextType {
   filteredRestaurants: Restaurant[];
   filterOptions: FilterOptions;
   selectedRestaurant: Restaurant | null;
+  loading: boolean;
+  error: string | null;
   setUser: (user: User | null) => void;
   setRestaurants: (restaurants: Restaurant[]) => void;
   setVisitRecords: (records: VisitRecord[]) => void;
   setTags: (tags: Tag[]) => void;
   setFilterOptions: (options: FilterOptions) => void;
   setSelectedRestaurant: (restaurant: Restaurant | null) => void;
-  addRestaurant: (restaurant: Restaurant) => void;
+  addRestaurant: (restaurant: Partial<Restaurant>) => Promise<Restaurant>;
   updateRestaurant: (id: string, updates: Partial<Restaurant>) => void;
   deleteRestaurant: (id: string) => void;
   addVisitRecord: (record: VisitRecord) => void;
@@ -26,6 +31,10 @@ interface AppContextType {
   deleteVisitRecord: (id: string) => void;
   addTag: (tag: Tag) => void;
   filterRestaurants: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
+  logout: () => void;
+  fetchData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -43,13 +52,94 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(mockUser);
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(mockRestaurants);
-  const [visitRecords, setVisitRecords] = useState<VisitRecord[]>(mockVisitRecords);
-  const [tags, setTags] = useState<Tag[]>(mockTags);
-  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>(mockRestaurants);
+  const [user, setUser] = useState<User | null>(null);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [visitRecords, setVisitRecords] = useState<VisitRecord[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Check if user is logged in on mount
+  useEffect(() => {
+    const storedUser = authService.getStoredUser();
+    if (storedUser && authService.isAuthenticated()) {
+      setUser(storedUser);
+      fetchData();
+    }
+  }, []);
+
+  // Fetch all data from backend
+  const fetchData = async () => {
+    if (!authService.isAuthenticated()) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch user profile
+      const userProfile = await authService.getProfile();
+      setUser(userProfile);
+
+      // Fetch restaurants
+      const restaurantsData = await restaurantService.getRestaurants();
+      setRestaurants(restaurantsData);
+      setFilteredRestaurants(restaurantsData);
+
+      // Fetch visit records
+      const visitsData = await visitService.getVisits();
+      setVisitRecords(visitsData);
+
+      // Fetch tags
+      const tagsData = await tagService.getTags();
+      setTags(tagsData);
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      setError(err.response?.data?.error || 'Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await authService.login(email, password);
+      setUser(response.user);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Login failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (username: string, email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await authService.register(username, email, password);
+      setUser(response.user);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Registration failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    authService.logout();
+    setUser(null);
+    setRestaurants([]);
+    setVisitRecords([]);
+    setTags([]);
+    setFilteredRestaurants([]);
+  };
 
   const filterRestaurants = () => {
     let filtered = [...restaurants];
@@ -95,85 +185,131 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setFilteredRestaurants(filtered);
   };
 
-  const addRestaurant = (restaurant: Restaurant) => {
-    setRestaurants(prev => [...prev, restaurant]);
-  };
-
-  const updateRestaurant = (id: string, updates: Partial<Restaurant>) => {
-    setRestaurants(prev =>
-      prev.map(restaurant =>
-        restaurant.id === id ? { ...restaurant, ...updates } : restaurant
-      )
-    );
-  };
-
-  const deleteRestaurant = (id: string) => {
-    setRestaurants(prev => prev.filter(restaurant => restaurant.id !== id));
-    setVisitRecords(prev => prev.filter(record => record.restaurantId !== id));
-  };
-
-  const addVisitRecord = (record: VisitRecord) => {
-    setVisitRecords(prev => [...prev, record]);
-    
-    // 更新餐廳統計資料
-    const restaurant = restaurants.find(r => r.id === record.restaurantId);
-    if (restaurant) {
-      const newTotalVisits = restaurant.totalVisits + 1;
-      const newTotalSpent = restaurant.totalSpent + record.totalSpent;
-      const existingRecords = visitRecords.filter(r => r.restaurantId === record.restaurantId);
-      const newAverageRating = existingRecords.length > 0 
-        ? (existingRecords.reduce((sum, r) => sum + r.rating, 0) + record.rating) / (existingRecords.length + 1)
-        : record.rating;
-      
-      updateRestaurant(record.restaurantId, {
-        totalVisits: newTotalVisits,
-        totalSpent: newTotalSpent,
-        averageRating: newAverageRating,
-        status: newTotalVisits >= 5 ? RestaurantStatus.FREQUENT : RestaurantStatus.VISITED
-      });
+  const addRestaurant = async (restaurant: Partial<Restaurant>): Promise<Restaurant> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newRestaurant = await restaurantService.createRestaurant(restaurant);
+      // Refresh all data to ensure consistency
+      await fetchData();
+      return newRestaurant;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to add restaurant');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateVisitRecord = (id: string, updates: Partial<VisitRecord>) => {
-    setVisitRecords(prev =>
-      prev.map(record =>
-        record.id === id ? { ...record, ...updates } : record
-      )
-    );
+  const updateRestaurant = async (id: string, updates: Partial<Restaurant>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await restaurantService.updateRestaurant(id, updates);
+      setRestaurants(prev =>
+        prev.map(restaurant =>
+          restaurant.id === id ? { ...restaurant, ...updates } : restaurant
+        )
+      );
+      filterRestaurants();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update restaurant');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteVisitRecord = (id: string) => {
-    const record = visitRecords.find(r => r.id === id);
-    if (record) {
+  const deleteRestaurant = async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await restaurantService.deleteRestaurant(id);
+      setRestaurants(prev => prev.filter(restaurant => restaurant.id !== id));
+      setVisitRecords(prev => prev.filter(record => record.restaurantId !== id));
+      filterRestaurants();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete restaurant');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addVisitRecord = async (record: VisitRecord) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newRecord = await visitService.createVisit(record);
+      setVisitRecords(prev => [...prev, newRecord]);
+      
+      // Refresh restaurant data to update statistics
+      await fetchData();
+      
+      return newRecord;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to add visit record');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateVisitRecord = async (id: string, updates: Partial<VisitRecord>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await visitService.updateVisit(id, updates);
+      setVisitRecords(prev =>
+        prev.map(record =>
+          record.id === id ? { ...record, ...updates } : record
+        )
+      );
+      
+      // Refresh restaurant data to update statistics
+      await fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update visit record');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteVisitRecord = async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await visitService.deleteVisit(id);
       setVisitRecords(prev => prev.filter(r => r.id !== id));
       
-      // 更新餐廳統計資料
-      const restaurant = restaurants.find(r => r.id === record.restaurantId);
-      if (restaurant) {
-        const newTotalVisits = Math.max(0, restaurant.totalVisits - 1);
-        const newTotalSpent = Math.max(0, restaurant.totalSpent - record.totalSpent);
-        const remainingRecords = visitRecords.filter(r => r.restaurantId === record.restaurantId && r.id !== id);
-        const newAverageRating = remainingRecords.length > 0 
-          ? remainingRecords.reduce((sum, r) => sum + r.rating, 0) / remainingRecords.length
-          : 0;
-        
-        updateRestaurant(record.restaurantId, {
-          totalVisits: newTotalVisits,
-          totalSpent: newTotalSpent,
-          averageRating: newAverageRating,
-          status: newTotalVisits >= 5 ? RestaurantStatus.FREQUENT : 
-                 newTotalVisits > 0 ? RestaurantStatus.VISITED : RestaurantStatus.WANT_TO_VISIT
-        });
-      }
+      // Refresh restaurant data to update statistics
+      await fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete visit record');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const addTag = (tag: Tag) => {
-    setTags(prev => [...prev, tag]);
+  const addTag = async (tag: Tag) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newTag = await tagService.createTag(tag);
+      setTags(prev => [...prev, newTag]);
+      return newTag;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to add tag');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 當篩選選項改變時自動重新篩選
-  React.useEffect(() => {
+  useEffect(() => {
     filterRestaurants();
   }, [filterOptions, restaurants]);
 
@@ -185,6 +321,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     filteredRestaurants,
     filterOptions,
     selectedRestaurant,
+    loading,
+    error,
     setUser,
     setRestaurants,
     setVisitRecords,
@@ -199,6 +337,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     deleteVisitRecord,
     addTag,
     filterRestaurants,
+    login,
+    register,
+    logout,
+    fetchData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

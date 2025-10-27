@@ -120,6 +120,12 @@ const RestaurantListPage: React.FC = () => {
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
+            variant="contained"
+            onClick={() => navigate('/restaurants/search')}
+          >
+            搜尋餐廳
+          </Button>
+          <Button
             variant={showMap ? "contained" : "outlined"}
             onClick={() => setShowMap(!showMap)}
             startIcon={<LocationOn />}
@@ -235,13 +241,13 @@ const RestaurantListPage: React.FC = () => {
       {/* 地圖檢視 */}
       {showMap && (
         <Box sx={{ mb: 3, height: 400 }}>
-          <GoogleMap restaurants={filteredRestaurants} />
+          <GoogleMap restaurants={filteredRestaurants || []} />
         </Box>
       )}
 
       {/* 餐廳列表 */}
       <Grid container spacing={3}>
-        {filteredRestaurants.map((restaurant) => (
+        {(filteredRestaurants || []).map((restaurant) => (
           <Grid item xs={12} sm={6} md={4} key={restaurant.id}>
             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               {restaurant.images && restaurant.images.length > 0 && (
@@ -267,7 +273,7 @@ const RestaurantListPage: React.FC = () => {
                     size="small" 
                     color={getStatusColor(restaurant.status) as any}
                   />
-                  {restaurant.tags.map((tag) => (
+                  {(restaurant.tags || []).map((tag) => (
                     <Chip key={tag} label={tag} size="small" variant="outlined" />
                   ))}
                 </Box>
@@ -276,13 +282,13 @@ const RestaurantListPage: React.FC = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Rating value={restaurant.averageRating} readOnly size="small" />
                     <Typography variant="body2" sx={{ ml: 1 }}>
-                      {restaurant.averageRating.toFixed(1)} ({restaurant.totalVisits} 次拜訪)
+                      {restaurant.averageRating.toFixed(1)} ({(restaurant.totalVisits || 0)} 次拜訪)
                     </Typography>
                   </Box>
                 )}
 
                 <Typography variant="body2" color="text.secondary">
-                  總花費: NT$ {restaurant.totalSpent.toLocaleString()}
+                  總花費: NT$ {(restaurant.totalSpent || 0).toLocaleString()}
                 </Typography>
               </CardContent>
               
@@ -314,7 +320,7 @@ const RestaurantListPage: React.FC = () => {
         ))}
       </Grid>
 
-      {filteredRestaurants.length === 0 && (
+      {(!filteredRestaurants || filteredRestaurants.length === 0) && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary">
             沒有找到符合條件的餐廳

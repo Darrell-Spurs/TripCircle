@@ -31,7 +31,8 @@ export const deleteRestaurant = async (id: string): Promise<void> => {
 };
 
 export const searchPlaces = async (query: string, location?: { lat: number; lng: number }): Promise<any[]> => {
-  const params = location ? { lat: location.lat, lng: location.lng } : {};
-  const response = await api.post('/api/restaurants/search', { query }, { params });
-  return response.data.data;
+  const queryParams = location ? { lat: location.lat.toString(), lng: location.lng.toString() } : {};
+  const response = await api.post('/api/restaurants/search', { query }, { params: queryParams });
+  console.log('searchPlaces response:', response.data);
+  return response.data?.data || [];
 };
