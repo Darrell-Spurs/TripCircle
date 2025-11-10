@@ -13,20 +13,27 @@ import type { NotificationResponse, PaginatedResponse } from "@/lib/api/types";
 import { queryKeys } from "./query-keys";
 
 export function useNotifications() {
-  const query = useInfiniteQuery({
+  const query = useInfiniteQuery<
+    PaginatedResponse<NotificationResponse>,
+    Error,
+    InfiniteData<PaginatedResponse<NotificationResponse>>,
+    readonly ["notifications"],
+    string | undefined
+  >({
     queryKey: queryKeys.notifications,
     queryFn: ({ pageParam }) =>
-      api.notifications.list({ cursor: pageParam ?? undefined }),
+      api.notifications.list({ cursor: pageParam as string | undefined }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined,
   });
 
   const notifications =
-    query.data?.pages.flatMap((page) => page.items) ?? [];
+    query.data?.pages.flatMap((page: PaginatedResponse<NotificationResponse>) => page.items) ?? [];
 
   return {
     ...query,
     notifications,
-    unreadCount: notifications.filter((item) => !item.readAt).length,
+    unreadCount: notifications.filter((item: NotificationResponse) => !item.readAt).length,
   };
 }
 

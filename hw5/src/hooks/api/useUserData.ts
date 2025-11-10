@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  InfiniteData,
   useInfiniteQuery,
   useQuery,
 } from "@tanstack/react-query";
@@ -17,7 +18,7 @@ import { queryKeys } from "./query-keys";
 
 export function useUserProfile(handle: string | null) {
   return useQuery<UserProfileResponse>({
-    queryKey: handle ? queryKeys.userProfile(handle) : undefined,
+    queryKey: handle ? queryKeys.userProfile(handle) : ["user", "profile", ""],
     queryFn: () => {
       if (!handle) throw new Error("handle required");
       return api.users.getProfile(handle);
@@ -32,19 +33,26 @@ function useUserPostFeed(
     handle: string,
     cursor?: string | null,
   ) => Promise<PaginatedResponse<PostResponse>>,
-  queryKeyFactory: (handle: string) => unknown[],
+  queryKeyFactory: (handle: string) => readonly unknown[],
 ) {
-  const query = useInfiniteQuery({
-    queryKey: handle ? queryKeyFactory(handle) : undefined,
+  const query = useInfiniteQuery<
+    PaginatedResponse<PostResponse>,
+    Error,
+    InfiniteData<PaginatedResponse<PostResponse>>,
+    readonly unknown[],
+    string | undefined
+  >({
+    queryKey: handle ? queryKeyFactory(handle) : ["user", "posts", ""],
     enabled: Boolean(handle),
     queryFn: ({ pageParam }) => {
       if (!handle) throw new Error("handle required");
-      return fetcher(handle, pageParam ?? undefined);
+      return fetcher(handle, pageParam as string | undefined);
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined,
   });
 
-  const posts = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const posts = query.data?.pages.flatMap((page: PaginatedResponse<PostResponse>) => page.items) ?? [];
 
   return {
     ...query,
@@ -71,18 +79,25 @@ export function useUserLikes(handle: string | null) {
 }
 
 export function useUserReposts(handle: string | null) {
-  const query = useInfiniteQuery({
-    queryKey: handle ? queryKeys.userReposts(handle) : undefined,
+  const query = useInfiniteQuery<
+    PaginatedResponse<RepostResponse>,
+    Error,
+    InfiniteData<PaginatedResponse<RepostResponse>>,
+    readonly unknown[],
+    string | undefined
+  >({
+    queryKey: handle ? queryKeys.userReposts(handle) : ["user", "reposts", ""],
     enabled: Boolean(handle),
     queryFn: ({ pageParam }) => {
       if (!handle) throw new Error("handle required");
-      return api.users.getReposts(handle, { cursor: pageParam ?? undefined });
+      return api.users.getReposts(handle, { cursor: pageParam as string | undefined });
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined,
   });
 
   const reposts =
-    query.data?.pages.flatMap((page) => page.items) ?? [];
+    query.data?.pages.flatMap((page: PaginatedResponse<RepostResponse>) => page.items) ?? [];
 
   return {
     ...query,

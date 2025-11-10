@@ -173,14 +173,14 @@ export function ProfileView({ handle, isOwner = false }: ProfileViewProps) {
   }, [profileResult, isOwner, postsQuery.posts, repostsQuery.reposts]);
 
   const likesTweets = useMemo(
-    () => likesQuery.posts.map((post) => mapPostToTweet(post)),
+    () => likesQuery.posts.map((post: PostResponse) => mapPostToTweet(post)),
     [likesQuery.posts],
   );
 
   const displayedTweets =
     activeTab === "Posts"
       ? postsTabItems
-      : likesTweets.map((tweet) => ({
+      : likesTweets.map((tweet: Tweet) => ({
           key: `like-${tweet.id}`,
           tweet,
           eventTime: tweet.createdAt ?? 0,
@@ -497,7 +497,7 @@ export function ProfileView({ handle, isOwner = false }: ProfileViewProps) {
               </span>
             </div>
           ) : (
-            displayedTweets.map(({ key, tweet }) => (
+            displayedTweets.map(({ key, tweet }: { key: string; tweet: Tweet; eventTime: number }) => (
               <TweetCard
                 key={key}
                 tweet={tweet}

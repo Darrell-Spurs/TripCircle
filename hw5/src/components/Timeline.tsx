@@ -390,7 +390,7 @@ export function Timeline() {
             </div>
           ) : (
             <div>
-              {posts.map((post) => (
+              {posts.map((post: Tweet) => (
               <TweetCard
                   key={post.id}
                   tweet={post}

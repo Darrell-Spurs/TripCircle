@@ -53,7 +53,8 @@ export function buildApp(): FastifyInstance {
         return;
       }
       try {
-        const json = JSON.parse(payload);
+        const payloadString = typeof payload === "string" ? payload : payload.toString();
+        const json = JSON.parse(payloadString);
         done(null, json);
       } catch (error) {
         done(error as Error, undefined);

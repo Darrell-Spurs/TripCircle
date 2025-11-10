@@ -132,7 +132,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: "desc" },
         take: limit + 1,
         cursor: cursor
-          ? { postId_userId: { postId: cursor, userId: user.id } }
+          ? { userId_postId: { userId: user.id, postId: cursor } }
           : undefined,
         skip: cursor ? 1 : 0,
         select: {
@@ -146,12 +146,12 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       let nextCursor: string | null = null;
       if (likes.length > limit) {
         const nextItem = likes.pop();
-        nextCursor = nextItem?.post.id ?? null;
+        nextCursor = nextItem?.post?.id ?? null;
       }
 
       return {
         items: likes.map((like) =>
-          serializePost(like.post, {
+          serializePost(like.post!, {
             liked: true,
           }),
         ),
@@ -187,7 +187,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: "desc" },
         take: limit + 1,
         cursor: cursor
-          ? { postId_userId: { postId: cursor, userId: user.id } }
+          ? { userId_postId: { userId: user.id, postId: cursor } }
           : undefined,
         skip: cursor ? 1 : 0,
         select: {
@@ -209,7 +209,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         items: reposts.map((entry) => ({
-          post: serializePost(entry.post, {
+          post: serializePost(entry.post!, {
             reposted: !!currentUserId && isOwner,
             context: isOwner
               ? "You reposted"

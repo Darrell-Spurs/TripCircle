@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = RequestInit & {
-  query?: Record<string, string | number | boolean | undefined>;
+  query?: Record<string, string | number | boolean | null | undefined>;
 };
 
 const BASE_URL =
@@ -151,17 +151,17 @@ export const apiClient = {
     path: string,
     body?: TBody,
     options?: RequestOptions,
-  ) => apiFetch<TResponse, TBody>(path, { ...options, method: "POST", body }),
+  ) => apiFetch<TResponse, TBody>(path, { ...options, method: "POST", body: body as any }),
   put: <TResponse, TBody = unknown>(
     path: string,
     body?: TBody,
     options?: RequestOptions,
-  ) => apiFetch<TResponse, TBody>(path, { ...options, method: "PUT", body }),
+  ) => apiFetch<TResponse, TBody>(path, { ...options, method: "PUT", body: body as any }),
   patch: <TResponse, TBody = unknown>(
     path: string,
     body?: TBody,
     options?: RequestOptions,
-  ) => apiFetch<TResponse, TBody>(path, { ...options, method: "PATCH", body }),
+  ) => apiFetch<TResponse, TBody>(path, { ...options, method: "PATCH", body: body as any }),
   delete: <TResponse>(path: string, options?: RequestOptions) =>
     apiFetch<TResponse>(path, { ...options, method: "DELETE" }),
 };

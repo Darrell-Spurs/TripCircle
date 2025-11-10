@@ -27,27 +27,27 @@ export const api = {
     getPosts: (handle: string, params?: PaginationQuery) =>
       apiClient.get<PaginatedResponse<PostResponse>>(
         `/users/${handle}/posts`,
-        { query: params },
+        { query: params as any },
       ),
     getLikes: (handle: string, params?: PaginationQuery) =>
       apiClient.get<PaginatedResponse<PostResponse>>(
         `/users/${handle}/likes`,
-        { query: params },
+        { query: params as any },
       ),
     getReposts: (handle: string, params?: PaginationQuery) =>
       apiClient.get<PaginatedResponse<RepostResponse>>(
         `/users/${handle}/reposts`,
-        { query: params },
+        { query: params as any },
       ),
   },
   timeline: {
     getAll: (params?: PaginationQuery) =>
       apiClient.get<PaginatedResponse<PostResponse>>("/timeline", {
-        query: params,
+        query: params as any,
       }),
     getFollowing: (params?: PaginationQuery) =>
       apiClient.get<PaginatedResponse<PostResponse>>("/timeline/following", {
-        query: params,
+        query: params as any,
       }),
   },
   posts: {
@@ -79,7 +79,7 @@ export const api = {
     list: (params?: PaginationQuery) =>
       apiClient.get<PaginatedResponse<NotificationResponse>>(
         `/notifications`,
-        { query: params },
+        { query: params as any },
       ),
     markRead: (ids: string[]) =>
       apiClient.post<{ status: string }>(`/notifications/mark-read`, { ids }),

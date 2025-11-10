@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api/endpoints";
 import type { PaginatedResponse, PostResponse } from "@/lib/api/types";
@@ -24,14 +24,21 @@ const fetchers: Record<
 };
 
 export function useTimeline(variant: TimelineVariant = "all", enabled = true) {
-  const query = useInfiniteQuery({
+  const query = useInfiniteQuery<
+    PaginatedResponse<PostResponse>,
+    Error,
+    InfiniteData<PaginatedResponse<PostResponse>>,
+    readonly ["timeline", TimelineVariant],
+    string | undefined
+  >({
     queryKey: queryKeys.timeline(variant),
-    queryFn: ({ pageParam }) => fetchers[variant]({ cursor: pageParam ?? undefined }),
+    queryFn: ({ pageParam }) => fetchers[variant]({ cursor: pageParam as string | undefined }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined,
     enabled,
   });
 
-  const posts = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const posts = query.data?.pages.flatMap((page: PaginatedResponse<PostResponse>) => page.items) ?? [];
 
   return {
     ...query,

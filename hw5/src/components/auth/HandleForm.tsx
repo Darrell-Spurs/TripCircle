@@ -57,13 +57,11 @@ export function HandleForm() {
         return;
       }
 
-      await update({
-        user: {
-          id: session?.user?.id || "",
-          handle: trimmedHandle,
-          name: trimmedDisplayName,
-        },
-      });
+      // Force session refresh by calling update with no args
+      // NextAuth will refetch the session from the database
+      await update();
+      
+      // Redirect to home
       router.replace("/");
       router.refresh();
     } catch (submitError) {
