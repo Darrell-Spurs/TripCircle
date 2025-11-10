@@ -1,6 +1,6 @@
 # X Clone - Full-Stack Social Media Platform
 
-**Deploy Link:** https://wp1141-8fci.vercel.app
+**Deploy Link:** https://wp1141-wx5k.vercel.app
 
 A full-featured Twitter/X clone built with Next.js, Fastify, and PostgreSQL, featuring real-time updates, OAuth authentication, and comprehensive social interactions.
 
