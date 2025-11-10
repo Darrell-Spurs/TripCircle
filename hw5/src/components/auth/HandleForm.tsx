@@ -9,7 +9,7 @@ const MAX_DISPLAY_NAME = 40;
 
 export function HandleForm() {
   const router = useRouter();
-  const { update } = useSession();
+  const { data: session, update } = useSession();
   const [handleValue, setHandleValue] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +59,7 @@ export function HandleForm() {
 
       await update({
         user: {
+          id: session?.user?.id || "",
           handle: trimmedHandle,
           name: trimmedDisplayName,
         },
