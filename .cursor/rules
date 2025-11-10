@@ -1,0 +1,3 @@
+# Force agent runtime to use UTF-8
+export PYTHONUTF8=1
+export NODE_OPTIONS="--max-old-space-size=8192 --experimental-modules"
