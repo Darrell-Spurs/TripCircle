@@ -99,7 +99,7 @@ export function Timeline() {
   const [replyValue, setReplyValue] = useState("");
   const [threadStack, setThreadStack] = useState<string[]>([]);
 
-  const isAuthenticated = status === "authenticated" && Boolean(session?.user?.handle);
+  const isAuthenticated = status === "authenticated";
 
   const {
     posts: apiPosts,
