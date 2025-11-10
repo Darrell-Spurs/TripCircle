@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ReactNode } from "react";
-import { getServerSession } from "next-auth";
 
 import "./globals.css";
 import { AuthProvider } from "@/lib/providers/session-provider";
 import { QueryProvider } from "@/lib/providers/query-provider";
-import { authOptions } from "@/lib/auth/options";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,23 +21,21 @@ export const metadata: Metadata = {
   description: "Static mock of an X-style home feed built with Next.js and Tailwind",
 };
 
-// Force dynamic rendering since we use session
+// Force dynamic rendering since we depend on client session lookups
 export const dynamic = "force-dynamic";
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) {
-  const session = await getServerSession(authOptions);
-
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <AuthProvider session={session}>
+        <AuthProvider>
           <QueryProvider>{children}</QueryProvider>
         </AuthProvider>
       </body>
