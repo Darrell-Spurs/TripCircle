@@ -12,6 +12,11 @@ const bodySchema = z.object({
     .min(1, "Handle is required")
     .max(16, "Handle must be at most 16 characters")
     .regex(/^[A-Za-z0-9]+$/, "Handle must be alphanumeric"),
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Display name is required")
+    .max(40, "Display name must be at most 40 characters"),
 });
 
 export async function POST(request: Request) {
@@ -25,12 +30,12 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { message: parsed.error.issues[0]?.message ?? "Invalid handle" },
+      { message: parsed.error.issues[0]?.message ?? "Invalid details" },
       { status: 400 },
     );
   }
 
-  const { handle } = parsed.data;
+  const { handle, displayName } = parsed.data;
 
   const existingHandle = await prisma.user.findUnique({
     where: { handle },
@@ -41,19 +46,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Handle already taken" }, { status: 409 });
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { displayName: true, name: true },
-  });
-
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
       handle,
-      displayName: existingUser?.displayName?.length
-        ? existingUser.displayName
-        : handle,
-      name: existingUser?.name ?? handle,
+      displayName,
+      name: displayName,
     },
   });
 

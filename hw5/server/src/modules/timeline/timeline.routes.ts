@@ -5,6 +5,7 @@ import { timelineQuerySchema } from "./timeline.schemas.js";
 import { buildPostSelect, serializePost } from "../posts/postSerializer.js";
 
 const timelineRoutes: FastifyPluginAsync = async (app) => {
+  // "For You" - All posts/reposts across the platform, newest first
   app.get("/", {
     schema: {
       querystring: timelineQuerySchema,
@@ -19,18 +20,8 @@ const timelineRoutes: FastifyPluginAsync = async (app) => {
         throw app.httpErrors.unauthorized("Authentication required");
       }
 
-      const following = await app.prisma.follow.findMany({
-        where: { followerId: currentUserId },
-        select: { followedId: true },
-      });
-      const authorIds = [currentUserId, ...following.map((row) => row.followedId)];
-
+      // Get all posts from everyone
       const posts = await app.prisma.post.findMany({
-        where: {
-          authorId: {
-            in: authorIds,
-          },
-        },
         orderBy: {
           createdAt: "desc",
         },
@@ -53,6 +44,7 @@ const timelineRoutes: FastifyPluginAsync = async (app) => {
     },
   });
 
+  // "Following" - Only posts from users I follow
   app.get("/following", {
     schema: {
       querystring: timelineQuerySchema,
@@ -79,6 +71,7 @@ const timelineRoutes: FastifyPluginAsync = async (app) => {
         };
       }
 
+      // Get posts only from followed users (not including my own posts)
       const posts = await app.prisma.post.findMany({
         where: {
           authorId: {

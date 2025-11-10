@@ -221,6 +221,64 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       };
     },
   });
+
+  // Update user profile
+  const updateProfileSchema = z.object({
+    displayName: z.string().min(1).max(50).optional(),
+    bio: z.string().max(160).optional(),
+    location: z.string().max(30).optional(),
+    website: z.string().url().max(100).optional().or(z.literal("")),
+    avatarUrl: z.string().url().optional().or(z.literal("")),
+    bannerUrl: z.string().url().optional().or(z.literal("")),
+  });
+
+  app.patch("/:handle", {
+    schema: {
+      params: handleParamSchema,
+      body: updateProfileSchema,
+    },
+    handler: async (request) => {
+      const { handle } = request.params as z.infer<typeof handleParamSchema>;
+      const updates = request.body as z.infer<typeof updateProfileSchema>;
+      const currentUserId = request.currentUserId;
+
+      if (!currentUserId) {
+        throw app.httpErrors.unauthorized("Authentication required");
+      }
+
+      // Check if user owns this profile
+      const user = await app.prisma.user.findUnique({
+        where: { handle },
+        select: { id: true },
+      });
+
+      if (!user) {
+        throw app.httpErrors.notFound("User not found");
+      }
+
+      if (user.id !== currentUserId) {
+        throw app.httpErrors.forbidden("Cannot edit another user's profile");
+      }
+
+      // Update the profile
+      const updated = await app.prisma.user.update({
+        where: { id: currentUserId },
+        data: updates,
+        select: {
+          id: true,
+          handle: true,
+          displayName: true,
+          bio: true,
+          location: true,
+          website: true,
+          avatarUrl: true,
+          bannerUrl: true,
+        },
+      });
+
+      return updated;
+    },
+  });
 };
 
 export default usersRoutes;

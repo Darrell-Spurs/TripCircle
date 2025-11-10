@@ -34,6 +34,48 @@ function buildUrl(path: string, query?: RequestOptions["query"]) {
   return url.toString();
 }
 
+let cachedToken: string | null | undefined = undefined;
+
+async function getSessionToken(): Promise<string | null> {
+  if (typeof window === "undefined") {
+    // Server-side: cannot access client cookies
+    return null;
+  }
+  
+  // Return cached token if available
+  if (cachedToken !== undefined) {
+    return cachedToken;
+  }
+  
+  // Fetch token from our API endpoint that has access to HttpOnly cookies
+  try {
+    const response = await fetch("/api/token", {
+      credentials: "include"
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const token = data.token || null;
+      cachedToken = token;
+      console.log("[API Client] Got session token:", token ? "yes" : "no");
+      return token;
+    } else {
+      console.log("[API Client] No session token available");
+      cachedToken = null;
+      return null;
+    }
+  } catch (error) {
+    console.error("[API Client] Failed to get session token:", error);
+    cachedToken = null;
+    return null;
+  }
+}
+
+// Reset cached token when needed (e.g., after login/logout)
+export function resetSessionToken() {
+  cachedToken = undefined;
+}
+
 export async function apiFetch<TResponse, TBody = unknown>(
   path: string,
   options: RequestOptions = {},
@@ -55,6 +97,18 @@ export async function apiFetch<TResponse, TBody = unknown>(
     } else {
       Object.assign(finalHeaders, headers);
     }
+  }
+
+  // Add session token as Bearer token if available
+  const sessionToken = await getSessionToken();
+  if (sessionToken && !finalHeaders["Authorization"]) {
+    finalHeaders["Authorization"] = `Bearer ${sessionToken}`;
+    console.log(`[API Client] Sending request to ${path} with auth token`);
+  } else {
+    console.log(`[API Client] Sending request to ${path} WITHOUT auth token`, {
+      hasToken: !!sessionToken,
+      hasExistingAuth: !!finalHeaders["Authorization"]
+    });
   }
 
   let payload: BodyInit | undefined;
@@ -103,6 +157,11 @@ export const apiClient = {
     body?: TBody,
     options?: RequestOptions,
   ) => apiFetch<TResponse, TBody>(path, { ...options, method: "PUT", body }),
+  patch: <TResponse, TBody = unknown>(
+    path: string,
+    body?: TBody,
+    options?: RequestOptions,
+  ) => apiFetch<TResponse, TBody>(path, { ...options, method: "PATCH", body }),
   delete: <TResponse>(path: string, options?: RequestOptions) =>
     apiFetch<TResponse>(path, { ...options, method: "DELETE" }),
 };

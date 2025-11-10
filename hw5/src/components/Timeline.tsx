@@ -63,7 +63,7 @@ function mapPostToTweet(post: PostResponse): Tweet {
   const createdAt = new Date(post.createdAt);
   const authorHandle = post.author.handle ? `@${post.author.handle}` : "@unknown";
   const colorSeed = post.author.handle ?? post.author.id;
-  return {
+      return {
     id: post.id,
     author: {
       name: post.author.displayName,
@@ -82,8 +82,8 @@ function mapPostToTweet(post: PostResponse): Tweet {
     liked: post.liked ?? false,
     reposted: post.reposted ?? false,
     createdAt: createdAt.getTime(),
-  };
-}
+          };
+        }
 
 function mapThreadResponse(node: ThreadNodeResponse): ThreadNode {
   const tweet = mapPostToTweet(node.post);
@@ -255,7 +255,7 @@ export function Timeline() {
 
   return (
     <section className="flex-1 border-x border-[var(--border)]">
-      {isThreadView ? (
+        {isThreadView ? (
         <>
           <div className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-[var(--border)] bg-black/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-black/60">
             <button
@@ -283,29 +283,29 @@ export function Timeline() {
       ) : (
         <>
           <div className="sticky top-0 z-20 border-b border-[var(--border)] bg-black/80 backdrop-blur supports-[backdrop-filter]:bg-black/60">
-            <div className="flex h-14 items-center justify-between px-4">
-              <div className="flex gap-8 text-sm font-semibold">
-                {FEED_TABS.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={clsx(
-                      "relative pb-3 pt-1 transition",
-                      activeTab === tab.key ? "text-white" : "text-zinc-500",
-                    )}
-                  >
-                    {tab.label}
-                    {activeTab === tab.key ? (
-                      <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-brand-primary" />
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-              <button className="rounded-full p-2 text-brand-primary transition hover:bg-white/10">
-                <SparklesIcon className="h-5 w-5" aria-hidden />
-              </button>
+          <div className="flex h-14 items-center justify-between px-4">
+            <div className="flex gap-8 text-sm font-semibold">
+              {FEED_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={clsx(
+                    "relative pb-3 pt-1 transition",
+                    activeTab === tab.key ? "text-white" : "text-zinc-500",
+                  )}
+                >
+                  {tab.label}
+                  {activeTab === tab.key ? (
+                    <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-brand-primary" />
+                  ) : null}
+                </button>
+              ))}
             </div>
+            <button className="rounded-full p-2 text-brand-primary transition hover:bg-white/10">
+              <SparklesIcon className="h-5 w-5" aria-hidden />
+            </button>
           </div>
+      </div>
 
           <form onSubmit={handleSubmit} className="border-b border-[var(--border)] px-4 py-4">
             <div className="flex gap-3">
@@ -391,7 +391,7 @@ export function Timeline() {
           ) : (
             <div>
               {posts.map((post) => (
-                <TweetCard
+              <TweetCard
                   key={post.id}
                   tweet={post}
                   onComment={handleOpenReply}
@@ -421,9 +421,9 @@ export function Timeline() {
                     {isFetchingNextPage ? "Loading…" : "Show more"}
                   </button>
                 </div>
-              ) : null}
-            </div>
-          )}
+            ) : null}
+                </div>
+              )}
         </>
       )}
 
@@ -460,9 +460,9 @@ export function Timeline() {
                 </button>
               </div>
             </div>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
     </section>
   );
 }

@@ -30,6 +30,7 @@ import type {
 } from "@/lib/api/types";
 
 import { Tweet, TweetCard } from "@/components/TweetCard";
+import { EditProfileModal } from "@/components/EditProfileModal";
 
 const OWNER_TABS = ["Posts", "Likes"] as const;
 const VISITOR_TABS = ["Posts"] as const;
@@ -139,6 +140,7 @@ export function ProfileView({ handle, isOwner = false }: ProfileViewProps) {
   const [replyTarget, setReplyTarget] = useState<Tweet | null>(null);
   const [replyValue, setReplyValue] = useState("");
   const [threadStack, setThreadStack] = useState<string[]>([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const {
     data: profile,
@@ -379,7 +381,10 @@ export function ProfileView({ handle, isOwner = false }: ProfileViewProps) {
           </div>
           <div className="mt-4 flex items-center gap-2">
             {isOwner ? (
-              <button className="rounded-full border border-[var(--border)] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-white/10">
+              <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="rounded-full border border-[var(--border)] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
                 Edit profile
               </button>
             ) : (
@@ -568,6 +573,15 @@ export function ProfileView({ handle, isOwner = false }: ProfileViewProps) {
           </div>
         </div>
       ) : null}
+
+      {/* Edit Profile Modal */}
+      {profileResult && (
+        <EditProfileModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          profile={profileResult}
+        />
+      )}
     </div>
   );
 }

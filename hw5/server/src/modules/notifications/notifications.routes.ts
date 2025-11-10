@@ -16,7 +16,10 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
       querystring: paginationSchema,
     },
     handler: async (request) => {
-      const userId = "user_darrell";
+      const userId = request.currentUserId;
+      if (!userId) {
+        throw app.httpErrors.unauthorized("Authentication required");
+      }
       const { limit, cursor } = request.query as z.infer<
         typeof paginationSchema
       >;
@@ -71,7 +74,10 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
       body: markReadSchema,
     },
     handler: async (request) => {
-      const userId = "user_darrell";
+      const userId = request.currentUserId;
+      if (!userId) {
+        throw app.httpErrors.unauthorized("Authentication required");
+      }
       const { ids } = request.body as z.infer<typeof markReadSchema>;
 
       await app.prisma.notification.updateMany({

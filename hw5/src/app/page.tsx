@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
 
 import {
   BellIcon,
@@ -16,6 +18,7 @@ import { RightRail } from "@/components/RightRail";
 import { Sidebar } from "@/components/Sidebar";
 import { Timeline } from "@/components/Timeline";
 import { buildMobileNav, buildNavItems } from "@/data/navigation";
+import { authOptions } from "@/lib/auth/options";
 
 const ICON_MAP = {
   home: HomeIcon,
@@ -54,7 +57,19 @@ const SUGGESTIONS = [
   { name: "St. Louis Cardinals", handle: "@Cardjinals" },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+  
+  // If not authenticated, redirect to login
+  if (!session) {
+    redirect("/login");
+  }
+  
+  // If authenticated but no handle, redirect to register
+  if (!session.user?.handle) {
+    redirect("/register");
+  }
+  
   const navItems = buildNavItems("home");
   const mobileNav = buildMobileNav("home");
 

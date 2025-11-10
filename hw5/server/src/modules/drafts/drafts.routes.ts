@@ -8,8 +8,11 @@ import {
 } from "./drafts.schemas.js";
 
 const draftsRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/", async () => {
-    const userId = "user_darrell";
+  app.get("/", async (request) => {
+    const userId = request.currentUserId;
+    if (!userId) {
+      throw app.httpErrors.unauthorized("Authentication required");
+    }
 
     const drafts = await app.prisma.draft.findMany({
       where: { authorId: userId },
@@ -30,7 +33,10 @@ const draftsRoutes: FastifyPluginAsync = async (app) => {
       body: createDraftSchema,
     },
     handler: async (request) => {
-      const userId = "user_darrell";
+      const userId = request.currentUserId;
+      if (!userId) {
+        throw app.httpErrors.unauthorized("Authentication required");
+      }
       const { content } = request.body as z.infer<typeof createDraftSchema>;
 
       const draft = await app.prisma.draft.create({
@@ -56,7 +62,10 @@ const draftsRoutes: FastifyPluginAsync = async (app) => {
       body: updateDraftSchema,
     },
     handler: async (request) => {
-      const userId = "user_darrell";
+      const userId = request.currentUserId;
+      if (!userId) {
+        throw app.httpErrors.unauthorized("Authentication required");
+      }
       const { draftId } = request.params as z.infer<typeof draftIdParamSchema>;
       const { content } = request.body as z.infer<typeof updateDraftSchema>;
 
@@ -89,7 +98,10 @@ const draftsRoutes: FastifyPluginAsync = async (app) => {
       params: draftIdParamSchema,
     },
     handler: async (request) => {
-      const userId = "user_darrell";
+      const userId = request.currentUserId;
+      if (!userId) {
+        throw app.httpErrors.unauthorized("Authentication required");
+      }
       const { draftId } = request.params as z.infer<typeof draftIdParamSchema>;
 
       const draft = await app.prisma.draft.findUnique({

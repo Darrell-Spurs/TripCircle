@@ -13,6 +13,17 @@ export const api = {
   users: {
     getProfile: (handle: string) =>
       apiClient.get<UserProfileResponse>(`/users/${handle}`),
+    updateProfile: (
+      handle: string,
+      data: {
+        displayName?: string;
+        bio?: string;
+        location?: string;
+        website?: string;
+        avatarUrl?: string;
+        bannerUrl?: string;
+      },
+    ) => apiClient.patch<UserProfileResponse>(`/users/${handle}`, data),
     getPosts: (handle: string, params?: PaginationQuery) =>
       apiClient.get<PaginatedResponse<PostResponse>>(
         `/users/${handle}/posts`,
