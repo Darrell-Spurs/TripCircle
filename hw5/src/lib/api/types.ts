@@ -4,6 +4,7 @@ export type UserProfileResponse = {
   displayName: string;
   bio?: string | null;
   location?: string | null;
+  website?: string | null;
   avatarUrl?: string | null;
   bannerUrl?: string | null;
   createdAt: string;
