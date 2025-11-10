@@ -23,6 +23,9 @@ export const metadata: Metadata = {
   description: "Static mock of an X-style home feed built with Next.js and Tailwind",
 };
 
+// Force dynamic rendering since we use session
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: Readonly<{

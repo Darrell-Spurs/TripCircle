@@ -59,6 +59,9 @@ const SUGGESTIONS = [
   { name: "St. Louis Cardinals", handle: "@Cardjinals" },
 ];
 
+// Force dynamic rendering since we use session
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const session = await getServerSession(authOptions);
   
