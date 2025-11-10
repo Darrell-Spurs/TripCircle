@@ -109,7 +109,7 @@ export function Timeline() {
     isLoading,
     isError,
     refetch,
-  } = useTimeline(activeTab, isAuthenticated);
+  } = useTimeline(activeTab);
 
   const createPost = useCreatePost();
   const toggleLike = useToggleLike();
