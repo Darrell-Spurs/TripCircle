@@ -9,8 +9,7 @@ export type NavKey =
   | "communities"
   | "premium"
   | "profile"
-  | "more"
-  | "post";
+  | "more";
 
 type NavDefinition = {
   key: NavKey;
