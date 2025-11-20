@@ -19,9 +19,17 @@ type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | null | undefined>;
 };
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
+const RAW_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.API_URL ??
   "http://localhost:4000/api";
+
+const BASE_URL = RAW_BASE_URL.replace(/\/$/, "");
+
+if (typeof window !== "undefined") {
+  console.info("[API Client] Using API base URL", BASE_URL);
+}
 
 function buildUrl(path: string, query?: RequestOptions["query"]) {
   const url = new URL(path.replace(/^\//, ""), BASE_URL + "/");
