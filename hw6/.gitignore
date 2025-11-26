@@ -6,6 +6,9 @@ dist/
 .next/
 out/
 
+# Old Express server code (no longer needed)
+src/
+
 # Environment variables
 .env
 .env.local

@@ -53,8 +53,8 @@ export async function generateResponse(
       },
     ];
 
-    const model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
-    const maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || '500', 10);
+    const model = process.env.OPENAI_MODEL || 'gpt-5-nano';
+    const maxTokens = parseInt(process.env.OPENAI_MAX_COMPLETION_TOKENS || '2500', 10);
 
     const completion = await openai.chat.completions.create({
       model: model,

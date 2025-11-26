@@ -27,19 +27,25 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-2xl font-bold text-indigo-600 hover:text-indigo-700">
-                🤖 LINE Chatbot
+              <Link href="/" className="text-2xl font-bold text-orange-600 hover:text-orange-700">
+                🍽️ Food Tracker
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link href="/" className={linkClass('/')}>
                 Dashboard
               </Link>
-              <Link href="/conversations" className={linkClass('/conversations')}>
-                Conversations
+              <Link href="/reviews" className={linkClass('/reviews')}>
+                Reviews
+              </Link>
+              <Link href="/restaurants" className={linkClass('/restaurants')}>
+                Restaurants
               </Link>
               <Link href="/stats" className={linkClass('/stats')}>
                 Statistics
+              </Link>
+              <Link href="/conversations" className={linkClass('/conversations')}>
+                Conversations
               </Link>
             </div>
           </div>

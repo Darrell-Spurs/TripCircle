@@ -1,16 +1,20 @@
-# LINE Chatbot Server with OpenAI Integration
+# AI 食記助手 (AI Food Review Assistant)
 
-A backend server for a LINE Chatbot that uses OpenAI's API to generate intelligent responses to user messages.
+A LINE Chatbot that helps users record and manage restaurant reviews. Users can send food review messages, and the bot extracts key information (restaurant name, rating, tags, price, meal type) using AI, then stores it in a database with a management dashboard.
 
 ## Features
 
-- Receives messages from LINE Chatbot via webhook
-- Processes text messages using OpenAI API
-- Maintains conversation context and history
-- Stores all conversations in MongoDB
-- Sends AI-generated responses back to LINE users
-- Handles webhook signature verification for security
-- Graceful error handling with rate limit and quota management
+- **LINE Bot Integration**: Receives food review messages from LINE users
+- **AI-Powered Extraction**: Uses OpenAI to extract restaurant name, summary, tags, rating, price, and meal type from user messages
+- **Follow-up Questions**: Asks users for missing information (price, meal type) when not provided
+- **MongoDB Storage**: Stores all reviews, restaurants, and user statistics
+- **Management Dashboard**: Next.js web interface to view:
+  - All reviews with filtering options
+  - Restaurant statistics and aggregated data
+  - User statistics
+  - Tag frequency and distribution
+  - Price and meal type analytics
+- **Real-time Updates**: Dashboard updates automatically with new reviews
 
 ## Prerequisites
 
@@ -48,9 +52,8 @@ Fill in the following values:
 - **LINE_CHANNEL_ACCESS_TOKEN**: Get this from your LINE Developers Console (Messaging API > Channel access token)
 - **MONGODB_URI**: Your MongoDB Atlas connection string (see MONGODB_SETUP.md)
 - **OPENAI_API_KEY**: Get this from [OpenAI Platform](https://platform.openai.com/api-keys)
-- **OPENAI_MODEL**: (Optional) The OpenAI model to use (default: `gpt-3.5-turbo`)
-- **OPENAI_MAX_TOKENS**: (Optional) Maximum tokens for responses (default: `500`)
-- **OPENAI_SYSTEM_PROMPT**: (Optional) Custom system prompt for the AI
+- **OPENAI_MODEL**: (Optional) The OpenAI model to use (default: `gpt-5-nano`)
+- **OPENAI_MAX_COMPLETION_TOKENS**: (Optional) Maximum completion tokens for responses (default: `800`)
 
 ### 4. LINE Bot Configuration
 
@@ -58,7 +61,7 @@ Fill in the following values:
 2. Create a new provider and channel (Messaging API)
 3. In your channel settings:
    - Enable "Webhook"
-   - Set the webhook URL to: `https://323f071ed0f9.ngrok-free.app/webhook`
+   - Set the webhook URL to your deployed URL or ngrok URL: `https://your-domain.com/api/webhook`
    - Disable "Auto-reply messages" (optional, but recommended)
    - Enable "Webhook" in the Messaging API settings
 
@@ -72,15 +75,17 @@ For local development, you'll need to expose your local server to the internet:
 ngrok http 3000
 ```
 
-Use the HTTPS URL provided by ngrok as your webhook URL in LINE Developers Console.
+Use the HTTPS URL provided by ngrok as your webhook URL in LINE Developers Console: `https://your-ngrok-url.ngrok-free.app/api/webhook`
 
-## Running the Server
+## Running the Application
 
 ### Development Mode
 
 ```bash
 npm run dev
 ```
+
+The application will start on `http://localhost:3000`
 
 ### Production Mode
 
@@ -89,59 +94,90 @@ npm run build
 npm start
 ```
 
-The server will start on `http://localhost:3000` (or the port specified in `.env`).
-
-## API Endpoints
-
-- `GET /health` - Health check endpoint
-- `POST /webhook` - LINE webhook endpoint (receives messages from LINE)
-
 ## How It Works
 
-1. User sends a message to your LINE Bot
-2. LINE sends a webhook event to `/webhook` endpoint
+1. User sends a food review message to your LINE Bot (e.g., "今天去吃八方雲集，總共140元，鍋貼超好吃")
+2. LINE sends a webhook event to `/api/webhook` endpoint
 3. Server verifies the webhook signature
-4. Server saves the user message to MongoDB
-5. Server retrieves conversation history from MongoDB (last 10 messages)
-6. Server sends the message + history to OpenAI API for context-aware responses
-7. Server receives the AI-generated response
-8. Server saves the AI response to MongoDB
-9. Server sends the response back to the user via LINE Messaging API
+4. Server detects if the message is a food review
+5. Server uses OpenAI to extract:
+   - Restaurant name
+   - Summary (50-100 characters)
+   - Tags (好吃, 便宜, 服務佳, etc.)
+   - Rating (1-5)
+   - Price level (高/中/便宜)
+   - Price amount (if mentioned)
+   - Meal type (breakfast/lunch/dinner)
+6. If information is missing, bot asks follow-up questions
+7. Server saves the review to MongoDB
+8. Server updates restaurant and user statistics
+9. Server sends confirmation message back to user
 
 ## Database Schema
 
-The application uses MongoDB to store conversations:
+The application uses MongoDB to store:
 
-- **Conversation**: Contains user ID and array of messages
-- **Message**: Contains role (user/assistant), content, and timestamp
-
-Conversation history is automatically limited to the last 20 messages to manage token usage.
+- **Review**: Individual food reviews with restaurant name, summary, tags, rating, price, meal type
+- **Restaurant**: Aggregated statistics per restaurant (total reviews, average rating, tag counts, price distribution)
+- **UserStats**: User-specific statistics (total reviews, favorite tags)
+- **Conversation**: Full conversation history for context
+- **PendingReview**: Temporary storage for incomplete reviews during follow-up questions
 
 ## Project Structure
 
 ```
 hw6/
-├── src/
-│   ├── app.ts                    # Express app setup
-│   ├── server.ts                 # Server entry point
-│   ├── routes/
-│   │   └── webhook.routes.ts     # LINE webhook handler
-│   ├── services/
-│   │   ├── openai.service.ts     # OpenAI API integration
-│   │   └── conversation.service.ts # Conversation/DB operations
-│   ├── models/
-│   │   ├── Conversation.ts       # MongoDB Conversation model
-│   │   └── Message.ts            # MongoDB Message model
-│   ├── utils/
-│   │   └── db.ts                 # MongoDB connection utility
-│   └── middleware/
-│       └── error.middleware.ts   # Error handling
+├── app/
+│   ├── api/
+│   │   ├── webhook/          # LINE webhook handler
+│   │   ├── reviews/          # Review CRUD endpoints
+│   │   ├── restaurants/      # Restaurant endpoints
+│   │   ├── stats/            # Statistics endpoints
+│   │   ├── conversations/    # Conversation endpoints
+│   │   └── users/            # User endpoints
+│   ├── components/           # React components
+│   ├── reviews/             # Reviews page
+│   ├── restaurants/          # Restaurants page
+│   ├── conversations/        # Conversations page
+│   └── stats/               # Statistics page
+├── lib/
+│   ├── models/              # MongoDB models
+│   ├── services/            # Business logic services
+│   └── utils/               # Utility functions
 ├── package.json
 ├── tsconfig.json
-├── env.template                  # Environment variables template
-├── MONGODB_SETUP.md             # MongoDB Atlas setup guide
+├── next.config.mjs
+├── tailwind.config.ts
+├── env.template
+├── MONGODB_SETUP.md
 └── README.md
 ```
+
+## API Endpoints
+
+- `GET /api/health` - Health check endpoint
+- `POST /api/webhook` - LINE webhook endpoint
+- `GET /api/reviews` - List reviews with filters
+- `GET /api/reviews/[id]` - Get a specific review
+- `GET /api/restaurants` - List all restaurants
+- `GET /api/restaurants/[name]` - Get restaurant details
+- `GET /api/stats/reviews` - Get review statistics
+- `GET /api/stats` - Get conversation statistics
+- `GET /api/tags` - Get tag frequency
+- `GET /api/users` - List users
+- `GET /api/users/[id]/reviews` - Get user's reviews
+- `GET /api/conversations` - List conversations
+- `GET /api/conversations/[id]` - Get conversation details
+
+## Dashboard Pages
+
+- `/` - Homepage with overview statistics
+- `/reviews` - List all reviews with filtering
+- `/restaurants` - List all restaurants with statistics
+- `/restaurants/[name]` - Restaurant detail page
+- `/conversations` - List all conversations
+- `/conversations/[id]` - Conversation detail page
+- `/stats` - Detailed statistics page
 
 ## Troubleshooting
 
@@ -156,6 +192,7 @@ hw6/
 - Verify your `OPENAI_API_KEY` is valid
 - Check your OpenAI account has sufficient credits
 - Ensure the API key has the necessary permissions
+- If using `gpt-5-nano`, note that it's a reasoning model that may use all tokens for reasoning
 
 ### Messages Not Being Received
 
@@ -166,11 +203,21 @@ hw6/
 ### MongoDB Connection Issues
 
 - Verify `MONGODB_URI` is correctly set in `.env`
-- Check that your IP address is whitelisted in MongoDB Atlas Network Access
+- Check that your IP address is whitelisted in MongoDB Atlas Network Access (use `0.0.0.0/0` for Vercel deployment)
 - Ensure database user credentials are correct
 - See [MONGODB_SETUP.md](./MONGODB_SETUP.md) for detailed setup instructions
+
+## Deployment
+
+### Vercel
+
+1. Push your code to GitHub
+2. Import your repository in Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy
+
+Make sure to whitelist `0.0.0.0/0` in MongoDB Atlas Network Access for Vercel deployment.
 
 ## License
 
 ISC
-
