@@ -64,7 +64,11 @@ export async function processFollowUpAnswer(
 
     // Update pending review and ask next question
     pendingReview.missingFields = newMissingFields;
-    pendingReview.extractedData = extracted;
+    // Ensure originalMessage is set
+    pendingReview.extractedData = {
+      ...extracted,
+      originalMessage: extracted.originalMessage || '',
+    };
     await pendingReview.save();
 
     return {
@@ -120,7 +124,11 @@ export async function processFollowUpAnswer(
 
     // Update pending review and ask next question
     pendingReview.missingFields = newMissingFields;
-    pendingReview.extractedData = extracted;
+    // Ensure originalMessage is set
+    pendingReview.extractedData = {
+      ...extracted,
+      originalMessage: extracted.originalMessage || '',
+    };
     await pendingReview.save();
 
     return {
@@ -175,7 +183,10 @@ export async function savePendingReview(
   // Create new pending review
   const pendingReview = new PendingReview({
     userId,
-    extractedData: extracted,
+    extractedData: {
+      ...extracted,
+      originalMessage: extracted.originalMessage || '',
+    },
     missingFields,
     expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
   });

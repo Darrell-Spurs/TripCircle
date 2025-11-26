@@ -45,9 +45,16 @@ export async function getRestaurantByName(name: string) {
   // Convert tagCounts Map to object
   const tagCounts: { [key: string]: number } = {};
   if (restaurant.tagCounts) {
-    restaurant.tagCounts.forEach((value, key) => {
-      tagCounts[key] = value;
-    });
+    // tagCounts is a Mongoose Map, convert to plain object
+    const tagCountsMap = restaurant.tagCounts as unknown as Map<string, number> | { [key: string]: number };
+    if (tagCountsMap instanceof Map) {
+      tagCountsMap.forEach((value, key) => {
+        tagCounts[key] = value;
+      });
+    } else {
+      // If it's already a plain object
+      Object.assign(tagCounts, tagCountsMap);
+    }
   }
 
   return {

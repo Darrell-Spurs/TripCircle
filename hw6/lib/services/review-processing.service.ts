@@ -117,8 +117,14 @@ export async function updateRestaurantStats(
 
   // Update tag counts
   reviewData.tags.forEach((tag) => {
-    const currentCount = (restaurant.tagCounts.get(tag) as number) || 0;
-    restaurant.tagCounts.set(tag, currentCount + 1);
+    // tagCounts is a Mongoose Map, handle it properly
+    const tagCountsMap = restaurant.tagCounts as unknown as Map<string, number>;
+    const currentCount = (tagCountsMap instanceof Map ? tagCountsMap.get(tag) : (tagCountsMap as any)[tag]) || 0;
+    if (tagCountsMap instanceof Map) {
+      tagCountsMap.set(tag, currentCount + 1);
+    } else {
+      (tagCountsMap as any)[tag] = currentCount + 1;
+    }
   });
 
   // Update price range

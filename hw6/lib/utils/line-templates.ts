@@ -102,19 +102,43 @@ export function createCarouselTemplate(
       type: 'carousel',
       columns: columns.slice(0, 10).map( // 最多 10 個 columns
         (col) => {
-          // 驗證和清理 actions，確保格式正確
+          // 驗證和清理 actions，確保格式正確，所有 action 都必須有 label
           const cleanedActions = col.actions.slice(0, 3).map((action) => {
             if (action.type === 'message') {
               const messageAction = action as any;
               // 確保 label 拼寫正確，並清理屬性
               return {
-                type: 'message',
+                type: 'message' as const,
                 label: messageAction.label || messageAction.labbel || '', // 處理可能的拼寫錯誤
                 text: String(messageAction.text || '').substring(0, 300),
-              } as MessageAction;
+              };
+            } else if (action.type === 'uri') {
+              const uriAction = action as URIAction;
+              return {
+                type: 'uri' as const,
+                label: (uriAction as any).label || '',
+                uri: uriAction.uri,
+              };
+            } else if (action.type === 'postback') {
+              const postbackAction = action as PostbackAction;
+              return {
+                type: 'postback' as const,
+                label: (postbackAction as any).label || '',
+                data: postbackAction.data,
+                ...(postbackAction.displayText && { displayText: postbackAction.displayText }),
+              };
             }
-            return action;
-          });
+            // Fallback: ensure label exists (should not reach here, but handle gracefully)
+            const fallbackAction = action as any;
+            return {
+              type: fallbackAction.type || 'message',
+              label: fallbackAction.label || '',
+              ...(fallbackAction.text && { text: fallbackAction.text }),
+              ...(fallbackAction.uri && { uri: fallbackAction.uri }),
+              ...(fallbackAction.data && { data: fallbackAction.data }),
+              ...(fallbackAction.displayText && { displayText: fallbackAction.displayText }),
+            };
+          }) as Array<(MessageAction | URIAction | PostbackAction) & { label: string }>;
           
           return {
             title: col.title.substring(0, 40), // title 最多 40 字元

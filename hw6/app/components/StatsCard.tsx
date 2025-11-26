@@ -2,7 +2,7 @@ interface StatsCardProps {
   title: string;
   value: string | number;
   icon: string;
-  color: 'blue' | 'green' | 'purple' | 'orange';
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'yellow';
 }
 
 export default function StatsCard({ title, value, icon, color }: StatsCardProps) {
@@ -11,6 +11,7 @@ export default function StatsCard({ title, value, icon, color }: StatsCardProps)
     green: 'bg-green-50 border-green-200 text-green-800',
     purple: 'bg-purple-50 border-purple-200 text-purple-800',
     orange: 'bg-orange-50 border-orange-200 text-orange-800',
+    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
   };
 
   return (
