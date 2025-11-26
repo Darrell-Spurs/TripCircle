@@ -230,14 +230,25 @@ export async function POST(req: NextRequest) {
                     await savePendingReview(userId, processed, missingFields);
                     const followUpText = generateFollowUpQuestion(missingFields, processed);
                     const { createQuickReply } = await import('@/lib/utils/line-templates');
-                    replyMessage = createQuickReply(followUpText, [
-                      { label: '高', text: '高' },
-                      { label: '中', text: '中' },
-                      { label: '便宜', text: '便宜' },
-                      { label: '早餐', text: '早餐' },
-                      { label: '午餐', text: '午餐' },
-                      { label: '晚餐', text: '晚餐' },
-                    ]);
+                    
+                    // Generate Quick Reply options based on missing fields
+                    const quickReplyItems: Array<{ label: string; text: string }> = [];
+                    if (missingFields.includes('price')) {
+                      quickReplyItems.push(
+                        { label: '高', text: '高' },
+                        { label: '中', text: '中' },
+                        { label: '便宜', text: '便宜' }
+                      );
+                    }
+                    if (missingFields.includes('mealType')) {
+                      quickReplyItems.push(
+                        { label: '早餐', text: '早餐' },
+                        { label: '午餐', text: '午餐' },
+                        { label: '晚餐', text: '晚餐' }
+                      );
+                    }
+                    
+                    replyMessage = createQuickReply(followUpText, quickReplyItems);
                     console.log('[Webhook] Asked follow-up question for:', missingFields);
                   } else {
                     // All info complete - save review

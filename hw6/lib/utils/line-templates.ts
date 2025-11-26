@@ -400,8 +400,8 @@ export function createRestaurantInfoButtons(restaurant: {
   const tagsText = topTags.length > 0 ? topTags.join('、') : '無';
   
   // 直接使用最緊湊的格式，避免超過 120 字元
-  // 格式：⭐X.X/5 📝X則 💰高:X中:X低:X 🍴早:X午:X晚:X 🏷️標籤
-  let text = `⭐${restaurant.averageRating.toFixed(1)}/5 | ${restaurant.totalReviews}則\n💰高:${restaurant.priceRange.high} 中:${restaurant.priceRange.medium} 低:${restaurant.priceRange.low}\n🍴早:${restaurant.mealTypeDistribution.breakfast} 午:${restaurant.mealTypeDistribution.lunch} 晚:${restaurant.mealTypeDistribution.dinner}\n🏷️${tagsText}`;
+  // 格式：⭐X.X/5 📝X則評論 💰高:X中:X低:X 🍴早:X午:X晚:X 🏷️標籤
+  let text = `⭐${restaurant.averageRating.toFixed(1)}/5 📝${restaurant.totalReviews}則評論\n💰高:${restaurant.priceRange.high} 中:${restaurant.priceRange.medium} 低:${restaurant.priceRange.low}\n🍴早:${restaurant.mealTypeDistribution.breakfast} 午:${restaurant.mealTypeDistribution.lunch} 晚:${restaurant.mealTypeDistribution.dinner}\n🏷️${tagsText}`;
   
   // 確保不超過 120 字元（考慮 emoji 可能被計算為多個字符）
   if (text.length > 120) {
