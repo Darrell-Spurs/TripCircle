@@ -270,44 +270,65 @@ export async function POST(req: NextRequest) {
                 // Handle as general chat
                 console.log('[Webhook] Handling as general chat');
                 
-                // Get conversation history for context
-                let conversationHistory: ChatMessage[] = [];
-                try {
-                  conversationHistory = await getConversationHistory(userId, 10);
-                  console.log(`[Webhook] Retrieved ${conversationHistory.length} messages from conversation history`);
-                } catch (dbError) {
-                  console.error('[Webhook] Error retrieving conversation history:', dbError);
-                  conversationHistory = []; // Use empty history if DB fails
-                }
-
-                // If user has no conversation history (first time user), show main menu
-                if (conversationHistory.length === 0) {
-                  console.log('[Webhook] First-time user, showing main menu');
-                  const { createMainMenu } = await import('@/lib/utils/line-templates');
-                  replyMessage = createMainMenu();
-                } else {
-                  // Generate response using OpenAI
-                  try {
-                    console.log('[Webhook] Calling OpenAI API...');
-                    const aiResponse = await generateResponse(userMessage, conversationHistory);
-                    console.log(`[Webhook] Generated response: ${aiResponse}`);
-                    
-                    // Add quick reply options with main menu
-                    const { createQuickReply } = await import('@/lib/utils/line-templates');
-                    replyMessage = createQuickReply(aiResponse, [
+                // Detect if message is in English (simple detection)
+                const isEnglish = /^[a-zA-Z\s.,!?'"-]+$/.test(userMessage.trim()) && 
+                                 userMessage.trim().length > 0 &&
+                                 !/[一-龯]/.test(userMessage); // No Chinese characters
+                
+                if (isEnglish) {
+                  console.log('[Webhook] Detected English message, redirecting to Chinese');
+                  const { createQuickReply } = await import('@/lib/utils/line-templates');
+                  replyMessage = createQuickReply(
+                    '你好！我是 Food Tracker 食記助手。我主要幫助你記錄餐廳食記，請使用繁體中文與我對話。\n\n你可以：\n• 分享用餐體驗（例如：「今天去吃八方雲集，鍋貼超好吃」）\n• 查看你的食記\n• 查詢餐廳資訊\n• 查看統計數據',
+                    [
                       { label: '📋 我的食記', text: '我的食記' },
                       { label: '📝 記錄食記', text: '記錄食記' },
                       { label: '🍽️ 餐廳查詢', text: '餐廳查詢' },
                       { label: '📊 統計資訊', text: '統計資訊' },
                       { label: '🌐 查看網站', text: '查看網站' },
                       { label: '❓ 幫助', text: '幫助' },
-                    ]);
-                  } catch (error) {
-                    console.error('[Webhook] Error generating response:', error);
-                    
-                    // On error, show main menu instead
+                    ]
+                  );
+                } else {
+                  // Get conversation history for context
+                  let conversationHistory: ChatMessage[] = [];
+                  try {
+                    conversationHistory = await getConversationHistory(userId, 10);
+                    console.log(`[Webhook] Retrieved ${conversationHistory.length} messages from conversation history`);
+                  } catch (dbError) {
+                    console.error('[Webhook] Error retrieving conversation history:', dbError);
+                    conversationHistory = []; // Use empty history if DB fails
+                  }
+
+                  // If user has no conversation history (first time user), show main menu
+                  if (conversationHistory.length === 0) {
+                    console.log('[Webhook] First-time user, showing main menu');
                     const { createMainMenu } = await import('@/lib/utils/line-templates');
                     replyMessage = createMainMenu();
+                  } else {
+                    // Generate response using OpenAI
+                    try {
+                      console.log('[Webhook] Calling OpenAI API...');
+                      const aiResponse = await generateResponse(userMessage, conversationHistory);
+                      console.log(`[Webhook] Generated response: ${aiResponse}`);
+                      
+                      // Add quick reply options with main menu
+                      const { createQuickReply } = await import('@/lib/utils/line-templates');
+                      replyMessage = createQuickReply(aiResponse, [
+                        { label: '📋 我的食記', text: '我的食記' },
+                        { label: '📝 記錄食記', text: '記錄食記' },
+                        { label: '🍽️ 餐廳查詢', text: '餐廳查詢' },
+                        { label: '📊 統計資訊', text: '統計資訊' },
+                        { label: '🌐 查看網站', text: '查看網站' },
+                        { label: '❓ 幫助', text: '幫助' },
+                      ]);
+                    } catch (error) {
+                      console.error('[Webhook] Error generating response:', error);
+                      
+                      // On error, show main menu instead
+                      const { createMainMenu } = await import('@/lib/utils/line-templates');
+                      replyMessage = createMainMenu();
+                    }
                   }
                 }
               }
