@@ -159,19 +159,17 @@ export function createCarouselTemplate(
  * Get website URL based on environment
  */
 function getWebsiteUrl(): string {
-  // Check if we're in production (Vercel)
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  // Check for custom production URL
+  // Priority 1: Check for custom production URL (user-defined, takes precedence)
   if (process.env.NEXT_PUBLIC_WEBSITE_URL) {
     return process.env.NEXT_PUBLIC_WEBSITE_URL;
   }
-  // Check if we're in development
+  // Priority 2: Check if we're in development
   if (process.env.NODE_ENV === 'development') {
     return 'http://localhost:3000';
   }
-  // Default to production URL
+  // Priority 3: Use default production URL (custom domain)
+  // Note: We don't use VERCEL_URL here because Vercel auto-generates it
+  // and it might not be the custom domain you want
   return 'https://wp1141-kappa-nine.vercel.app';
 }
 
