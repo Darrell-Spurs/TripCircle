@@ -1,6 +1,7 @@
-import { useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import { useSharedTrip } from '../hooks/useShare'
-import { Link } from 'react-router-dom'
+import { trackEvent } from '../lib/amplitude'
 
 export default function ShareTrip() {
   const { token } = useParams<{ token: string }>()
