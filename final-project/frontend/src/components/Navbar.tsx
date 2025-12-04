@@ -23,7 +23,7 @@ export default function Navbar() {
               to="/dashboard"
               className="text-gray-700 hover:text-indigo-600 transition"
             >
-              Dashboard
+              My Trips
             </Link>
             <Link
               to="/explore"

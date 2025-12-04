@@ -128,5 +128,94 @@ router.get('/:token', authenticateOptional, async (req: AuthRequest, res: Respon
   });
 });
 
+// Import a shared trip to user's own account
+router.post('/:token/import', authenticate, async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const { token } = req.params;
+
+  try {
+    const shareLink = await prisma.shareLink.findUnique({
+      where: { token },
+      include: {
+        trip: {
+          include: {
+            activities: { orderBy: { orderIndex: 'asc' } },
+          },
+        },
+      },
+    });
+
+    if (!shareLink) {
+      res.status(404).json({ detail: 'Share link not found' });
+      return;
+    }
+
+    if (shareLink.expiresAt && shareLink.expiresAt < new Date()) {
+      res.status(410).json({ detail: 'Share link has expired' });
+      return;
+    }
+
+    const sourceTrip = shareLink.trip;
+
+    // Create new trip for the user (don't copy body/story - user should write their own)
+    const newTrip = await prisma.trip.create({
+      data: {
+        ownerId: req.user.id,
+        title: `${sourceTrip.title} (Imported)`,
+        description: sourceTrip.description,
+        // body is intentionally not copied - user should write their own story
+        coverImage: sourceTrip.coverImage,
+        startDate: sourceTrip.startDate,
+        endDate: sourceTrip.endDate,
+        status: 'planning', // Reset status to planning
+        isPublished: false, // Don't publish imported trips
+      },
+    });
+
+    // Add user as owner member
+    await prisma.tripMember.create({
+      data: {
+        tripId: newTrip.id,
+        userId: req.user.id,
+        role: 'owner',
+      },
+    });
+
+    // Copy all activities (notes are copied, but body/story is not)
+    if (sourceTrip.activities.length > 0) {
+      await prisma.activity.createMany({
+        data: sourceTrip.activities.map((a) => ({
+          tripId: newTrip.id,
+          date: a.date,
+          startTime: a.startTime,
+          endTime: a.endTime,
+          title: a.title,
+          notes: a.notes,
+          // body is intentionally not copied - user should write their own story
+          placeId: a.placeId,
+          locationName: a.locationName,
+          address: a.address,
+          lat: a.lat,
+          lng: a.lng,
+          orderIndex: a.orderIndex,
+        })),
+      });
+    }
+
+    res.json({
+      message: 'Trip imported successfully',
+      tripId: newTrip.id,
+      title: newTrip.title,
+    });
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ detail: 'Failed to import trip' });
+  }
+});
+
 export default router;
 

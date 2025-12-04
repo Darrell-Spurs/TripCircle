@@ -1,12 +1,38 @@
 import { useEffect, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useSharedTrip } from '../hooks/useShare'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useSharedTrip, useImportSharedTrip } from '../hooks/useShare'
+import { useAuth } from '../context/AuthContext'
 import { trackEvent } from '../lib/amplitude'
 import { Activity } from '../types'
 
 export default function ShareTrip() {
   const { token } = useParams<{ token: string }>()
+  const navigate = useNavigate()
+  const { user, isGuest } = useAuth()
   const { data, isLoading } = useSharedTrip(token || '')
+  const importTrip = useImportSharedTrip()
+
+  const isLoggedIn = !!user && !isGuest
+
+  const handleImport = async () => {
+    if (!token) return
+    
+    if (!isLoggedIn) {
+      // Redirect to login with return URL
+      alert('Please login to import this trip')
+      navigate('/auth/login')
+      return
+    }
+
+    try {
+      const result = await importTrip.mutateAsync(token)
+      trackEvent('trip_imported', { sourceToken: token, newTripId: result.tripId })
+      alert(`Trip "${result.title}" imported successfully!`)
+      navigate(`/trips/${result.tripId}`)
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to import trip')
+    }
+  }
 
   // Format time without seconds
   const formatTime = (timeStr?: string | null) => {
@@ -84,8 +110,22 @@ export default function ShareTrip() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-4">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-4 flex justify-between items-center">
           <p className="text-sm text-gray-600">Shared Trip - Read Only</p>
+          <button
+            onClick={handleImport}
+            disabled={importTrip.isPending}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 text-sm flex items-center gap-2"
+          >
+            {importTrip.isPending ? (
+              'Importing...'
+            ) : (
+              <>
+                <span>📥</span>
+                Import to My Trips
+              </>
+            )}
+          </button>
         </div>
 
         {trip.coverImage && (

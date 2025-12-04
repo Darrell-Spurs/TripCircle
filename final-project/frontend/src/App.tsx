@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
-import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import GoogleCallback from './pages/GoogleCallback'
@@ -13,6 +12,8 @@ import CreateTrip from './pages/CreateTrip'
 import Explore from './pages/Explore'
 import ShareTrip from './pages/ShareTrip'
 import AdminAnalytics from './pages/AdminAnalytics'
+import Feed from './pages/Feed'
+import FeedTripDetail from './pages/FeedTripDetail'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,7 +31,8 @@ function App() {
         <BrowserRouter>
           <Navbar />
           <Routes>
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<Feed />} />
+            <Route path="/feed/:id" element={<FeedTripDetail />} />
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
             <Route path="/auth/callback" element={<GoogleCallback />} />
