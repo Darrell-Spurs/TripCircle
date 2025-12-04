@@ -218,29 +218,18 @@ export default function TripDetail() {
 
           {days.map((date) => {
             const activities = activitiesByDate[date] || []
-            const defaultOrderIndex = activities.length
 
             return (
-              <div key={date}>
-                <div className="flex justify-between items-center mb-2">
-                  {canEdit && (
-                    <button
-                      onClick={() => handleAddActivity(date)}
-                      className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-                    >
-                      + Add Activity
-                    </button>
-                  )}
-                </div>
-                <ItineraryDay
-                  date={date}
-                  activities={activities}
-                  onEdit={handleEditActivity}
-                  onDelete={handleDeleteActivity}
-                  onReorder={handleReorder}
-                  canEdit={canEdit}
-                />
-              </div>
+              <ItineraryDay
+                key={date}
+                date={date}
+                activities={activities}
+                onEdit={handleEditActivity}
+                onDelete={handleDeleteActivity}
+                onReorder={handleReorder}
+                onAddActivity={() => handleAddActivity(date)}
+                canEdit={canEdit}
+              />
             )
           })}
         </div>

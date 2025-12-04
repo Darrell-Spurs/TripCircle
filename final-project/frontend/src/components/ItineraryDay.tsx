@@ -26,6 +26,7 @@ interface ItineraryDayProps {
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
   onReorder: (activityIds: number[]) => void
+  onAddActivity?: () => void
   canEdit: boolean
 }
 
@@ -68,6 +69,7 @@ export default function ItineraryDay({
   onEdit,
   onDelete,
   onReorder,
+  onAddActivity,
   canEdit,
 }: ItineraryDayProps) {
   const sensors = useSensors(
@@ -99,7 +101,17 @@ export default function ItineraryDay({
 
   return (
     <div className="mb-8">
-      <h3 className="text-xl font-bold mb-4">{formattedDate}</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold">{formattedDate}</h3>
+        {canEdit && onAddActivity && (
+          <button
+            onClick={onAddActivity}
+            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+          >
+            + Add Activity
+          </button>
+        )}
+      </div>
       
       {activities.length === 0 ? (
         <p className="text-gray-500 text-sm">No activities planned for this day</p>
