@@ -23,6 +23,7 @@ export default function ActivityModal({
   const [formData, setFormData] = useState({
     title: '',
     notes: '',
+    body: '',
     startTime: '',
     endTime: '',
     locationName: '',
@@ -41,6 +42,7 @@ export default function ActivityModal({
       setFormData({
         title: activity.title,
         notes: activity.notes || '',
+        body: activity.body || '',
         startTime: extractTime(activity.startTime),
         endTime: extractTime(activity.endTime),
         locationName: activity.locationName || '',
@@ -50,6 +52,7 @@ export default function ActivityModal({
       setFormData({
         title: '',
         notes: '',
+        body: '',
         startTime: '',
         endTime: '',
         locationName: '',
@@ -74,6 +77,7 @@ export default function ActivityModal({
       date,
       title: formData.title,
       notes: formData.notes || undefined,
+      body: formData.body || undefined,
       startTime: combineDateTime(date, formData.startTime),
       endTime: combineDateTime(date, formData.endTime),
       locationName: formData.locationName || undefined,
@@ -178,9 +182,24 @@ export default function ActivityModal({
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
+              rows={2}
+              placeholder="Quick notes for planning..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Story (for feed)
+            </label>
+            <textarea
+              value={formData.body}
+              onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+              rows={3}
+              placeholder="Share your experience at this place when publishing to feed..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">This will be shown when the trip is published</p>
           </div>
 
           <div className="flex gap-4 pt-4">

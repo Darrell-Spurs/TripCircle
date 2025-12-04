@@ -10,10 +10,13 @@ export interface Trip {
   id: number
   title: string
   description?: string
+  body?: string
   coverImage?: string
   startDate: string
   endDate: string
   status: string
+  isPublished?: boolean
+  publishedAt?: string | null
   ownerId: number
   isOwner?: boolean
   role?: string
@@ -39,6 +42,7 @@ export interface Activity {
   endTime?: string
   title: string
   notes?: string
+  body?: string
   placeId?: string
   locationName?: string
   address?: string
@@ -50,6 +54,7 @@ export interface Activity {
 export interface CreateTripData {
   title: string
   description?: string
+  body?: string
   coverImage?: string
   startDate: string
   endDate: string
@@ -59,9 +64,52 @@ export interface CreateTripData {
 export interface UpdateTripData {
   title?: string
   description?: string
+  body?: string
   coverImage?: string
   startDate?: string
   endDate?: string
   status?: string
+}
+
+// Feed types
+export interface FeedTrip {
+  id: number
+  title: string
+  description?: string
+  body?: string
+  coverImage?: string
+  startDate: string
+  endDate: string
+  status: string
+  publishedAt?: string
+  owner: {
+    id: number
+    name: string
+    avatarUrl?: string
+  }
+  activitiesCount: number
+  activitiesPreview: {
+    id: number
+    title: string
+    locationName?: string
+  }[]
+}
+
+export interface FeedTripDetail {
+  id: number
+  title: string
+  description?: string
+  body?: string
+  coverImage?: string
+  startDate: string
+  endDate: string
+  status: string
+  publishedAt?: string
+  owner: {
+    id: number
+    name: string
+    avatarUrl?: string
+  }
+  activities: Activity[]
 }
 

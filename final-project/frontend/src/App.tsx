@@ -13,6 +13,8 @@ import CreateTrip from './pages/CreateTrip'
 import Explore from './pages/Explore'
 import ShareTrip from './pages/ShareTrip'
 import AdminAnalytics from './pages/AdminAnalytics'
+import Feed from './pages/Feed'
+import FeedTripDetail from './pages/FeedTripDetail'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +33,8 @@ function App() {
           <Navbar />
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/feed" element={<Feed />} />
+            <Route path="/feed/:id" element={<FeedTripDetail />} />
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
             <Route path="/auth/callback" element={<GoogleCallback />} />
