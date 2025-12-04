@@ -20,16 +20,10 @@ export default function Navbar() {
           
           <div className="flex items-center gap-4">
             <Link
-              to="/feed"
-              className="text-gray-700 hover:text-indigo-600 transition"
-            >
-              Feed
-            </Link>
-            <Link
               to="/dashboard"
               className="text-gray-700 hover:text-indigo-600 transition"
             >
-              Dashboard
+              My Trips
             </Link>
             <Link
               to="/explore"
