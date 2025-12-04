@@ -5,11 +5,17 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+// Helper to validate date strings (accepts both "YYYY-MM-DD" and ISO datetime formats)
+const dateStringSchema = z.string().refine(
+  (val) => !isNaN(Date.parse(val)),
+  { message: 'Invalid datetime' }
+);
+
 const activityCreateSchema = z.object({
   tripId: z.number(),
-  date: z.string().datetime(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
+  date: dateStringSchema,
+  startTime: dateStringSchema.optional(),
+  endTime: dateStringSchema.optional(),
   title: z.string().min(1),
   notes: z.string().optional(),
   placeId: z.string().optional(),
@@ -21,9 +27,9 @@ const activityCreateSchema = z.object({
 });
 
 const activityUpdateSchema = z.object({
-  date: z.string().datetime().optional(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
+  date: dateStringSchema.optional(),
+  startTime: dateStringSchema.optional(),
+  endTime: dateStringSchema.optional(),
   title: z.string().min(1).optional(),
   notes: z.string().optional(),
   placeId: z.string().optional(),

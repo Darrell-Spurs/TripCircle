@@ -5,12 +5,18 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+// Helper to validate date strings (accepts both "YYYY-MM-DD" and ISO datetime formats)
+const dateStringSchema = z.string().refine(
+  (val) => !isNaN(Date.parse(val)),
+  { message: 'Invalid datetime' }
+);
+
 const tripCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   coverImage: z.string().url().optional().or(z.literal('')),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  startDate: dateStringSchema,
+  endDate: dateStringSchema,
   status: z.string().default('planning'),
 });
 
@@ -18,8 +24,8 @@ const tripUpdateSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
   coverImage: z.string().url().optional().or(z.literal('')),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: dateStringSchema.optional(),
+  endDate: dateStringSchema.optional(),
   status: z.string().optional(),
 });
 
@@ -29,14 +35,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const ownedTrips = await prisma.trip.findMany({
-    where: { ownerId: req.user.id },
-    include: {
-      members: { include: { user: true } },
-      activities: true,
-    },
-  });
-
+  // Fetch all trips where user is a member (includes owned trips since owner is also a member)
   const memberTrips = await prisma.tripMember.findMany({
     where: { userId: req.user.id },
     include: {
@@ -49,36 +48,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     },
   });
 
-  const trips = [
-    ...ownedTrips.map((trip) => ({
-      id: trip.id,
-      title: trip.title,
-      description: trip.description,
-      coverImage: trip.coverImage,
-      startDate: trip.startDate.toISOString(),
-      endDate: trip.endDate.toISOString(),
-      status: trip.status,
-      ownerId: trip.ownerId,
-      isOwner: true,
-      role: 'owner' as const,
-      createdAt: trip.createdAt.toISOString(),
-      updatedAt: trip.updatedAt.toISOString(),
-    })),
-    ...memberTrips.map((member) => ({
-      id: member.trip.id,
-      title: member.trip.title,
-      description: member.trip.description,
-      coverImage: member.trip.coverImage,
-      startDate: member.trip.startDate.toISOString(),
-      endDate: member.trip.endDate.toISOString(),
-      status: member.trip.status,
-      ownerId: member.trip.ownerId,
-      isOwner: false,
-      role: member.role,
-      createdAt: member.trip.createdAt.toISOString(),
-      updatedAt: member.trip.updatedAt.toISOString(),
-    })),
-  ];
+  const trips = memberTrips.map((member) => ({
+    id: member.trip.id,
+    title: member.trip.title,
+    description: member.trip.description,
+    coverImage: member.trip.coverImage,
+    startDate: member.trip.startDate.toISOString(),
+    endDate: member.trip.endDate.toISOString(),
+    status: member.trip.status,
+    ownerId: member.trip.ownerId,
+    isOwner: member.trip.ownerId === req.user!.id,
+    role: member.role,
+    createdAt: member.trip.createdAt.toISOString(),
+    updatedAt: member.trip.updatedAt.toISOString(),
+  }));
 
   res.json({ trips });
 });
