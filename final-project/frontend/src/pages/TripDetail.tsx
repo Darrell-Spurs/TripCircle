@@ -37,6 +37,12 @@ export default function TripDetail() {
   const unpublishTrip = useUnpublishTrip()
   const [tripBody, setTripBody] = useState('')
   const [isEditingBody, setIsEditingBody] = useState(false)
+  
+  // Trip details editing state
+  const [isEditingDetails, setIsEditingDetails] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editCoverImage, setEditCoverImage] = useState('')
 
   const canEdit = !isGuest && (trip?.role === 'owner' || trip?.role === 'editor')
   const isOwner = !isGuest && trip?.role === 'owner'
@@ -47,6 +53,40 @@ export default function TripDetail() {
       setTripBody(trip.body || '')
     }
   }, [trip?.body])
+
+  // Sync trip details with edit state when trip loads
+  useEffect(() => {
+    if (trip) {
+      setEditTitle(trip.title)
+      setEditDescription(trip.description || '')
+      setEditCoverImage(trip.coverImage || '')
+    }
+  }, [trip])
+
+  const handleSaveDetails = async () => {
+    try {
+      await updateTrip.mutateAsync({
+        tripId,
+        data: {
+          title: editTitle,
+          description: editDescription,
+          coverImage: editCoverImage,
+        },
+      })
+      setIsEditingDetails(false)
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to save')
+    }
+  }
+
+  const handleCancelEditDetails = () => {
+    if (trip) {
+      setEditTitle(trip.title)
+      setEditDescription(trip.description || '')
+      setEditCoverImage(trip.coverImage || '')
+    }
+    setIsEditingDetails(false)
+  }
 
   // Generate days from trip date range
   const days = useMemo(() => {
@@ -151,36 +191,117 @@ export default function TripDetail() {
           </Link>
         </div>
 
-        {trip.coverImage && (
-          <img
-            src={trip.coverImage}
-            alt={trip.title}
-            className="w-full h-64 object-cover rounded-lg mb-6"
-          />
+        {/* Cover Image */}
+        {isEditingDetails ? (
+          <div className="mb-6">
+            {editCoverImage && (
+              <img
+                src={editCoverImage}
+                alt="Cover preview"
+                className="w-full h-64 object-cover rounded-lg mb-2"
+              />
+            )}
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cover Image URL
+              </label>
+              <input
+                type="url"
+                value={editCoverImage}
+                onChange={(e) => setEditCoverImage(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+          </div>
+        ) : (
+          trip.coverImage && (
+            <img
+              src={trip.coverImage}
+              alt={trip.title}
+              className="w-full h-64 object-cover rounded-lg mb-6"
+            />
+          )
         )}
 
+        {/* Trip Details */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold mb-2">{trip.title}</h1>
-          {trip.description && (
-            <p className="text-gray-600 mb-4">{trip.description}</p>
+          {isEditingDetails ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Describe your trip..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={handleSaveDetails}
+                  disabled={updateTrip.isPending || !editTitle.trim()}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                >
+                  {updateTrip.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={handleCancelEditDetails}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-start mb-2">
+                <h1 className="text-3xl font-bold">{trip.title}</h1>
+                {canEdit && (
+                  <button
+                    onClick={() => setIsEditingDetails(true)}
+                    className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                  >
+                    Edit Details
+                  </button>
+                )}
+              </div>
+              {trip.description && (
+                <p className="text-gray-600 mb-4">{trip.description}</p>
+              )}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                <p>
+                  <span className="font-semibold">Dates:</span>{' '}
+                  {new Date(trip.startDate).toLocaleDateString()} -{' '}
+                  {new Date(trip.endDate).toLocaleDateString()}
+                </p>
+                <p>
+                  <span className="font-semibold">Status:</span>{' '}
+                  <span className="capitalize">{trip.status}</span>
+                </p>
+                {trip.role && (
+                  <p>
+                    <span className="font-semibold">Your Role:</span>{' '}
+                    <span className="capitalize">{trip.role}</span>
+                  </p>
+                )}
+              </div>
+            </>
           )}
-          <div className="flex gap-4 text-sm text-gray-500">
-            <p>
-              <span className="font-semibold">Dates:</span>{' '}
-              {new Date(trip.startDate).toLocaleDateString()} -{' '}
-              {new Date(trip.endDate).toLocaleDateString()}
-            </p>
-            <p>
-              <span className="font-semibold">Status:</span>{' '}
-              <span className="capitalize">{trip.status}</span>
-            </p>
-            {trip.role && (
-              <p>
-                <span className="font-semibold">Your Role:</span>{' '}
-                <span className="capitalize">{trip.role}</span>
-              </p>
-            )}
-          </div>
         </div>
 
         {(isOwner || (members && members.length > 0)) && (
