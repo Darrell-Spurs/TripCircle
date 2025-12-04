@@ -29,13 +29,20 @@ export default function ActivityModal({
     address: '',
   })
 
+  // Extract time (HH:MM) from a datetime string
+  const extractTime = (dateTimeStr: string | null | undefined): string => {
+    if (!dateTimeStr) return ''
+    const d = new Date(dateTimeStr)
+    return d.toTimeString().slice(0, 5) // "HH:MM"
+  }
+
   useEffect(() => {
     if (activity) {
       setFormData({
         title: activity.title,
         notes: activity.notes || '',
-        startTime: activity.startTime ? new Date(activity.startTime).toISOString().slice(0, 16) : '',
-        endTime: activity.endTime ? new Date(activity.endTime).toISOString().slice(0, 16) : '',
+        startTime: extractTime(activity.startTime),
+        endTime: extractTime(activity.endTime),
         locationName: activity.locationName || '',
         address: activity.address || '',
       })
@@ -53,6 +60,13 @@ export default function ActivityModal({
 
   if (!isOpen) return null
 
+  // Combine date and time into ISO string
+  const combineDateTime = (dateStr: string, timeStr: string): string | undefined => {
+    if (!timeStr) return undefined
+    // dateStr is "YYYY-MM-DD", timeStr is "HH:MM"
+    return new Date(`${dateStr}T${timeStr}:00`).toISOString()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const data: any = {
@@ -60,8 +74,8 @@ export default function ActivityModal({
       date,
       title: formData.title,
       notes: formData.notes || undefined,
-      startTime: formData.startTime ? new Date(formData.startTime).toISOString() : undefined,
-      endTime: formData.endTime ? new Date(formData.endTime).toISOString() : undefined,
+      startTime: combineDateTime(date, formData.startTime),
+      endTime: combineDateTime(date, formData.endTime),
       locationName: formData.locationName || undefined,
       address: formData.address || undefined,
       orderIndex: activity?.orderIndex ?? defaultOrderIndex,
@@ -82,9 +96,17 @@ export default function ActivityModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h2 className="text-2xl font-bold mb-4">
+        <h2 className="text-2xl font-bold mb-1">
           {activity ? 'Edit Activity' : 'Add Activity'}
         </h2>
+        <p className="text-sm text-gray-500 mb-4">
+          {new Date(date + 'T00:00:00').toLocaleDateString(undefined, { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -105,7 +127,7 @@ export default function ActivityModal({
                 Start Time
               </label>
               <input
-                type="datetime-local"
+                type="time"
                 value={formData.startTime}
                 onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
@@ -117,7 +139,7 @@ export default function ActivityModal({
                 End Time
               </label>
               <input
-                type="datetime-local"
+                type="time"
                 value={formData.endTime}
                 onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
