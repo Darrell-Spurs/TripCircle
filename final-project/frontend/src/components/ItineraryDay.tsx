@@ -27,6 +27,7 @@ interface ItineraryDayProps {
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
   onReorder: (activityIds: number[]) => void
+  onAddActivity?: () => void
   canEdit: boolean
 }
 
@@ -52,13 +53,33 @@ function SortableActivityItem({ activity, onEdit, onDelete, canEdit }: {
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <ActivityCard
-        activity={activity}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        canEdit={canEdit}
-      />
+    <div ref={setNodeRef} style={style} {...attributes} className="flex gap-2 items-start">
+      {/* Drag handle - only this part is draggable */}
+      {canEdit && (
+        <div
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-2 text-gray-400 hover:text-gray-600 touch-none"
+          title="Drag to reorder"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="9" cy="6" r="1.5" />
+            <circle cx="15" cy="6" r="1.5" />
+            <circle cx="9" cy="12" r="1.5" />
+            <circle cx="15" cy="12" r="1.5" />
+            <circle cx="9" cy="18" r="1.5" />
+            <circle cx="15" cy="18" r="1.5" />
+          </svg>
+        </div>
+      )}
+      {/* Activity card - clicks work normally */}
+      <div className="flex-1">
+        <ActivityCard
+          activity={activity}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          canEdit={canEdit}
+        />
+      </div>
     </div>
   )
 }
@@ -69,6 +90,7 @@ export default function ItineraryDay({
   onEdit,
   onDelete,
   onReorder,
+  onAddActivity,
   canEdit,
 }: ItineraryDayProps) {
   const { t, language } = useLanguage()
@@ -103,7 +125,17 @@ export default function ItineraryDay({
 
   return (
     <div className="mb-8">
-      <h3 className="text-xl font-bold mb-4">{formattedDate}</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold">{formattedDate}</h3>
+        {canEdit && onAddActivity && (
+          <button
+            onClick={onAddActivity}
+            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+          >
+            + Add Activity
+          </button>
+        )}
+      </div>
       
       {activities.length === 0 ? (
         <p className="text-gray-500 text-sm">{t.activity.noActivitiesForDay}</p>

@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
-import { useState, useMemo } from 'react'
-import { useTrip } from '../hooks/useTrips'
+import { useState, useMemo, useEffect } from 'react'
+import { useTrip, useUpdateTrip } from '../hooks/useTrips'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import {
@@ -13,6 +13,7 @@ import {
 } from '../hooks/useActivities'
 import { useTripMembers } from '../hooks/useMembers'
 import { useCreateShareLink } from '../hooks/useShare'
+import { usePublishTrip, useUnpublishTrip } from '../hooks/useFeed'
 import ItineraryDay from '../components/ItineraryDay'
 import ActivityModal from '../components/ActivityModal'
 import MemberList from '../components/MemberList'
@@ -36,9 +37,62 @@ export default function TripDetail() {
   const reorderActivities = useReorderActivities()
   const { data: members } = useTripMembers(tripId)
   const createShareLink = useCreateShareLink()
+  const updateTrip = useUpdateTrip()
+  const publishTrip = usePublishTrip()
+  const unpublishTrip = useUnpublishTrip()
+  const [tripBody, setTripBody] = useState('')
+  const [isEditingBody, setIsEditingBody] = useState(false)
+  const [allowImports, setAllowImports] = useState(false)
+  
+  // Trip details editing state
+  const [isEditingDetails, setIsEditingDetails] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editCoverImage, setEditCoverImage] = useState('')
 
   const canEdit = !isGuest && (trip?.role === 'owner' || trip?.role === 'editor')
   const isOwner = !isGuest && trip?.role === 'owner'
+
+  // Sync trip body with state
+  useEffect(() => {
+    if (trip?.body !== undefined) {
+      setTripBody(trip.body || '')
+    }
+  }, [trip?.body])
+
+  // Sync trip details with edit state when trip loads
+  useEffect(() => {
+    if (trip) {
+      setEditTitle(trip.title)
+      setEditDescription(trip.description || '')
+      setEditCoverImage(trip.coverImage || '')
+    }
+  }, [trip])
+
+  const handleSaveDetails = async () => {
+    try {
+      await updateTrip.mutateAsync({
+        tripId,
+        data: {
+          title: editTitle,
+          description: editDescription,
+          coverImage: editCoverImage,
+        },
+      })
+      setIsEditingDetails(false)
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to save')
+    }
+  }
+
+  const handleCancelEditDetails = () => {
+    if (trip) {
+      setEditTitle(trip.title)
+      setEditDescription(trip.description || '')
+      setEditCoverImage(trip.coverImage || '')
+    }
+    setIsEditingDetails(false)
+  }
 
   // Generate days from trip date range
   const days = useMemo(() => {
@@ -177,55 +231,117 @@ export default function TripDetail() {
           </Link>
         </div>
 
-        {trip.coverImage && (
-          <img
-            src={trip.coverImage}
-            alt={trip.title}
-            className="w-full h-64 object-cover rounded-lg mb-6"
-          />
+        {/* Cover Image */}
+        {isEditingDetails ? (
+          <div className="mb-6">
+            {editCoverImage && (
+              <img
+                src={editCoverImage}
+                alt="Cover preview"
+                className="w-full h-64 object-cover rounded-lg mb-2"
+              />
+            )}
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cover Image URL
+              </label>
+              <input
+                type="url"
+                value={editCoverImage}
+                onChange={(e) => setEditCoverImage(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+          </div>
+        ) : (
+          trip.coverImage && (
+            <img
+              src={trip.coverImage}
+              alt={trip.title}
+              className="w-full h-64 object-cover rounded-lg mb-6"
+            />
+          )
         )}
 
+        {/* Trip Details */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold mb-2">{trip.title}</h1>
-          {trip.description && (
-            <p className="text-gray-600 mb-4">{trip.description}</p>
+          {isEditingDetails ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Describe your trip..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={handleSaveDetails}
+                  disabled={updateTrip.isPending || !editTitle.trim()}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                >
+                  {updateTrip.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={handleCancelEditDetails}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-start mb-2">
+                <h1 className="text-3xl font-bold">{trip.title}</h1>
+                {canEdit && (
+                  <button
+                    onClick={() => setIsEditingDetails(true)}
+                    className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                  >
+                    Edit Details
+                  </button>
+                )}
+              </div>
+              {trip.description && (
+                <p className="text-gray-600 mb-4">{trip.description}</p>
+              )}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                <p>
+                  <span className="font-semibold">Dates:</span>{' '}
+                  {new Date(trip.startDate).toLocaleDateString()} -{' '}
+                  {new Date(trip.endDate).toLocaleDateString()}
+                </p>
+                <p>
+                  <span className="font-semibold">Status:</span>{' '}
+                  <span className="capitalize">{trip.status}</span>
+                </p>
+                {trip.role && (
+                  <p>
+                    <span className="font-semibold">Your Role:</span>{' '}
+                    <span className="capitalize">{trip.role}</span>
+                  </p>
+                )}
+              </div>
+            </>
           )}
-          <div className="flex gap-4 text-sm text-gray-500">
-            <p>
-              <span className="font-semibold">{t.trip.startDate} - {t.trip.endDate}:</span>{' '}
-              {(() => {
-                const start = new Date(trip.startDate)
-                const end = new Date(trip.endDate)
-                const startYear = start.getFullYear()
-                const startMonth = start.getMonth() + 1
-                const startDay = start.getDate()
-                const endYear = end.getFullYear()
-                const endMonth = end.getMonth() + 1
-                const endDay = end.getDate()
-                return `${startYear}/${startMonth}/${startDay} - ${endYear}/${endMonth}/${endDay}`
-              })()}
-            </p>
-            <p>
-              <span className="font-semibold">{t.trip.status}:</span>{' '}
-              <span className="capitalize">
-                {trip.status === 'planning' ? t.trip.planning :
-                 trip.status === 'upcoming' ? t.trip.upcoming :
-                 trip.status === 'ongoing' ? t.trip.ongoing :
-                 trip.status === 'completed' ? t.trip.completed :
-                 trip.status === 'cancelled' ? t.trip.cancelled : trip.status}
-              </span>
-            </p>
-            {trip.role && (
-              <p>
-                <span className="font-semibold">{t.dashboard.role}:</span>{' '}
-                <span className="capitalize">
-                  {trip.role === 'owner' ? t.trip.owner :
-                   trip.role === 'editor' ? t.trip.editor :
-                   trip.role === 'viewer' ? t.trip.viewer : trip.role}
-                </span>
-              </p>
-            )}
-          </div>
         </div>
 
         {(isOwner || (members && members.length > 0)) && (
@@ -269,6 +385,156 @@ export default function TripDetail() {
           </div>
         )}
 
+        {/* Publish to Feed Section */}
+        {isOwner && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">Publish to Feed</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Share your trip experience with the community
+                </p>
+              </div>
+              {trip.isPublished ? (
+                <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+                  ✓ Published
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
+                  Draft
+                </span>
+              )}
+            </div>
+
+            {/* Trip Body Editor */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Trip Story (for feed)
+              </label>
+              {isEditingBody ? (
+                <div>
+                  <textarea
+                    value={tripBody}
+                    onChange={(e) => setTripBody(e.target.value)}
+                    rows={6}
+                    placeholder="Share your trip experience, tips, and highlights..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await updateTrip.mutateAsync({
+                            tripId,
+                            data: { body: tripBody },
+                          })
+                          setIsEditingBody(false)
+                        } catch (error: any) {
+                          alert(error.response?.data?.detail || 'Failed to save')
+                        }
+                      }}
+                      disabled={updateTrip.isPending}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                    >
+                      {updateTrip.isPending ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTripBody(trip.body || '')
+                        setIsEditingBody(false)
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => setIsEditingBody(true)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition min-h-[100px]"
+                >
+                  {tripBody ? (
+                    <p className="text-gray-700 whitespace-pre-wrap">{tripBody}</p>
+                  ) : (
+                    <p className="text-gray-400">Click to add your trip story...</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Allow Imports Toggle (before publishing) */}
+            {!trip.isPublished && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowImports}
+                    onChange={(e) => setAllowImports(e.target.checked)}
+                    className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <span className="font-medium text-gray-700">Allow imports</span>
+                    <p className="text-sm text-gray-500">
+                      Let others import this trip as a template for their own trips
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
+            {/* Publish/Unpublish Button */}
+            <div className="flex gap-3">
+              {trip.isPublished ? (
+                <>
+                  <button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to unpublish this trip?')) {
+                        try {
+                          await unpublishTrip.mutateAsync(tripId)
+                        } catch (error: any) {
+                          alert(error.response?.data?.detail || 'Failed to unpublish')
+                        }
+                      }
+                    }}
+                    disabled={unpublishTrip.isPending}
+                    className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                  >
+                    {unpublishTrip.isPending ? 'Unpublishing...' : 'Unpublish'}
+                  </button>
+                  <Link
+                    to={`/feed/${tripId}`}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                  >
+                    View in Feed →
+                  </Link>
+                </>
+              ) : (
+                <button
+                  onClick={async () => {
+                    try {
+                      await publishTrip.mutateAsync({ tripId, allowImports })
+                      alert('Trip published to feed!')
+                    } catch (error: any) {
+                      alert(error.response?.data?.detail || 'Failed to publish')
+                    }
+                  }}
+                  disabled={publishTrip.isPending}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  {publishTrip.isPending ? 'Publishing...' : 'Publish to Feed'}
+                </button>
+              )}
+            </div>
+
+            {trip.publishedAt && (
+              <p className="text-xs text-gray-500 mt-3">
+                Published on {new Date(trip.publishedAt).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">{t.trip.activities}</h2>
@@ -296,133 +562,22 @@ export default function TripDetail() {
             </div>
           </div>
 
-          {viewMode === 'list' ? (
-            // List View
-            days.map((date) => {
-              const activities = activitiesByDate[date] || []
-              const defaultOrderIndex = activities.length
+          {days.map((date) => {
+            const activities = activitiesByDate[date] || []
 
-              return (
-                <div key={date}>
-                  <div className="flex justify-between items-center mb-2">
-                    {canEdit && (
-                      <button
-                        onClick={() => handleAddActivity(date)}
-                        className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-                      >
-                        + {t.activity.addActivity}
-                      </button>
-                    )}
-                  </div>
-                  <ItineraryDay
-                    date={date}
-                    activities={activities}
-                    onEdit={handleEditActivity}
-                    onDelete={handleDeleteActivity}
-                    onReorder={handleReorder}
-                    canEdit={canEdit}
-                  />
-                </div>
-              )
-            })
-          ) : (
-            // Calendar View
-            <div className="grid grid-cols-7 gap-2">
-              {/* Calendar Header */}
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="text-center font-semibold text-gray-700 py-2">
-                  {day}
-                </div>
-              ))}
-              {/* Calendar Days */}
-              {(() => {
-                if (!trip) return null
-                // Parse dates using local timezone
-                const start = new Date(trip.startDate)
-                const end = new Date(trip.endDate)
-                
-                // Get local date components
-                const startYear = start.getFullYear()
-                const startMonth = start.getMonth()
-                const startDay = start.getDate()
-                
-                const endYear = end.getFullYear()
-                const endMonth = end.getMonth()
-                const endDay = end.getDate()
-                
-                const startDate = new Date(startYear, startMonth, startDay)
-                const endDate = new Date(endYear, endMonth, endDay)
-                const startDayOfWeek = startDate.getDay()
-                const calendarDays: (string | null)[] = []
-                
-                // Add empty cells for days before trip starts
-                for (let i = 0; i < startDayOfWeek; i++) {
-                  calendarDays.push(null)
-                }
-                
-                // Add trip days
-                const current = new Date(startDate)
-                while (current <= endDate) {
-                  const year = current.getFullYear()
-                  const month = String(current.getMonth() + 1).padStart(2, '0')
-                  const day = String(current.getDate()).padStart(2, '0')
-                  calendarDays.push(`${year}-${month}-${day}`)
-                  current.setDate(current.getDate() + 1)
-                }
-                
-                return calendarDays.map((date, idx) => {
-                  if (!date) {
-                    return <div key={`empty-${idx}`} className="aspect-square"></div>
-                  }
-                  const dayActivities = activitiesByDate[date] || []
-                  const dateObj = new Date(date)
-                  const dayNumber = dateObj.getDate()
-                  const isToday = date === new Date().toISOString().split('T')[0]
-                  
-                  return (
-                    <div
-                      key={date}
-                      className={`aspect-square border border-gray-200 rounded p-2 ${
-                        isToday ? 'bg-indigo-50 border-indigo-300' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={`text-sm font-medium ${isToday ? 'text-indigo-600' : 'text-gray-700'}`}>
-                          {dayNumber}
-                        </span>
-                        {canEdit && (
-                          <button
-                            onClick={() => handleAddActivity(date)}
-                            className="text-indigo-600 hover:text-indigo-700 text-xs"
-                            title={t.activity.addActivity}
-                          >
-                            +
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-1 overflow-y-auto max-h-20">
-                        {dayActivities.slice(0, 3).map((activity) => (
-                          <div
-                            key={activity.id}
-                            className="text-xs bg-indigo-100 text-indigo-800 rounded px-1 py-0.5 truncate cursor-pointer hover:bg-indigo-200"
-                            onClick={() => handleEditActivity(activity)}
-                            title={activity.title}
-                          >
-                            {activity.title}
-                          </div>
-                        ))}
-                        {dayActivities.length > 3 && (
-                          <div className="text-xs text-gray-500">
-                            +{dayActivities.length - 3} {t.activity.more}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })
-              })()}
-            </div>
-          )}
+            return (
+              <ItineraryDay
+                key={date}
+                date={date}
+                activities={activities}
+                onEdit={handleEditActivity}
+                onDelete={handleDeleteActivity}
+                onReorder={handleReorder}
+                onAddActivity={() => handleAddActivity(date)}
+                canEdit={canEdit}
+              />
+            )
+          })}
         </div>
 
         <ActivityModal

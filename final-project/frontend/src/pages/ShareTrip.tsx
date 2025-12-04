@@ -1,10 +1,82 @@
-import { useParams } from 'react-router-dom'
-import { useSharedTrip } from '../hooks/useShare'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useSharedTrip, useImportSharedTrip } from '../hooks/useShare'
+import { useAuth } from '../context/AuthContext'
+import { trackEvent } from '../lib/amplitude'
+import { Activity } from '../types'
 
 export default function ShareTrip() {
   const { token } = useParams<{ token: string }>()
+  const navigate = useNavigate()
+  const { user, isGuest } = useAuth()
   const { data, isLoading } = useSharedTrip(token || '')
+  const importTrip = useImportSharedTrip()
+
+  const isLoggedIn = !!user && !isGuest
+
+  const handleImport = async () => {
+    if (!token) return
+    
+    if (!isLoggedIn) {
+      // Redirect to login with return URL
+      alert('Please login to import this trip')
+      navigate('/auth/login')
+      return
+    }
+
+    try {
+      const result = await importTrip.mutateAsync(token)
+      trackEvent('trip_imported', { sourceToken: token, newTripId: result.tripId })
+      alert(`Trip "${result.title}" imported successfully!`)
+      navigate(`/trips/${result.tripId}`)
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to import trip')
+    }
+  }
+
+  // Format time without seconds
+  const formatTime = (timeStr?: string | null) => {
+    if (!timeStr) return ''
+    const date = new Date(timeStr)
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+
+  // Group activities by date (only dates with activities)
+  const activitiesByDate = useMemo(() => {
+    if (!data?.trip?.activities) return {}
+    const grouped: Record<string, Activity[]> = {}
+    
+    data.trip.activities.forEach((activity) => {
+      const date = new Date(activity.date).toISOString().split('T')[0]
+      if (!grouped[date]) {
+        grouped[date] = []
+      }
+      grouped[date].push(activity)
+    })
+    
+    // Sort activities by orderIndex within each day
+    Object.keys(grouped).forEach((date) => {
+      grouped[date].sort((a, b) => a.orderIndex - b.orderIndex)
+    })
+    
+    return grouped
+  }, [data?.trip?.activities])
+
+  // Get sorted dates that have activities
+  const datesWithActivities = useMemo(() => {
+    return Object.keys(activitiesByDate).sort()
+  }, [activitiesByDate])
+
+  // Format date for display
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00')
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  }
 
   useEffect(() => {
     if (token && data) {
@@ -38,8 +110,22 @@ export default function ShareTrip() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-4">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-4 flex justify-between items-center">
           <p className="text-sm text-gray-600">Shared Trip - Read Only</p>
+          <button
+            onClick={handleImport}
+            disabled={importTrip.isPending}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 text-sm flex items-center gap-2"
+          >
+            {importTrip.isPending ? (
+              'Importing...'
+            ) : (
+              <>
+                <span>📥</span>
+                Import to My Trips
+              </>
+            )}
+          </button>
         </div>
 
         {trip.coverImage && (
@@ -69,27 +155,33 @@ export default function ShareTrip() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold mb-4">Itinerary</h2>
-          {trip.activities && trip.activities.length > 0 ? (
-            <div className="space-y-4">
-              {trip.activities.map((activity) => (
-                <div key={activity.id} className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-lg mb-2">{activity.title}</h4>
-                  {activity.startTime && activity.endTime && (
-                    <p className="text-sm text-gray-600 mb-2">
-                      {new Date(activity.startTime).toLocaleTimeString()} -{' '}
-                      {new Date(activity.endTime).toLocaleTimeString()}
-                    </p>
-                  )}
-                  {activity.locationName && (
-                    <p className="text-sm text-gray-600 mb-2">
-                      📍 {activity.locationName}
-                      {activity.address && <span className="text-gray-500"> - {activity.address}</span>}
-                    </p>
-                  )}
-                  {activity.notes && (
-                    <p className="text-sm text-gray-700 mt-2">{activity.notes}</p>
-                  )}
+          <h2 className="text-2xl font-bold mb-6">Itinerary</h2>
+          {datesWithActivities.length > 0 ? (
+            <div className="space-y-8">
+              {datesWithActivities.map((date) => (
+                <div key={date}>
+                  <h3 className="text-xl font-bold mb-4">{formatDate(date)}</h3>
+                  <div className="space-y-3">
+                    {activitiesByDate[date].map((activity) => (
+                      <div key={activity.id} className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-lg mb-2">{activity.title}</h4>
+                        {(activity.startTime || activity.endTime) && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            {formatTime(activity.startTime)} - {formatTime(activity.endTime)}
+                          </p>
+                        )}
+                        {activity.locationName && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            📍 {activity.locationName}
+                            {activity.address && <span className="text-gray-500"> - {activity.address}</span>}
+                          </p>
+                        )}
+                        {activity.notes && (
+                          <p className="text-sm text-gray-700 mt-2">{activity.notes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

@@ -44,3 +44,17 @@ export function useSharedTrip(token: string) {
   })
 }
 
+export function useImportSharedTrip() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (token: string) => {
+      const response = await api.post(`/share/${token}/import`)
+      return response.data as { message: string; tripId: number; title: string }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trips'] })
+    },
+  })
+}
+

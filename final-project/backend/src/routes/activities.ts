@@ -5,13 +5,20 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+// Helper to validate date strings (accepts both "YYYY-MM-DD" and ISO datetime formats)
+const dateStringSchema = z.string().refine(
+  (val) => !isNaN(Date.parse(val)),
+  { message: 'Invalid datetime' }
+);
+
 const activityCreateSchema = z.object({
   tripId: z.number(),
-  date: z.string().datetime(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
+  date: dateStringSchema,
+  startTime: dateStringSchema.optional(),
+  endTime: dateStringSchema.optional(),
   title: z.string().min(1),
   notes: z.string().optional(),
+  body: z.string().optional(),
   placeId: z.string().optional(),
   locationName: z.string().optional(),
   address: z.string().optional(),
@@ -21,11 +28,12 @@ const activityCreateSchema = z.object({
 });
 
 const activityUpdateSchema = z.object({
-  date: z.string().datetime().optional(),
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().optional(),
+  date: dateStringSchema.optional(),
+  startTime: dateStringSchema.optional(),
+  endTime: dateStringSchema.optional(),
   title: z.string().min(1).optional(),
   notes: z.string().optional(),
+  body: z.string().optional(),
   placeId: z.string().optional(),
   locationName: z.string().optional(),
   address: z.string().optional(),
@@ -85,6 +93,7 @@ router.post('/trips/:tripId/activities', authenticate, async (req: AuthRequest, 
         endTime: data.endTime ? new Date(data.endTime) : null,
         title: data.title,
         notes: data.notes || null,
+        body: data.body || null,
         placeId: data.placeId || null,
         locationName: data.locationName || null,
         address: data.address || null,
@@ -102,6 +111,7 @@ router.post('/trips/:tripId/activities', authenticate, async (req: AuthRequest, 
       endTime: activity.endTime?.toISOString() || null,
       title: activity.title,
       notes: activity.notes,
+      body: activity.body,
       placeId: activity.placeId,
       locationName: activity.locationName,
       address: activity.address,
@@ -160,6 +170,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     if (data.endTime !== undefined) updateData.endTime = data.endTime ? new Date(data.endTime) : null;
     if (data.title !== undefined) updateData.title = data.title;
     if (data.notes !== undefined) updateData.notes = data.notes || null;
+    if (data.body !== undefined) updateData.body = data.body || null;
     if (data.placeId !== undefined) updateData.placeId = data.placeId || null;
     if (data.locationName !== undefined) updateData.locationName = data.locationName || null;
     if (data.address !== undefined) updateData.address = data.address || null;
@@ -180,6 +191,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       endTime: updatedActivity.endTime?.toISOString() || null,
       title: updatedActivity.title,
       notes: updatedActivity.notes,
+      body: updatedActivity.body,
       placeId: updatedActivity.placeId,
       locationName: updatedActivity.locationName,
       address: updatedActivity.address,

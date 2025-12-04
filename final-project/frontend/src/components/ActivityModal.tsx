@@ -25,6 +25,7 @@ export default function ActivityModal({
   const [formData, setFormData] = useState({
     title: '',
     notes: '',
+    body: '',
     startTime: '',
     endTime: '',
     locationName: '',
@@ -32,14 +33,22 @@ export default function ActivityModal({
     noTime: false,
   })
 
+  // Extract time (HH:MM) from a datetime string
+  const extractTime = (dateTimeStr: string | null | undefined): string => {
+    if (!dateTimeStr) return ''
+    const d = new Date(dateTimeStr)
+    return d.toTimeString().slice(0, 5) // "HH:MM"
+  }
+
   useEffect(() => {
     if (activity) {
       const hasNoTime = !activity.startTime && !activity.endTime
       setFormData({
         title: activity.title,
         notes: activity.notes || '',
-        startTime: activity.startTime ? new Date(activity.startTime).toISOString().slice(0, 16) : '',
-        endTime: activity.endTime ? new Date(activity.endTime).toISOString().slice(0, 16) : '',
+        body: activity.body || '',
+        startTime: extractTime(activity.startTime),
+        endTime: extractTime(activity.endTime),
         locationName: activity.locationName || '',
         address: activity.address || '',
         noTime: hasNoTime,
@@ -48,6 +57,7 @@ export default function ActivityModal({
       setFormData({
         title: '',
         notes: '',
+        body: '',
         startTime: '',
         endTime: '',
         locationName: '',
@@ -59,6 +69,13 @@ export default function ActivityModal({
 
   if (!isOpen) return null
 
+  // Combine date and time into ISO string
+  const combineDateTime = (dateStr: string, timeStr: string): string | undefined => {
+    if (!timeStr) return undefined
+    // dateStr is "YYYY-MM-DD", timeStr is "HH:MM"
+    return new Date(`${dateStr}T${timeStr}:00`).toISOString()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const data: any = {
@@ -66,8 +83,9 @@ export default function ActivityModal({
       date,
       title: formData.title,
       notes: formData.notes || undefined,
-      startTime: formData.noTime ? undefined : (formData.startTime ? new Date(formData.startTime).toISOString() : undefined),
-      endTime: formData.noTime ? undefined : (formData.endTime ? new Date(formData.endTime).toISOString() : undefined),
+      body: formData.body || undefined,
+      startTime: combineDateTime(date, formData.startTime),
+      endTime: combineDateTime(date, formData.endTime),
       locationName: formData.locationName || undefined,
       address: formData.address || undefined,
       orderIndex: activity?.orderIndex ?? defaultOrderIndex,
@@ -86,52 +104,46 @@ export default function ActivityModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h2 className="text-2xl font-bold mb-4">
-          {activity ? 'Edit Activity' : 'Add Activity'}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.activity.title} *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
+        {/* Header - fixed */}
+        <div className="p-6 pb-4 border-b border-gray-100 flex-shrink-0">
+          <h2 className="text-2xl font-bold mb-1">
+            {activity ? 'Edit Activity' : 'Add Activity'}
+          </h2>
+          <p className="text-sm text-gray-500">
+            {new Date(date + 'T00:00:00').toLocaleDateString(undefined, { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
+        </div>
 
-          <div>
-            <label className="flex items-center gap-2 mb-2">
+        {/* Scrollable form content */}
+        <div className="flex-1 overflow-y-auto p-6 pt-4">
+          <form id="activity-form" onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title *
+              </label>
               <input
-                type="checkbox"
-                checked={formData.noTime}
-                onChange={(e) => {
-                  setFormData({ 
-                    ...formData, 
-                    noTime: e.target.checked,
-                    startTime: e.target.checked ? '' : formData.startTime,
-                    endTime: e.target.checked ? '' : formData.endTime,
-                  })
-                }}
-                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
-              <span className="text-sm text-gray-700">{t.activity.noAssignedTime}</span>
-            </label>
-          </div>
+            </div>
 
-          {!formData.noTime && (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.activity.startTime}
+                  Start Time
                 </label>
                 <input
-                  type="datetime-local"
+                  type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
@@ -140,70 +152,87 @@ export default function ActivityModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.activity.endTime}
+                  End Time
                 </label>
                 <input
-                  type="datetime-local"
+                  type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.activity.location}
-            </label>
-            <input
-              type="text"
-              value={formData.locationName}
-              onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location Name
+              </label>
+              <input
+                type="text"
+                value={formData.locationName}
+                onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.activity.address}
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Address
+              </label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.activity.notes}
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={2}
+                placeholder="Quick notes for planning..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
 
-          <div className="flex gap-4 pt-4">
-            <button
-              type="submit"
-              className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-            >
-              {activity ? t.common.update : t.common.create}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              {t.common.cancel}
-            </button>
-          </div>
-        </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Story (for feed)
+              </label>
+              <textarea
+                value={formData.body}
+                onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+                rows={3}
+                placeholder="Share your experience at this place when publishing to feed..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">This will be shown when the trip is published</p>
+            </div>
+          </form>
+        </div>
+
+        {/* Footer buttons - fixed at bottom, outside scrollable area */}
+        <div className="flex gap-4 p-6 pt-4 border-t border-gray-100 flex-shrink-0">
+          <button
+            type="submit"
+            form="activity-form"
+            className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+          >
+            {activity ? 'Update' : 'Create'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   )

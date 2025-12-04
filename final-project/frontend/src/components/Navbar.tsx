@@ -26,7 +26,11 @@ export default function Navbar() {
               to="/dashboard"
               className="text-gray-700 hover:text-indigo-600 transition"
             >
+<<<<<<< HEAD
               {t.nav.dashboard}
+=======
+              My Trips
+>>>>>>> 5db6c05c9cbb4e6c0abb8eee608ceeefef4ba9dd
             </Link>
             <Link
               to="/explore"
