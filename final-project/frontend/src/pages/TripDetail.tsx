@@ -37,6 +37,7 @@ export default function TripDetail() {
   const unpublishTrip = useUnpublishTrip()
   const [tripBody, setTripBody] = useState('')
   const [isEditingBody, setIsEditingBody] = useState(false)
+  const [allowImports, setAllowImports] = useState(false)
   
   // Trip details editing state
   const [isEditingDetails, setIsEditingDetails] = useState(false)
@@ -423,6 +424,26 @@ export default function TripDetail() {
               )}
             </div>
 
+            {/* Allow Imports Toggle (before publishing) */}
+            {!trip.isPublished && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowImports}
+                    onChange={(e) => setAllowImports(e.target.checked)}
+                    className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <span className="font-medium text-gray-700">Allow imports</span>
+                    <p className="text-sm text-gray-500">
+                      Let others import this trip as a template for their own trips
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
             {/* Publish/Unpublish Button */}
             <div className="flex gap-3">
               {trip.isPublished ? (
@@ -453,7 +474,7 @@ export default function TripDetail() {
                 <button
                   onClick={async () => {
                     try {
-                      await publishTrip.mutateAsync(tripId)
+                      await publishTrip.mutateAsync({ tripId, allowImports })
                       alert('Trip published to feed!')
                     } catch (error: any) {
                       alert(error.response?.data?.detail || 'Failed to publish')

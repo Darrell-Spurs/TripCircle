@@ -66,7 +66,7 @@ export default function FeedTripDetail() {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Trip not found</h2>
           <p className="text-gray-600 mb-4">This trip may not be published or doesn't exist.</p>
-          <Link to="/feed" className="text-indigo-600 hover:text-indigo-700">
+          <Link to="/" className="text-indigo-600 hover:text-indigo-700">
             ← Back to Feed
           </Link>
         </div>
@@ -79,7 +79,7 @@ export default function FeedTripDetail() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Back link */}
         <Link
-          to="/feed"
+          to="/"
           className="text-indigo-600 hover:text-indigo-700 mb-6 inline-block"
         >
           ← Back to Feed
@@ -96,7 +96,18 @@ export default function FeedTripDetail() {
 
         {/* Trip Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{trip.title}</h1>
+          <div className="flex justify-between items-start mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">{trip.title}</h1>
+            {trip.shareToken && (
+              <Link
+                to={`/share/${trip.shareToken}`}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm flex items-center gap-2 flex-shrink-0"
+              >
+                <span>📥</span>
+                View & Import
+              </Link>
+            )}
+          </div>
 
           {/* Author info */}
           <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">

@@ -37,11 +37,11 @@ export function usePublishTrip() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (tripId: number) => {
-      const response = await api.post(`/feed/${tripId}/publish`)
+    mutationFn: async ({ tripId, allowImports }: { tripId: number; allowImports: boolean }) => {
+      const response = await api.post(`/feed/${tripId}/publish`, { allowImports })
       return response.data
     },
-    onSuccess: (_, tripId) => {
+    onSuccess: (_, { tripId }) => {
       queryClient.invalidateQueries({ queryKey: ['trips', tripId] })
       queryClient.invalidateQueries({ queryKey: ['trips'] })
       queryClient.invalidateQueries({ queryKey: ['feed'] })
@@ -61,6 +61,20 @@ export function useUnpublishTrip() {
       queryClient.invalidateQueries({ queryKey: ['trips', tripId] })
       queryClient.invalidateQueries({ queryKey: ['trips'] })
       queryClient.invalidateQueries({ queryKey: ['feed'] })
+    },
+  })
+}
+
+export function useImportFeedTrip() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (tripId: number) => {
+      const response = await api.post(`/feed/${tripId}/import`)
+      return response.data as { message: string; tripId: number; title: string }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trips'] })
     },
   })
 }

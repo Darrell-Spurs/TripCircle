@@ -93,6 +93,16 @@ router.get('/:id', async (req, res: Response) => {
         activities: {
           orderBy: [{ date: 'asc' }, { orderIndex: 'asc' }],
         },
+        shareLinks: {
+          where: {
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } },
+            ],
+          },
+          orderBy: { id: 'desc' },
+          take: 1,
+        },
       },
     });
 
@@ -106,6 +116,9 @@ router.get('/:id', async (req, res: Response) => {
       return;
     }
 
+    // Get share token if available (for import functionality)
+    const shareToken = trip.shareLinks.length > 0 ? trip.shareLinks[0].token : null;
+
     res.json({
       id: trip.id,
       title: trip.title,
@@ -117,6 +130,7 @@ router.get('/:id', async (req, res: Response) => {
       status: trip.status,
       publishedAt: trip.publishedAt?.toISOString(),
       owner: trip.owner,
+      shareToken,
       activities: trip.activities.map((a) => ({
         id: a.id,
         tripId: a.tripId,
@@ -153,6 +167,9 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response
     return;
   }
 
+  // allowImports parameter controls whether a share link should exist
+  const allowImports = req.body.allowImports === true;
+
   try {
     const trip = await prisma.trip.findUnique({ where: { id: tripId } });
 
@@ -164,6 +181,32 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response
     if (trip.ownerId !== req.user.id) {
       res.status(403).json({ detail: 'Only the owner can publish this trip' });
       return;
+    }
+
+    // Handle share links based on allowImports setting
+    if (allowImports) {
+      // Check if a share link already exists
+      const existingLink = await prisma.shareLink.findFirst({
+        where: { tripId },
+      });
+      
+      // Create one if it doesn't exist
+      if (!existingLink) {
+        const { randomBytes } = await import('crypto');
+        const token = randomBytes(32).toString('hex');
+        await prisma.shareLink.create({
+          data: {
+            tripId,
+            token,
+            permission: 'view',
+          },
+        });
+      }
+    } else {
+      // Delete any existing share links if imports are not allowed
+      await prisma.shareLink.deleteMany({
+        where: { tripId },
+      });
     }
 
     const updatedTrip = await prisma.trip.update({
@@ -225,6 +268,93 @@ router.post('/:id/unpublish', authenticate, async (req: AuthRequest, res: Respon
   } catch (error) {
     console.error('Unpublish error:', error);
     res.status(500).json({ detail: 'Failed to unpublish trip' });
+  }
+});
+
+// Import a published trip to user's own account
+router.post('/:id/import', authenticate, async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const tripId = parseInt(req.params.id, 10);
+  if (isNaN(tripId)) {
+    res.status(400).json({ detail: 'Invalid trip ID' });
+    return;
+  }
+
+  try {
+    const sourceTrip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        activities: { orderBy: { orderIndex: 'asc' } },
+      },
+    });
+
+    if (!sourceTrip) {
+      res.status(404).json({ detail: 'Trip not found' });
+      return;
+    }
+
+    if (!sourceTrip.isPublished) {
+      res.status(403).json({ detail: 'This trip is not published and cannot be imported' });
+      return;
+    }
+
+    // Create new trip for the user (don't copy body/story - user should write their own)
+    const newTrip = await prisma.trip.create({
+      data: {
+        ownerId: req.user.id,
+        title: `${sourceTrip.title} (Imported)`,
+        description: sourceTrip.description,
+        // body is intentionally not copied - user should write their own story
+        coverImage: sourceTrip.coverImage,
+        startDate: sourceTrip.startDate,
+        endDate: sourceTrip.endDate,
+        status: 'planning', // Reset status to planning
+        isPublished: false, // Don't publish imported trips
+      },
+    });
+
+    // Add user as owner member
+    await prisma.tripMember.create({
+      data: {
+        tripId: newTrip.id,
+        userId: req.user.id,
+        role: 'owner',
+      },
+    });
+
+    // Copy all activities (notes are copied, but body/story is not)
+    if (sourceTrip.activities.length > 0) {
+      await prisma.activity.createMany({
+        data: sourceTrip.activities.map((a) => ({
+          tripId: newTrip.id,
+          date: a.date,
+          startTime: a.startTime,
+          endTime: a.endTime,
+          title: a.title,
+          notes: a.notes,
+          // body is intentionally not copied - user should write their own story
+          placeId: a.placeId,
+          locationName: a.locationName,
+          address: a.address,
+          lat: a.lat,
+          lng: a.lng,
+          orderIndex: a.orderIndex,
+        })),
+      });
+    }
+
+    res.json({
+      message: 'Trip imported successfully',
+      tripId: newTrip.id,
+      title: newTrip.title,
+    });
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ detail: 'Failed to import trip' });
   }
 });
 

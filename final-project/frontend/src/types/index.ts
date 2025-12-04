@@ -105,6 +105,7 @@ export interface FeedTripDetail {
   endDate: string
   status: string
   publishedAt?: string
+  shareToken?: string | null
   owner: {
     id: number
     name: string
