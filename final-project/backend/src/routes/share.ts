@@ -161,13 +161,13 @@ router.post('/:token/import', authenticate, async (req: AuthRequest, res: Respon
 
     const sourceTrip = shareLink.trip;
 
-    // Create new trip for the user
+    // Create new trip for the user (don't copy body/story - user should write their own)
     const newTrip = await prisma.trip.create({
       data: {
         ownerId: req.user.id,
         title: `${sourceTrip.title} (Imported)`,
         description: sourceTrip.description,
-        body: sourceTrip.body,
+        // body is intentionally not copied - user should write their own story
         coverImage: sourceTrip.coverImage,
         startDate: sourceTrip.startDate,
         endDate: sourceTrip.endDate,
@@ -185,7 +185,7 @@ router.post('/:token/import', authenticate, async (req: AuthRequest, res: Respon
       },
     });
 
-    // Copy all activities
+    // Copy all activities (notes are copied, but body/story is not)
     if (sourceTrip.activities.length > 0) {
       await prisma.activity.createMany({
         data: sourceTrip.activities.map((a) => ({
@@ -195,7 +195,7 @@ router.post('/:token/import', authenticate, async (req: AuthRequest, res: Respon
           endTime: a.endTime,
           title: a.title,
           notes: a.notes,
-          body: a.body,
+          // body is intentionally not copied - user should write their own story
           placeId: a.placeId,
           locationName: a.locationName,
           address: a.address,
