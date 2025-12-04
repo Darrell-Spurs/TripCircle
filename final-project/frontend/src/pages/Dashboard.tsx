@@ -1,15 +1,17 @@
 import { Link } from 'react-router-dom'
 import { useTrips, useDeleteTrip } from '../hooks/useTrips'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 import { Trip } from '../types'
 
 export default function Dashboard() {
   const { user, isGuest } = useAuth()
+  const { t } = useLanguage()
   const { data: trips, isLoading } = useTrips()
   const deleteTrip = useDeleteTrip()
 
   const handleDelete = async (tripId: number) => {
-    if (confirm('Are you sure you want to delete this trip?')) {
+    if (confirm(t.trip.deleteConfirm)) {
       await deleteTrip.mutateAsync(tripId)
     }
   }
@@ -17,7 +19,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">{t.common.loading}</div>
       </div>
     )
   }
@@ -27,10 +29,10 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">My Trips</h1>
+            <h1 className="text-3xl font-bold">{t.dashboard.myTrips}</h1>
             {isGuest && (
               <p className="text-sm text-gray-500 mt-1">
-                Browsing as guest - <Link to="/auth/login" className="text-indigo-600 hover:underline">Login</Link> to save your trips
+                {t.dashboard.browsingAsGuest}<Link to="/auth/login" className="text-indigo-600 hover:underline">{t.nav.login}</Link> {t.dashboard.loginToSave}
               </p>
             )}
           </div>
@@ -39,7 +41,7 @@ export default function Dashboard() {
               to="/trips/new"
               className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
             >
-              + New Trip
+              {t.dashboard.newTrip}
             </Link>
           )}
         </div>
@@ -47,51 +49,51 @@ export default function Dashboard() {
         {isGuest ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-md">
             <p className="text-gray-600 mb-4 text-lg">
-              Welcome! You're browsing as a guest.
+              {t.dashboard.welcomeGuest}
             </p>
             <p className="text-gray-500 mb-6">
-              To create and save trips, please sign up or log in.
+              {t.dashboard.welcomeGuestDesc}
             </p>
             <div className="space-x-4">
               <Link
                 to="/auth/login"
                 className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
               >
-                Login
+                {t.nav.login}
               </Link>
               <Link
                 to="/auth/register"
                 className="inline-block bg-white text-indigo-600 px-6 py-3 rounded-lg hover:bg-gray-50 transition border-2 border-indigo-600"
               >
-                Sign Up
+                {t.nav.signUp}
               </Link>
             </div>
             <div className="mt-6 pt-6 border-t">
-              <p className="text-sm text-gray-500 mb-4">You can still explore:</p>
+              <p className="text-sm text-gray-500 mb-4">{t.dashboard.youCanExplore}</p>
               <div className="space-x-4">
                 <Link
                   to="/explore"
                   className="inline-block text-indigo-600 hover:text-indigo-700 underline"
                 >
-                  Explore Places
+                  {t.dashboard.explorePlaces}
                 </Link>
                 <Link
                   to="/admin/analytics"
                   className="inline-block text-indigo-600 hover:text-indigo-700 underline"
                 >
-                  View Analytics
+                  {t.dashboard.viewAnalytics}
                 </Link>
               </div>
             </div>
           </div>
         ) : !trips || trips.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">No trips yet. Create your first trip!</p>
+            <p className="text-gray-600 mb-4">{t.dashboard.noTrips}</p>
             <Link
               to="/trips/new"
               className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
             >
-              Create Trip
+              {t.dashboard.createTrip}
             </Link>
           </div>
         ) : (
@@ -121,11 +123,11 @@ export default function Dashboard() {
                       {new Date(trip.endDate).toLocaleDateString()}
                     </p>
                     <p className="mt-1">
-                      Status: <span className="capitalize">{trip.status}</span>
+                      {t.dashboard.status}: <span className="capitalize">{trip.status}</span>
                     </p>
                     {trip.role && (
                       <p className="mt-1">
-                        Role: <span className="capitalize">{trip.role}</span>
+                        {t.dashboard.role}: <span className="capitalize">{trip.role}</span>
                       </p>
                     )}
                   </div>
@@ -134,14 +136,14 @@ export default function Dashboard() {
                       to={`/trips/${trip.id}`}
                       className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded text-center hover:bg-indigo-700 transition"
                     >
-                      View
+                      {t.common.view}
                     </Link>
                     {trip.isOwner && (
                       <button
                         onClick={() => handleDelete(trip.id)}
                         className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
                       >
-                        Delete
+                        {t.common.delete}
                       </button>
                     )}
                   </div>

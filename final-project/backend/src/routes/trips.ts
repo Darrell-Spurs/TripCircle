@@ -37,8 +37,15 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     },
   });
 
+  // Get owned trip IDs for filtering
+  const ownedTripIds = new Set(ownedTrips.map(trip => trip.id));
+
   const memberTrips = await prisma.tripMember.findMany({
-    where: { userId: req.user.id },
+    where: { 
+      userId: req.user.id,
+      // Exclude trips where user is already the owner
+      tripId: { notIn: Array.from(ownedTripIds) }
+    },
     include: {
       trip: {
         include: {
@@ -49,36 +56,48 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     },
   });
 
-  const trips = [
-    ...ownedTrips.map((trip) => ({
-      id: trip.id,
-      title: trip.title,
-      description: trip.description,
-      coverImage: trip.coverImage,
-      startDate: trip.startDate.toISOString(),
-      endDate: trip.endDate.toISOString(),
-      status: trip.status,
-      ownerId: trip.ownerId,
-      isOwner: true,
-      role: 'owner' as const,
-      createdAt: trip.createdAt.toISOString(),
-      updatedAt: trip.updatedAt.toISOString(),
-    })),
-    ...memberTrips.map((member) => ({
-      id: member.trip.id,
-      title: member.trip.title,
-      description: member.trip.description,
-      coverImage: member.trip.coverImage,
-      startDate: member.trip.startDate.toISOString(),
-      endDate: member.trip.endDate.toISOString(),
-      status: member.trip.status,
-      ownerId: member.trip.ownerId,
-      isOwner: false,
-      role: member.role,
-      createdAt: member.trip.createdAt.toISOString(),
-      updatedAt: member.trip.updatedAt.toISOString(),
-    })),
-  ];
+  // Map owned trips
+  const ownedTripsMap = new Map(
+    ownedTrips.map((trip) => [
+      trip.id,
+      {
+        id: trip.id,
+        title: trip.title,
+        description: trip.description,
+        coverImage: trip.coverImage,
+        startDate: trip.startDate.toISOString(),
+        endDate: trip.endDate.toISOString(),
+        status: trip.status,
+        ownerId: trip.ownerId,
+        isOwner: true,
+        role: 'owner' as const,
+        createdAt: trip.createdAt.toISOString(),
+        updatedAt: trip.updatedAt.toISOString(),
+      },
+    ])
+  );
+
+  // Add member trips (already filtered to exclude owned trips)
+  memberTrips.forEach((member) => {
+    if (!ownedTripsMap.has(member.trip.id)) {
+      ownedTripsMap.set(member.trip.id, {
+        id: member.trip.id,
+        title: member.trip.title,
+        description: member.trip.description,
+        coverImage: member.trip.coverImage,
+        startDate: member.trip.startDate.toISOString(),
+        endDate: member.trip.endDate.toISOString(),
+        status: member.trip.status,
+        ownerId: member.trip.ownerId,
+        isOwner: false,
+        role: member.role,
+        createdAt: member.trip.createdAt.toISOString(),
+        updatedAt: member.trip.updatedAt.toISOString(),
+      });
+    }
+  });
+
+  const trips = Array.from(ownedTripsMap.values());
 
   res.json({ trips });
 });
@@ -112,13 +131,8 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       },
     });
 
-    await prisma.tripMember.create({
-      data: {
-        tripId: trip.id,
-        userId: req.user.id,
-        role: 'owner',
-      },
-    });
+    // Don't create TripMember entry for owner - ownership is already established via ownerId
+    // This prevents duplicates when fetching trips
 
     res.json({
       id: trip.id,

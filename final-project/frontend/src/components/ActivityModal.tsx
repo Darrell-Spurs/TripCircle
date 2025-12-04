@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Activity, CreateActivityData, UpdateActivityData } from '../types'
+import { useLanguage } from '../context/LanguageContext'
 
 interface ActivityModalProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ export default function ActivityModal({
   date,
   defaultOrderIndex,
 }: ActivityModalProps) {
+  const { t } = useLanguage()
   const [formData, setFormData] = useState({
     title: '',
     notes: '',
@@ -27,10 +29,12 @@ export default function ActivityModal({
     endTime: '',
     locationName: '',
     address: '',
+    noTime: false,
   })
 
   useEffect(() => {
     if (activity) {
+      const hasNoTime = !activity.startTime && !activity.endTime
       setFormData({
         title: activity.title,
         notes: activity.notes || '',
@@ -38,6 +42,7 @@ export default function ActivityModal({
         endTime: activity.endTime ? new Date(activity.endTime).toISOString().slice(0, 16) : '',
         locationName: activity.locationName || '',
         address: activity.address || '',
+        noTime: hasNoTime,
       })
     } else {
       setFormData({
@@ -47,6 +52,7 @@ export default function ActivityModal({
         endTime: '',
         locationName: '',
         address: '',
+        noTime: false,
       })
     }
   }, [activity, isOpen])
@@ -60,8 +66,8 @@ export default function ActivityModal({
       date,
       title: formData.title,
       notes: formData.notes || undefined,
-      startTime: formData.startTime ? new Date(formData.startTime).toISOString() : undefined,
-      endTime: formData.endTime ? new Date(formData.endTime).toISOString() : undefined,
+      startTime: formData.noTime ? undefined : (formData.startTime ? new Date(formData.startTime).toISOString() : undefined),
+      endTime: formData.noTime ? undefined : (formData.endTime ? new Date(formData.endTime).toISOString() : undefined),
       locationName: formData.locationName || undefined,
       address: formData.address || undefined,
       orderIndex: activity?.orderIndex ?? defaultOrderIndex,
@@ -88,7 +94,7 @@ export default function ActivityModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Title *
+              {t.activity.title} *
             </label>
             <input
               type="text"
@@ -99,35 +105,56 @@ export default function ActivityModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Time
-              </label>
+          <div>
+            <label className="flex items-center gap-2 mb-2">
               <input
-                type="datetime-local"
-                value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                type="checkbox"
+                checked={formData.noTime}
+                onChange={(e) => {
+                  setFormData({ 
+                    ...formData, 
+                    noTime: e.target.checked,
+                    startTime: e.target.checked ? '' : formData.startTime,
+                    endTime: e.target.checked ? '' : formData.endTime,
+                  })
+                }}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Time
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
+              <span className="text-sm text-gray-700">{t.activity.noAssignedTime}</span>
+            </label>
           </div>
+
+          {!formData.noTime && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.activity.startTime}
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.startTime}
+                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.activity.endTime}
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.endTime}
+                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location Name
+              {t.activity.location}
             </label>
             <input
               type="text"
@@ -139,7 +166,7 @@ export default function ActivityModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address
+              {t.activity.address}
             </label>
             <input
               type="text"
@@ -151,7 +178,7 @@ export default function ActivityModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
+              {t.activity.notes}
             </label>
             <textarea
               value={formData.notes}
@@ -166,14 +193,14 @@ export default function ActivityModal({
               type="submit"
               className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
             >
-              {activity ? 'Update' : 'Create'}
+              {activity ? t.common.update : t.common.create}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
             >
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </form>

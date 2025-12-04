@@ -6,6 +6,7 @@ import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/ap
 import { useNavigate, Link } from 'react-router-dom'
 import { trackEvent } from '../lib/amplitude'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 
 const mapContainerStyle = {
   width: '100%',
@@ -20,14 +21,34 @@ const defaultCenter = {
 export default function Explore() {
   const navigate = useNavigate()
   const { isGuest } = useAuth()
+  const { t } = useLanguage()
   const [keyword, setKeyword] = useState('')
   const [location, setLocation] = useState('')
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
+  const [showSuccess, setShowSuccess] = useState(false)
   
   const { data: trips } = useTrips()
+  
+  // Get selected trip for date range restriction
+  const selectedTrip = trips?.find(t => t.id === selectedTripId)
+  
+  // Reset date when trip changes
+  useEffect(() => {
+    if (selectedTripId && selectedTrip) {
+      // Set default date to start date of trip
+      // Use local date to avoid timezone issues
+      const startDateObj = new Date(selectedTrip.startDate)
+      const year = startDateObj.getFullYear()
+      const month = String(startDateObj.getMonth() + 1).padStart(2, '0')
+      const day = String(startDateObj.getDate()).padStart(2, '0')
+      setSelectedDate(`${year}-${month}-${day}`)
+    } else {
+      setSelectedDate('')
+    }
+  }, [selectedTripId, selectedTrip])
   const { data: places, isLoading } = useSearchPlaces(
     { keyword, location },
     keyword.length > 0
@@ -44,9 +65,11 @@ export default function Explore() {
     if (!selectedPlace || !selectedTripId || !selectedDate) return
 
     try {
+      // Convert date to ISO format at midnight UTC to avoid timezone issues
+      const dateObj = new Date(selectedDate + 'T00:00:00.000Z')
       await createActivity.mutateAsync({
         tripId: selectedTripId,
-        date: new Date(selectedDate).toISOString(),
+        date: dateObj.toISOString(),
         title: selectedPlace.name,
         locationName: selectedPlace.name,
         address: selectedPlace.address,
@@ -55,12 +78,23 @@ export default function Explore() {
         placeId: selectedPlace.placeId,
         orderIndex: 0,
       })
-      setShowAddModal(false)
-      setSelectedPlace(null)
-      alert('Activity added to trip!')
-      navigate(`/trips/${selectedTripId}`)
+      // Show success message
+      setShowSuccess(true)
+      // Close modal and navigate after a short delay
+      setTimeout(() => {
+        setShowAddModal(false)
+        setSelectedPlace(null)
+        setSelectedTripId(null)
+        setSelectedDate('')
+        setShowSuccess(false)
+        navigate('/explore')
+      }, 1500)
     } catch (error: any) {
-      alert(error.response?.data?.detail || 'Failed to add activity')
+      // Only show error if it's a real error (not a navigation issue)
+      const errorMessage = error.response?.data?.detail || error.message || t.common.error
+      if (!errorMessage.includes('navigate')) {
+        alert(t.activity.addToTrip + ' ' + t.common.error + ': ' + errorMessage)
+      }
     }
   }
 
@@ -71,31 +105,31 @@ export default function Explore() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Explore Places</h1>
+        <h1 className="text-3xl font-bold mb-6">{t.explore.title}</h1>
 
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search Keyword
+                {t.explore.searchKeyword}
               </label>
               <input
                 type="text"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="e.g., museums, restaurants, parks"
+                placeholder={t.explore.searchPlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Location (optional)
+                {t.explore.location}
               </label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g., San Francisco, CA"
+                placeholder={t.explore.locationPlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -104,14 +138,14 @@ export default function Explore() {
 
         {isLoading && (
           <div className="text-center py-8">
-            <p className="text-gray-600">Searching...</p>
+            <p className="text-gray-600">{t.explore.searching}</p>
           </div>
         )}
 
         {places && places.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Results</h2>
+              <h2 className="text-xl font-semibold">{t.explore.results}</h2>
               {places.map((place) => (
                 <div
                   key={place.placeId}
@@ -132,14 +166,14 @@ export default function Explore() {
                       }}
                       className="mt-2 bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 transition"
                     >
-                      Add to Trip
+                      {t.activity.addToTrip}
                     </button>
                   )}
                   {isGuest && (
                     <p className="mt-2 text-xs text-gray-500">
                       <Link to="/auth/login" className="text-indigo-600 hover:underline">
-                        Login
-                      </Link> to add to trips
+                        {t.nav.login}
+                      </Link> {t.explore.loginToAdd}
                     </p>
                   )}
                 </div>
@@ -147,7 +181,7 @@ export default function Explore() {
             </div>
 
             <div className="bg-white rounded-lg shadow-md p-4">
-              <h2 className="text-xl font-semibold mb-4">Map</h2>
+              <h2 className="text-xl font-semibold mb-4">{t.explore.map}</h2>
               {import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
                 <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
                   <GoogleMap
@@ -177,7 +211,7 @@ export default function Explore() {
                 </LoadScript>
               ) : (
                 <div className="flex items-center justify-center h-96 bg-gray-100 rounded">
-                  <p className="text-gray-500">Google Maps API key not configured</p>
+                  <p className="text-gray-500">{t.explore.googleMapsNotConfigured}</p>
                 </div>
               )}
             </div>
@@ -186,25 +220,25 @@ export default function Explore() {
 
         {places && places.length === 0 && keyword && !isLoading && (
           <div className="text-center py-8">
-            <p className="text-gray-600">No places found. Try a different search.</p>
+            <p className="text-gray-600">{t.explore.noPlacesFound}</p>
           </div>
         )}
 
         {showAddModal && selectedPlace && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-2xl font-bold mb-4">Add to Trip</h2>
+              <h2 className="text-2xl font-bold mb-4">{t.activity.addToTrip}</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Trip
+                    {t.activity.selectTrip}
                   </label>
                   <select
                     value={selectedTripId || ''}
                     onChange={(e) => setSelectedTripId(parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   >
-                    <option value="">Choose a trip...</option>
+                    <option value="">{t.activity.chooseTrip}</option>
                     {trips?.map((trip) => (
                       <option key={trip.id} value={trip.id}>
                         {trip.title}
@@ -214,31 +248,58 @@ export default function Explore() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date
+                    {t.activity.date}
+                    {selectedTrip && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({new Date(selectedTrip.startDate).toLocaleDateString()} - {new Date(selectedTrip.endDate).toLocaleDateString()})
+                      </span>
+                    )}
                   </label>
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
+                    min={selectedTrip ? (() => {
+                      const start = new Date(selectedTrip.startDate)
+                      const year = start.getFullYear()
+                      const month = String(start.getMonth() + 1).padStart(2, '0')
+                      const day = String(start.getDate()).padStart(2, '0')
+                      return `${year}-${month}-${day}`
+                    })() : undefined}
+                    max={selectedTrip ? (() => {
+                      const end = new Date(selectedTrip.endDate)
+                      const year = end.getFullYear()
+                      const month = String(end.getMonth() + 1).padStart(2, '0')
+                      const day = String(end.getDate()).padStart(2, '0')
+                      return `${year}-${month}-${day}`
+                    })() : undefined}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
                 <div className="flex gap-4 pt-4">
-                  <button
-                    onClick={handleAddToTrip}
-                    disabled={!selectedTripId || !selectedDate || createActivity.isPending}
-                    className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
-                  >
-                    {createActivity.isPending ? 'Adding...' : 'Add'}
-                  </button>
+                  {showSuccess ? (
+                    <div className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                      {t.common.createSuccess}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleAddToTrip}
+                      disabled={!selectedTripId || !selectedDate || createActivity.isPending}
+                      className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                    >
+                      {createActivity.isPending ? t.common.loading : t.common.create}
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setShowAddModal(false)
                       setSelectedPlace(null)
+                      setSelectedTripId(null)
+                      setSelectedDate('')
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                   >
-                    Cancel
+                    {t.common.cancel}
                   </button>
                 </div>
               </div>

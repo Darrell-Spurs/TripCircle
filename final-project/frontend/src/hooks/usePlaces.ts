@@ -19,14 +19,20 @@ export interface SearchPlacesParams {
 }
 
 export function useSearchPlaces(params: SearchPlacesParams, enabled: boolean = true) {
+  // Get current language for query key and API call
+  const language = localStorage.getItem('language') || 'zh-TW'
+  
   return useQuery({
-    queryKey: ['places', 'search', params],
+    queryKey: ['places', 'search', params, language],
     queryFn: async () => {
       const queryParams = new URLSearchParams()
       queryParams.append('keyword', params.keyword)
       if (params.location) queryParams.append('location', params.location)
       if (params.lat) queryParams.append('lat', params.lat.toString())
       if (params.lng) queryParams.append('lng', params.lng.toString())
+      
+      // Add language parameter (zh-TW for Traditional Chinese, en for English)
+      queryParams.append('language', language)
       
       const response = await api.get(`/places/search?${queryParams.toString()}`)
       return response.data.places as Place[]

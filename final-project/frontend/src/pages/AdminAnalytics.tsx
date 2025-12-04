@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface Metrics {
@@ -24,6 +25,7 @@ interface Metrics {
 
 export default function AdminAnalytics() {
   const { isGuest } = useAuth()
+  const { t } = useLanguage()
   const { data: metrics, isLoading } = useQuery<Metrics>({
     queryKey: ['admin', 'metrics'],
     queryFn: async () => {
@@ -35,7 +37,7 @@ export default function AdminAnalytics() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading analytics...</div>
+        <div className="text-lg">{t.common.loading}</div>
       </div>
     )
   }
@@ -44,7 +46,7 @@ export default function AdminAnalytics() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Failed to load analytics</h2>
+          <h2 className="text-2xl font-bold mb-4">{t.common.error}</h2>
         </div>
       </div>
     )
@@ -74,22 +76,22 @@ export default function AdminAnalytics() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center bg-white rounded-lg shadow-md p-8 max-w-md">
-          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <h2 className="text-2xl font-bold mb-4">{t.admin.authenticationRequired}</h2>
           <p className="text-gray-600 mb-6">
-            Admin analytics are only available to authenticated users.
+            {t.admin.authRequiredDesc}
           </p>
           <div className="space-x-4">
             <Link
               to="/auth/login"
               className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
             >
-              Login
+              {t.nav.login}
             </Link>
             <Link
               to="/dashboard"
               className="inline-block bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition"
             >
-              Go Back
+              {t.admin.goBack}
             </Link>
           </div>
         </div>
@@ -100,30 +102,30 @@ export default function AdminAnalytics() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Admin Analytics Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-6">{t.admin.analytics}</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Total Users</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t.admin.totalUsers}</h3>
             <p className="text-3xl font-bold">{metrics.totalUsers}</p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Total Trips</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t.admin.totalTrips}</h3>
             <p className="text-3xl font-bold">{metrics.totalTrips}</p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Explore Searches</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t.admin.exploreUsage}</h3>
             <p className="text-3xl font-bold">{metrics.exploreUsage}</p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Active Share Links</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t.admin.shareLinkStats} ({t.admin.active})</h3>
             <p className="text-3xl font-bold">{metrics.shareLinkStats.active}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4">Trips Created Over Time (Last 30 Days)</h2>
+            <h2 className="text-xl font-bold mb-4">{t.admin.tripsOverTime}</h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={tripsChartData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -153,7 +155,7 @@ export default function AdminAnalytics() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4">Event Type Breakdown</h2>
+            <h2 className="text-xl font-bold mb-4">{t.admin.eventTypeBreakdown}</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={eventTypeData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -167,12 +169,12 @@ export default function AdminAnalytics() {
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4">Most Active Trips</h2>
+            <h2 className="text-xl font-bold mb-4">{t.admin.mostActiveTrips}</h2>
             <div className="space-y-3">
               {metrics.mostActiveTrips.map((trip) => (
                 <div key={trip.tripId} className="flex justify-between items-center p-3 bg-gray-50 rounded">
                   <span className="font-medium">{trip.title}</span>
-                  <span className="text-indigo-600 font-semibold">{trip.activityCount} activities</span>
+                  <span className="text-indigo-600 font-semibold">{trip.activityCount} {t.trip.activities}</span>
                 </div>
               ))}
             </div>

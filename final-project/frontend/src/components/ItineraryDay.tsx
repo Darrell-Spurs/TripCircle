@@ -1,5 +1,6 @@
 import { Activity } from '../types'
 import ActivityCard from './ActivityCard'
+import { useLanguage } from '../context/LanguageContext'
 import {
   DndContext,
   closestCenter,
@@ -70,6 +71,7 @@ export default function ItineraryDay({
   onReorder,
   canEdit,
 }: ItineraryDayProps) {
+  const { t, language } = useLanguage()
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -90,7 +92,9 @@ export default function ItineraryDay({
   }
 
   const dateObj = new Date(date)
-  const formattedDate = dateObj.toLocaleDateString('en-US', {
+  // Use the current language for date formatting
+  const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+  const formattedDate = dateObj.toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -102,7 +106,7 @@ export default function ItineraryDay({
       <h3 className="text-xl font-bold mb-4">{formattedDate}</h3>
       
       {activities.length === 0 ? (
-        <p className="text-gray-500 text-sm">No activities planned for this day</p>
+        <p className="text-gray-500 text-sm">{t.activity.noActivitiesForDay}</p>
       ) : (
         <DndContext
           sensors={sensors}

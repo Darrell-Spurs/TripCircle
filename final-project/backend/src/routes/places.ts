@@ -5,7 +5,7 @@ import { config } from '../config';
 const router = express.Router();
 
 router.get('/search', async (req: express.Request, res: Response) => {
-  const { keyword, location, lat, lng } = req.query;
+  const { keyword, location, lat, lng, language } = req.query;
 
   if (!keyword || typeof keyword !== 'string') {
     res.status(400).json({ detail: 'keyword is required' });
@@ -28,6 +28,11 @@ router.get('/search', async (req: express.Request, res: Response) => {
       key: config.googlePlacesApiKey,
       type: 'tourist_attraction|point_of_interest',
     };
+
+    // Add language parameter if provided (zh-TW for Traditional Chinese, en for English)
+    if (language && typeof language === 'string') {
+      params.language = language;
+    }
 
     if (lat && lng) {
       params.location = `${lat},${lng}`;

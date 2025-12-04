@@ -10,7 +10,12 @@ export function useTrips() {
     queryKey: ['trips'],
     queryFn: async () => {
       const response = await api.get('/trips')
-      return response.data.trips as Trip[]
+      const trips = response.data.trips as Trip[]
+      // Deduplicate trips by ID (safety measure in case backend returns duplicates)
+      const uniqueTrips = Array.from(
+        new Map(trips.map(trip => [trip.id, trip])).values()
+      )
+      return uniqueTrips
     },
     enabled: !isGuest, // Only fetch if not a guest
   })
