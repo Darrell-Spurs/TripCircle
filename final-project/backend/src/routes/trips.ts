@@ -35,14 +35,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const ownedTrips = await prisma.trip.findMany({
-    where: { ownerId: req.user.id },
-    include: {
-      members: { include: { user: true } },
-      activities: true,
-    },
-  });
-
+  // Fetch all trips where user is a member (includes owned trips since owner is also a member)
   const memberTrips = await prisma.tripMember.findMany({
     where: { userId: req.user.id },
     include: {
@@ -55,36 +48,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     },
   });
 
-  const trips = [
-    ...ownedTrips.map((trip) => ({
-      id: trip.id,
-      title: trip.title,
-      description: trip.description,
-      coverImage: trip.coverImage,
-      startDate: trip.startDate.toISOString(),
-      endDate: trip.endDate.toISOString(),
-      status: trip.status,
-      ownerId: trip.ownerId,
-      isOwner: true,
-      role: 'owner' as const,
-      createdAt: trip.createdAt.toISOString(),
-      updatedAt: trip.updatedAt.toISOString(),
-    })),
-    ...memberTrips.map((member) => ({
-      id: member.trip.id,
-      title: member.trip.title,
-      description: member.trip.description,
-      coverImage: member.trip.coverImage,
-      startDate: member.trip.startDate.toISOString(),
-      endDate: member.trip.endDate.toISOString(),
-      status: member.trip.status,
-      ownerId: member.trip.ownerId,
-      isOwner: false,
-      role: member.role,
-      createdAt: member.trip.createdAt.toISOString(),
-      updatedAt: member.trip.updatedAt.toISOString(),
-    })),
-  ];
+  const trips = memberTrips.map((member) => ({
+    id: member.trip.id,
+    title: member.trip.title,
+    description: member.trip.description,
+    coverImage: member.trip.coverImage,
+    startDate: member.trip.startDate.toISOString(),
+    endDate: member.trip.endDate.toISOString(),
+    status: member.trip.status,
+    ownerId: member.trip.ownerId,
+    isOwner: member.trip.ownerId === req.user!.id,
+    role: member.role,
+    createdAt: member.trip.createdAt.toISOString(),
+    updatedAt: member.trip.updatedAt.toISOString(),
+  }));
 
   res.json({ trips });
 });
