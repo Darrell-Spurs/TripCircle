@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { Activity } from '../types'
+import { trackEvent } from '../lib/amplitude'
 
 export interface CreateActivityData {
   tripId: number
