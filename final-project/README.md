@@ -12,7 +12,7 @@ Deploy link: http://wp-final-five.vercel.app/
 
 ### 1. Search & Filter Feed
 - [ ] Add search bar to filter published trips by title, destination, etc.
-- [ ] Add filters (date range, trip length, etc.)
+- [ ] Add filters (date range, trip length, trip type etc.)
 
 ### 2. Clickable Feed Content → Search/Explore
 - [ ] Make locations, tags, or keywords in feed posts clickable
