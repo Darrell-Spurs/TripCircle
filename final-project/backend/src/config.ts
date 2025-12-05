@@ -2,6 +2,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Parse FRONTEND_URL - support comma-separated URLs or single URL
+const parseFrontendUrls = (): string[] => {
+  const defaultUrls = ['http://localhost:3000', 'http://localhost:5173'];
+  
+  if (process.env.FRONTEND_URL) {
+    const urls = process.env.FRONTEND_URL.split(',').map(url => url.trim()).filter(Boolean);
+    return urls.length > 0 ? urls : defaultUrls;
+  }
+  
+  return defaultUrls;
+};
+
 export const config = {
   databaseUrl: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/tripcircle',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
@@ -12,6 +24,7 @@ export const config = {
   amplitudeApiKey: process.env.AMPLITUDE_API_KEY || '',
   port: parseInt(process.env.PORT || '8000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
+  frontendUrls: parseFrontendUrls(),
 };
 
 // Only warn in development
