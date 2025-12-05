@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useSharedTrip, useImportSharedTrip } from '../hooks/useShare'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 import { trackEvent } from '../lib/amplitude'
 import { Activity } from '../types'
 
@@ -9,6 +10,7 @@ export default function ShareTrip() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
   const { user, isGuest } = useAuth()
+  const { t } = useLanguage()
   const { data, isLoading } = useSharedTrip(token || '')
   const importTrip = useImportSharedTrip()
 
@@ -19,7 +21,7 @@ export default function ShareTrip() {
     
     if (!isLoggedIn) {
       // Redirect to login with return URL
-      alert('Please login to import this trip')
+      alert(t.share.pleaseLoginToImport)
       navigate('/auth/login')
       return
     }
@@ -27,10 +29,10 @@ export default function ShareTrip() {
     try {
       const result = await importTrip.mutateAsync(token)
       trackEvent('trip_imported', { sourceToken: token, newTripId: result.tripId })
-      alert(`Trip "${result.title}" imported successfully!`)
+      alert(t.share.tripImportedSuccess.replace('{title}', result.title))
       navigate(`/trips/${result.tripId}`)
     } catch (error: any) {
-      alert(error.response?.data?.detail || 'Failed to import trip')
+      alert(error.response?.data?.detail || t.share.failedToImport)
     }
   }
 
@@ -87,7 +89,7 @@ export default function ShareTrip() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">{t.common.loading}</div>
       </div>
     )
   }
@@ -96,9 +98,9 @@ export default function ShareTrip() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Trip not found</h2>
+          <h2 className="text-2xl font-bold mb-4">{t.feed.tripNotFound}</h2>
           <Link to="/" className="text-indigo-600 hover:text-indigo-700">
-            Go to Home
+            {t.feed.goToHome}
           </Link>
         </div>
       </div>
@@ -111,18 +113,18 @@ export default function ShareTrip() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md p-6 mb-4 flex justify-between items-center">
-          <p className="text-sm text-gray-600">Shared Trip - Read Only</p>
+          <p className="text-sm text-gray-600">{t.share.sharedTripReadOnly}</p>
           <button
             onClick={handleImport}
             disabled={importTrip.isPending}
             className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 text-sm flex items-center gap-2"
           >
             {importTrip.isPending ? (
-              'Importing...'
+              t.share.importing
             ) : (
               <>
                 <span>📥</span>
-                Import to My Trips
+                {t.share.importToMyTrips}
               </>
             )}
           </button>
@@ -143,19 +145,19 @@ export default function ShareTrip() {
           )}
           <div className="flex gap-4 text-sm text-gray-500">
             <p>
-              <span className="font-semibold">Dates:</span>{' '}
+              <span className="font-semibold">{t.trip.dates}:</span>{' '}
               {new Date(trip.startDate).toLocaleDateString()} -{' '}
               {new Date(trip.endDate).toLocaleDateString()}
             </p>
             <p>
-              <span className="font-semibold">Status:</span>{' '}
-              <span className="capitalize">{trip.status}</span>
+              <span className="font-semibold">{t.trip.status}:</span>{' '}
+              <span className="capitalize">{trip.status === 'planning' ? t.trip.planning : trip.status === 'upcoming' ? t.trip.upcoming : trip.status === 'ongoing' ? t.trip.ongoing : trip.status === 'completed' ? t.trip.completed : trip.status === 'cancelled' ? t.trip.cancelled : trip.status}</span>
             </p>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold mb-6">Itinerary</h2>
+          <h2 className="text-2xl font-bold mb-6">{t.share.itinerary}</h2>
           {datesWithActivities.length > 0 ? (
             <div className="space-y-8">
               {datesWithActivities.map((date) => (
@@ -186,7 +188,7 @@ export default function ShareTrip() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">No activities planned yet.</p>
+            <p className="text-gray-500">{t.share.noActivitiesPlanned}</p>
           )}
         </div>
       </div>

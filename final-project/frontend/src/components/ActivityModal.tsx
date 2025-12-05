@@ -109,7 +109,7 @@ export default function ActivityModal({
         {/* Header - fixed */}
         <div className="p-6 pb-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-2xl font-bold mb-1">
-            {activity ? 'Edit Activity' : 'Add Activity'}
+            {activity ? t.activity.editActivity : t.activity.addActivity}
           </h2>
           <p className="text-sm text-gray-500">
             {new Date(date + 'T00:00:00').toLocaleDateString(undefined, { 
@@ -126,7 +126,7 @@ export default function ActivityModal({
           <form id="activity-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title *
+                {t.activity.titleRequired}
               </label>
               <input
                 type="text"
@@ -140,7 +140,7 @@ export default function ActivityModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Time
+                  {t.activity.startTime}
                 </label>
                 <input
                   type="time"
@@ -152,7 +152,7 @@ export default function ActivityModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Time
+                  {t.activity.endTime}
                 </label>
                 <input
                   type="time"
@@ -165,7 +165,7 @@ export default function ActivityModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Location Name
+                {t.activity.locationName}
               </label>
               <input
                 type="text"
@@ -177,7 +177,7 @@ export default function ActivityModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address
+                {t.activity.address}
               </label>
               <input
                 type="text"
@@ -189,29 +189,29 @@ export default function ActivityModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notes
+                {t.activity.notes}
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={2}
-                placeholder="Quick notes for planning..."
+                placeholder={t.activity.quickNotesPlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Story (for feed)
+                {t.activity.storyForFeed}
               </label>
               <textarea
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value })}
                 rows={3}
-                placeholder="Share your experience at this place when publishing to feed..."
+                placeholder={t.activity.storyPlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
-              <p className="text-xs text-gray-500 mt-1">This will be shown when the trip is published</p>
+              <p className="text-xs text-gray-500 mt-1">{t.activity.storyDescription}</p>
             </div>
           </form>
         </div>
@@ -223,14 +223,14 @@ export default function ActivityModal({
             form="activity-form"
             className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
           >
-            {activity ? 'Update' : 'Create'}
+            {activity ? t.common.update : t.common.create}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
           >
-            Cancel
+            {t.common.cancel}
           </button>
         </div>
       </div>

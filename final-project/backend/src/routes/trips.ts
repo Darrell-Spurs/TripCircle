@@ -19,6 +19,8 @@ const tripCreateSchema = z.object({
   startDate: dateStringSchema,
   endDate: dateStringSchema,
   status: z.string().default('planning'),
+  isPublished: z.boolean().optional().default(false),
+  publishedAt: z.string().datetime().optional().nullable(),
 });
 
 const tripUpdateSchema = z.object({
@@ -29,6 +31,8 @@ const tripUpdateSchema = z.object({
   startDate: dateStringSchema.optional(),
   endDate: dateStringSchema.optional(),
   status: z.string().optional(),
+  isPublished: z.boolean().optional(),
+  publishedAt: z.string().datetime().optional().nullable(),
 });
 
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
@@ -37,7 +41,6 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-<<<<<<< HEAD
   const ownedTrips = await prisma.trip.findMany({
     where: { ownerId: req.user.id },
     include: {
@@ -49,9 +52,6 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   // Get owned trip IDs for filtering
   const ownedTripIds = new Set(ownedTrips.map(trip => trip.id));
 
-=======
-  // Fetch all trips where user is a member (includes owned trips since owner is also a member)
->>>>>>> 5db6c05c9cbb4e6c0abb8eee608ceeefef4ba9dd
   const memberTrips = await prisma.tripMember.findMany({
     where: { 
       userId: req.user.id,
@@ -68,7 +68,6 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     },
   });
 
-<<<<<<< HEAD
   // Map owned trips
   const ownedTripsMap = new Map(
     ownedTrips.map((trip) => [
@@ -77,10 +76,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         id: trip.id,
         title: trip.title,
         description: trip.description,
+        body: trip.body,
         coverImage: trip.coverImage,
         startDate: trip.startDate.toISOString(),
         endDate: trip.endDate.toISOString(),
         status: trip.status,
+        isPublished: trip.isPublished,
+        publishedAt: trip.publishedAt?.toISOString() || null,
         ownerId: trip.ownerId,
         isOwner: true,
         role: 'owner' as const,
@@ -97,13 +99,16 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         id: member.trip.id,
         title: member.trip.title,
         description: member.trip.description,
+        body: member.trip.body,
         coverImage: member.trip.coverImage,
         startDate: member.trip.startDate.toISOString(),
         endDate: member.trip.endDate.toISOString(),
         status: member.trip.status,
+        isPublished: member.trip.isPublished,
+        publishedAt: member.trip.publishedAt?.toISOString() || null,
         ownerId: member.trip.ownerId,
         isOwner: false,
-        role: member.role,
+        role: member.role as 'owner' | 'editor' | 'viewer',
         createdAt: member.trip.createdAt.toISOString(),
         updatedAt: member.trip.updatedAt.toISOString(),
       });
@@ -111,25 +116,6 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   });
 
   const trips = Array.from(ownedTripsMap.values());
-=======
-  const trips = memberTrips.map((member) => ({
-    id: member.trip.id,
-    title: member.trip.title,
-    description: member.trip.description,
-    body: member.trip.body,
-    coverImage: member.trip.coverImage,
-    startDate: member.trip.startDate.toISOString(),
-    endDate: member.trip.endDate.toISOString(),
-    status: member.trip.status,
-    isPublished: member.trip.isPublished,
-    publishedAt: member.trip.publishedAt?.toISOString() || null,
-    ownerId: member.trip.ownerId,
-    isOwner: member.trip.ownerId === req.user!.id,
-    role: member.role,
-    createdAt: member.trip.createdAt.toISOString(),
-    updatedAt: member.trip.updatedAt.toISOString(),
-  }));
->>>>>>> 5db6c05c9cbb4e6c0abb8eee608ceeefef4ba9dd
 
   res.json({ trips });
 });
@@ -151,16 +137,20 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    const publishedAt = data.publishedAt ? new Date(data.publishedAt) : null;
+
     const trip = await prisma.trip.create({
       data: {
         ownerId: req.user.id,
         title: data.title,
         description: data.description,
-        body: data.body,
+        body: data.body || null,
         coverImage: data.coverImage || null,
         startDate,
         endDate,
         status: data.status,
+        isPublished: data.isPublished ?? false,
+        publishedAt,
       },
     });
 
@@ -266,7 +256,6 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       endTime: a.endTime?.toISOString() || null,
       title: a.title,
       notes: a.notes,
-      body: a.body,
       placeId: a.placeId,
       locationName: a.locationName,
       address: a.address,
@@ -318,6 +307,10 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     if (data.body !== undefined) updateData.body = data.body || null;
     if (data.coverImage !== undefined) updateData.coverImage = data.coverImage || null;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.isPublished !== undefined) updateData.isPublished = data.isPublished;
+    if (data.publishedAt !== undefined) {
+      updateData.publishedAt = data.publishedAt ? new Date(data.publishedAt) : null;
+    }
 
     if (data.startDate || data.endDate) {
       const startDate = data.startDate ? new Date(data.startDate) : trip.startDate;

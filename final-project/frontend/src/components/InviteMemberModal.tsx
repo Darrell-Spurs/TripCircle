@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useInviteMember } from '../hooks/useMembers'
+import { useLanguage } from '../context/LanguageContext'
 
 interface InviteMemberModalProps {
   isOpen: boolean
@@ -8,6 +9,7 @@ interface InviteMemberModalProps {
 }
 
 export default function InviteMemberModal({ isOpen, onClose, tripId }: InviteMemberModalProps) {
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('viewer')
   const inviteMember = useInviteMember()
@@ -21,18 +23,18 @@ export default function InviteMemberModal({ isOpen, onClose, tripId }: InviteMem
       setEmail('')
       onClose()
     } catch (error: any) {
-      alert(error.response?.data?.detail || 'Failed to invite member')
+      alert(error.response?.data?.detail || t.members.failedToInvite)
     }
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h2 className="text-2xl font-bold mb-4">Invite Member</h2>
+        <h2 className="text-2xl font-bold mb-4">{t.members.inviteMember}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
+              {t.members.email} *
             </label>
             <input
               type="email"
@@ -45,15 +47,15 @@ export default function InviteMemberModal({ isOpen, onClose, tripId }: InviteMem
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role
+              {t.members.role}
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="viewer">Viewer</option>
-              <option value="editor">Editor</option>
+              <option value="viewer">{t.trip.viewer}</option>
+              <option value="editor">{t.trip.editor}</option>
             </select>
           </div>
 
@@ -63,14 +65,14 @@ export default function InviteMemberModal({ isOpen, onClose, tripId }: InviteMem
               disabled={inviteMember.isPending}
               className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
             >
-              {inviteMember.isPending ? 'Inviting...' : 'Invite'}
+              {inviteMember.isPending ? t.members.inviting : t.members.invite}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
             >
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </form>

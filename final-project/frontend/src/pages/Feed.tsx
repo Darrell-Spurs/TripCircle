@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFeed } from '../hooks/useFeed'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function Feed() {
+  const { t } = useLanguage()
   const [page, setPage] = useState(1)
   const { data, isLoading } = useFeed(page, 20)
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">{t.common.loading}</div>
       </div>
     )
   }
@@ -18,15 +20,15 @@ export default function Feed() {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Discover Trips</h1>
-          <p className="text-gray-600 mt-2">Explore travel experiences shared by the community</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t.feed.discoverTrips}</h1>
+          <p className="text-gray-600 mt-2">{t.feed.exploreDescription}</p>
         </div>
 
         {!data || data.trips.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🌍</div>
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">No trips yet</h2>
-            <p className="text-gray-500">Be the first to share your travel experience!</p>
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">{t.feed.noTripsYet}</h2>
+            <p className="text-gray-500">{t.feed.beFirstToShare}</p>
           </div>
         ) : (
           <>
@@ -78,7 +80,7 @@ export default function Feed() {
                             ))}
                             {trip.activitiesCount > 3 && (
                               <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full">
-                                +{trip.activitiesCount - 3} more
+                                +{trip.activitiesCount - 3} {t.feed.moreActivities}
                               </span>
                             )}
                           </div>
@@ -121,17 +123,17 @@ export default function Feed() {
                   disabled={page === 1}
                   className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Previous
+                  {t.feed.previous}
                 </button>
                 <span className="px-4 py-2 text-gray-600">
-                  Page {page} of {data.pagination.totalPages}
+                  {t.feed.page} {page} {t.feed.of} {data.pagination.totalPages}
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
                   disabled={page === data.pagination.totalPages}
                   className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Next
+                  {t.feed.next}
                 </button>
               </div>
             )}

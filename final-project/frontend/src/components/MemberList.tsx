@@ -1,6 +1,7 @@
 import { TripMember } from '../types'
 import { useRemoveMember, useUpdateMemberRole } from '../hooks/useMembers'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 
 interface MemberListProps {
   members: TripMember[]
@@ -10,11 +11,12 @@ interface MemberListProps {
 
 export default function MemberList({ members, tripId, isOwner }: MemberListProps) {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const removeMember = useRemoveMember()
   const updateRole = useUpdateMemberRole()
 
   const handleRemove = async (memberId: number) => {
-    if (confirm('Are you sure you want to remove this member?')) {
+    if (confirm(t.members.removeConfirm)) {
       await removeMember.mutateAsync({ memberId, tripId })
     }
   }
@@ -54,12 +56,12 @@ export default function MemberList({ members, tripId, isOwner }: MemberListProps
                 onChange={(e) => handleRoleChange(member.id, e.target.value)}
                 className="px-3 py-1 border border-gray-300 rounded text-sm"
               >
-                <option value="viewer">Viewer</option>
-                <option value="editor">Editor</option>
+                <option value="viewer">{t.trip.viewer}</option>
+                <option value="editor">{t.trip.editor}</option>
               </select>
             ) : (
               <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded text-sm capitalize">
-                {member.role}
+                {member.role === 'owner' ? t.trip.owner : member.role === 'editor' ? t.trip.editor : member.role === 'viewer' ? t.trip.viewer : member.role}
               </span>
             )}
             {isOwner && member.role !== 'owner' && (
@@ -67,7 +69,7 @@ export default function MemberList({ members, tripId, isOwner }: MemberListProps
                 onClick={() => handleRemove(member.id)}
                 className="text-red-600 hover:text-red-700 text-sm"
               >
-                Remove
+                {t.members.remove}
               </button>
             )}
           </div>

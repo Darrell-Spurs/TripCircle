@@ -26,10 +26,13 @@ model Trip {
   owner       User         @relation("OwnerTrips", fields: [ownerId], references: [id])
   title       String
   description String?
+  body        String?
   coverImage  String?
   startDate   DateTime
   endDate     DateTime
   status      String
+  isPublished Boolean      @default(false)
+  publishedAt DateTime?
   members     TripMember[]
   activities  Activity[]
   shareLinks  ShareLink[]
@@ -57,6 +60,7 @@ model Activity {
   endTime      DateTime?
   title        String
   notes        String?
+  body         String?
   placeId      String?
   locationName String?
   address      String?

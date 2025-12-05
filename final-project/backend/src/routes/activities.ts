@@ -120,11 +120,16 @@ router.post('/trips/:tripId/activities', authenticate, async (req: AuthRequest, 
       orderIndex: activity.orderIndex,
     });
   } catch (error) {
+    console.error('Error creating activity:', error);
     if (error instanceof z.ZodError) {
       res.status(400).json({ detail: error.errors[0].message });
       return;
     }
-    res.status(500).json({ detail: 'Failed to create activity' });
+    // Log the full error for debugging
+    if (error instanceof Error) {
+      console.error('Error details:', error.message, error.stack);
+    }
+    res.status(500).json({ detail: 'Failed to create activity', error: error instanceof Error ? error.message : String(error) });
   }
 });
 

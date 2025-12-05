@@ -10,6 +10,7 @@ export interface CreateActivityData {
   endTime?: string
   title: string
   notes?: string
+  body?: string
   placeId?: string
   locationName?: string
   address?: string
@@ -24,6 +25,7 @@ export interface UpdateActivityData {
   endTime?: string
   title?: string
   notes?: string
+  body?: string
   placeId?: string
   locationName?: string
   address?: string

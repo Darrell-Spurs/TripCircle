@@ -287,7 +287,7 @@ export default function Explore() {
                       disabled={!selectedTripId || !selectedDate || createActivity.isPending}
                       className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
                     >
-                      {createActivity.isPending ? t.common.loading : t.common.create}
+                      {createActivity.isPending ? t.common.loading : t.activity.add}
                     </button>
                   )}
                   <button

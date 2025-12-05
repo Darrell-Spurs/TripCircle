@@ -81,7 +81,7 @@ export default function TripDetail() {
       })
       setIsEditingDetails(false)
     } catch (error: any) {
-      alert(error.response?.data?.detail || 'Failed to save')
+      alert(error.response?.data?.detail || t.common.error)
     }
   }
 
@@ -237,13 +237,13 @@ export default function TripDetail() {
             {editCoverImage && (
               <img
                 src={editCoverImage}
-                alt="Cover preview"
+                alt={t.trip.coverImage}
                 className="w-full h-64 object-cover rounded-lg mb-2"
               />
             )}
             <div className="bg-white rounded-lg shadow-md p-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cover Image URL
+                {t.trip.coverImageUrl}
               </label>
               <input
                 type="url"
@@ -270,7 +270,7 @@ export default function TripDetail() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title *
+                  {t.trip.title} *
                 </label>
                 <input
                   type="text"
@@ -281,13 +281,13 @@ export default function TripDetail() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  {t.trip.description}
                 </label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={3}
-                  placeholder="Describe your trip..."
+                  placeholder={t.trip.describePlaceholder}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
@@ -297,13 +297,13 @@ export default function TripDetail() {
                   disabled={updateTrip.isPending || !editTitle.trim()}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
                 >
-                  {updateTrip.isPending ? 'Saving...' : 'Save Changes'}
+                  {updateTrip.isPending ? t.trip.saving : t.trip.saveChanges}
                 </button>
                 <button
                   onClick={handleCancelEditDetails}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  Cancel
+                  {t.common.cancel}
                 </button>
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function TripDetail() {
                     onClick={() => setIsEditingDetails(true)}
                     className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
                   >
-                    Edit Details
+                    {t.trip.editDetails}
                   </button>
                 )}
               </div>
@@ -325,18 +325,18 @@ export default function TripDetail() {
               )}
               <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                 <p>
-                  <span className="font-semibold">Dates:</span>{' '}
+                  <span className="font-semibold">{t.trip.dates}:</span>{' '}
                   {new Date(trip.startDate).toLocaleDateString()} -{' '}
                   {new Date(trip.endDate).toLocaleDateString()}
                 </p>
                 <p>
-                  <span className="font-semibold">Status:</span>{' '}
-                  <span className="capitalize">{trip.status}</span>
+                  <span className="font-semibold">{t.trip.status}:</span>{' '}
+                  <span className="capitalize">{trip.status === 'planning' ? t.trip.planning : trip.status === 'upcoming' ? t.trip.upcoming : trip.status === 'ongoing' ? t.trip.ongoing : trip.status === 'completed' ? t.trip.completed : trip.status === 'cancelled' ? t.trip.cancelled : trip.status}</span>
                 </p>
                 {trip.role && (
                   <p>
-                    <span className="font-semibold">Your Role:</span>{' '}
-                    <span className="capitalize">{trip.role}</span>
+                    <span className="font-semibold">{t.trip.yourRole}:</span>{' '}
+                    <span className="capitalize">{trip.role === 'owner' ? t.trip.owner : trip.role === 'editor' ? t.trip.editor : trip.role === 'viewer' ? t.trip.viewer : trip.role}</span>
                   </p>
                 )}
               </div>
@@ -390,18 +390,18 @@ export default function TripDetail() {
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h2 className="text-2xl font-bold">Publish to Feed</h2>
+                <h2 className="text-2xl font-bold">{t.trip.publishToFeed}</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Share your trip experience with the community
+                  {t.trip.publishDescription}
                 </p>
               </div>
               {trip.isPublished ? (
                 <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                  ✓ Published
+                  ✓ {t.trip.published}
                 </span>
               ) : (
                 <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                  Draft
+                  {t.trip.draft}
                 </span>
               )}
             </div>
@@ -409,7 +409,7 @@ export default function TripDetail() {
             {/* Trip Body Editor */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Trip Story (for feed)
+                {t.trip.tripStory}
               </label>
               {isEditingBody ? (
                 <div>
@@ -417,7 +417,7 @@ export default function TripDetail() {
                     value={tripBody}
                     onChange={(e) => setTripBody(e.target.value)}
                     rows={6}
-                    placeholder="Share your trip experience, tips, and highlights..."
+                    placeholder={t.trip.tripStoryPlaceholder}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                   <div className="flex gap-2 mt-2">
@@ -430,13 +430,13 @@ export default function TripDetail() {
                           })
                           setIsEditingBody(false)
                         } catch (error: any) {
-                          alert(error.response?.data?.detail || 'Failed to save')
+                          alert(error.response?.data?.detail || t.common.error)
                         }
                       }}
                       disabled={updateTrip.isPending}
                       className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
                     >
-                      {updateTrip.isPending ? 'Saving...' : 'Save'}
+                      {updateTrip.isPending ? t.trip.saving : t.common.save}
                     </button>
                     <button
                       onClick={() => {
@@ -445,7 +445,7 @@ export default function TripDetail() {
                       }}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                     >
-                      Cancel
+                      {t.common.cancel}
                     </button>
                   </div>
                 </div>
@@ -457,7 +457,7 @@ export default function TripDetail() {
                   {tripBody ? (
                     <p className="text-gray-700 whitespace-pre-wrap">{tripBody}</p>
                   ) : (
-                    <p className="text-gray-400">Click to add your trip story...</p>
+                    <p className="text-gray-400">{t.trip.clickToAddStory}</p>
                   )}
                 </div>
               )}
@@ -474,9 +474,9 @@ export default function TripDetail() {
                     className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                   />
                   <div>
-                    <span className="font-medium text-gray-700">Allow imports</span>
+                    <span className="font-medium text-gray-700">{t.trip.allowImports}</span>
                     <p className="text-sm text-gray-500">
-                      Let others import this trip as a template for their own trips
+                      {t.trip.allowImportsDescription}
                     </p>
                   </div>
                 </label>
@@ -489,24 +489,24 @@ export default function TripDetail() {
                 <>
                   <button
                     onClick={async () => {
-                      if (confirm('Are you sure you want to unpublish this trip?')) {
+                      if (confirm(t.trip.unpublishConfirm)) {
                         try {
                           await unpublishTrip.mutateAsync(tripId)
                         } catch (error: any) {
-                          alert(error.response?.data?.detail || 'Failed to unpublish')
+                          alert(error.response?.data?.detail || t.common.error)
                         }
                       }
                     }}
                     disabled={unpublishTrip.isPending}
                     className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
                   >
-                    {unpublishTrip.isPending ? 'Unpublishing...' : 'Unpublish'}
+                    {unpublishTrip.isPending ? t.trip.unpublishing : t.trip.unpublish}
                   </button>
                   <Link
                     to={`/feed/${tripId}`}
                     className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
                   >
-                    View in Feed →
+                    {t.trip.viewInFeed}
                   </Link>
                 </>
               ) : (
@@ -514,15 +514,15 @@ export default function TripDetail() {
                   onClick={async () => {
                     try {
                       await publishTrip.mutateAsync({ tripId, allowImports })
-                      alert('Trip published to feed!')
+                      alert(t.common.success)
                     } catch (error: any) {
-                      alert(error.response?.data?.detail || 'Failed to publish')
+                      alert(error.response?.data?.detail || t.common.error)
                     }
                   }}
                   disabled={publishTrip.isPending}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                 >
-                  {publishTrip.isPending ? 'Publishing...' : 'Publish to Feed'}
+                  {publishTrip.isPending ? t.trip.publishing : t.trip.publish}
                 </button>
               )}
             </div>

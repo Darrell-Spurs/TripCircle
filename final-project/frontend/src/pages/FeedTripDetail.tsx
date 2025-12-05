@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useFeedTrip } from '../hooks/useFeed'
+import { useLanguage } from '../context/LanguageContext'
 import { Activity } from '../types'
 
 export default function FeedTripDetail() {
   const { id } = useParams<{ id: string }>()
+  const { t } = useLanguage()
   const tripId = id ? parseInt(id) : 0
   const { data: trip, isLoading, error } = useFeedTrip(tripId)
 
@@ -55,7 +57,7 @@ export default function FeedTripDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">{t.common.loading}</div>
       </div>
     )
   }
@@ -64,10 +66,10 @@ export default function FeedTripDetail() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Trip not found</h2>
-          <p className="text-gray-600 mb-4">This trip may not be published or doesn't exist.</p>
+          <h2 className="text-2xl font-bold mb-4">{t.feed.tripNotFound}</h2>
+          <p className="text-gray-600 mb-4">{t.feed.tripNotFoundDesc}</p>
           <Link to="/" className="text-indigo-600 hover:text-indigo-700">
-            ← Back to Feed
+            ← {t.feed.backToFeed}
           </Link>
         </div>
       </div>
@@ -82,7 +84,7 @@ export default function FeedTripDetail() {
           to="/"
           className="text-indigo-600 hover:text-indigo-700 mb-6 inline-block"
         >
-          ← Back to Feed
+          ← {t.feed.backToFeed}
         </Link>
 
         {/* Cover Image */}
@@ -104,7 +106,7 @@ export default function FeedTripDetail() {
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm flex items-center gap-2 flex-shrink-0"
               >
                 <span>📥</span>
-                View & Import
+                {t.feed.viewAndImport}
               </Link>
             )}
           </div>
@@ -128,7 +130,7 @@ export default function FeedTripDetail() {
               <p className="font-medium text-gray-900">{trip.owner.name}</p>
               {trip.publishedAt && (
                 <p className="text-sm text-gray-500">
-                  Published {new Date(trip.publishedAt).toLocaleDateString()}
+                  {t.feed.published} {new Date(trip.publishedAt).toLocaleDateString()}
                 </p>
               )}
             </div>
@@ -155,7 +157,7 @@ export default function FeedTripDetail() {
             </div>
             <div className="flex items-center gap-1">
               <span>📍</span>
-              <span>{trip.activities.length} activities</span>
+              <span>{trip.activities.length} {t.feed.activities}</span>
             </div>
             <div className="flex items-center gap-1 capitalize">
               <span>🏷️</span>
@@ -166,7 +168,7 @@ export default function FeedTripDetail() {
 
         {/* Itinerary */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Itinerary</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.share.itinerary}</h2>
 
           {datesWithActivities.length > 0 ? (
             <div className="space-y-8">
@@ -218,7 +220,7 @@ export default function FeedTripDetail() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No activities in this trip yet.</p>
+            <p className="text-gray-500 text-center py-8">{t.feed.noActivitiesInTrip}</p>
           )}
         </div>
       </div>
