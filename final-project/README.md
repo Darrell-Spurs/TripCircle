@@ -2,6 +2,8 @@
 
 A full-stack travel planning application built with React (Vite + TypeScript) frontend and Express.js (TypeScript) backend. Users can plan trips, collaborate with others, and share their travel experiences with the community.
 
+Deploy link: http://wp-final-five.vercel.app/
+
 ---
 
 ## 🚧 TODO - Upcoming Features
@@ -263,3 +265,4 @@ npx prisma migrate dev     # Apply migrations
 ## Deployment
 
 See deployment instructions in `PROJECT_SPEC.md`.
+
