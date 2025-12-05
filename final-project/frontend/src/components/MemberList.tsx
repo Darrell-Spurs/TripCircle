@@ -1,6 +1,5 @@
 import { TripMember } from '../types'
 import { useRemoveMember, useUpdateMemberRole } from '../hooks/useMembers'
-import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 
 interface MemberListProps {
@@ -10,7 +9,6 @@ interface MemberListProps {
 }
 
 export default function MemberList({ members, tripId, isOwner }: MemberListProps) {
-  const { user } = useAuth()
   const { t } = useLanguage()
   const removeMember = useRemoveMember()
   const updateRole = useUpdateMemberRole()

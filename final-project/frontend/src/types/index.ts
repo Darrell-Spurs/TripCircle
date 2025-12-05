@@ -51,6 +51,37 @@ export interface Activity {
   orderIndex: number
 }
 
+export interface CreateActivityData {
+  tripId: number
+  date: string
+  startTime?: string
+  endTime?: string
+  title: string
+  notes?: string
+  body?: string
+  placeId?: string
+  locationName?: string
+  address?: string
+  lat?: number
+  lng?: number
+  orderIndex: number
+}
+
+export interface UpdateActivityData {
+  date?: string
+  startTime?: string
+  endTime?: string
+  title?: string
+  notes?: string
+  body?: string
+  placeId?: string
+  locationName?: string
+  address?: string
+  lat?: number
+  lng?: number
+  orderIndex?: number
+}
+
 export interface CreateTripData {
   title: string
   description?: string

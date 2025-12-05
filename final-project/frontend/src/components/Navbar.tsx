@@ -59,7 +59,7 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <span className="text-sm text-gray-700">{user.name}</span>
+                    {user && <span className="text-sm text-gray-700">{user.name}</span>}
                     <button
                       onClick={handleLogout}
                       className="text-gray-700 hover:text-red-600 text-sm"

@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { Trip } from '../types'
 
 export default function Dashboard() {
-  const { user, isGuest } = useAuth()
+  const { isGuest } = useAuth()
   const { t } = useLanguage()
   const { data: trips, isLoading } = useTrips()
   const deleteTrip = useDeleteTrip()
