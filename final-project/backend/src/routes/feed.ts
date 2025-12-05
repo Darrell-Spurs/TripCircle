@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { prisma } from '../database';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
@@ -155,8 +155,9 @@ router.get('/:id', async (req, res: Response) => {
 });
 
 // Publish a trip (owner only)
-router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.post('/:id/publish', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -178,7 +179,7 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response
       return;
     }
 
-    if (trip.ownerId !== req.user.id) {
+    if (trip.ownerId !== authReq.user.id) {
       res.status(403).json({ detail: 'Only the owner can publish this trip' });
       return;
     }
@@ -229,8 +230,9 @@ router.post('/:id/publish', authenticate, async (req: AuthRequest, res: Response
 });
 
 // Unpublish a trip (owner only)
-router.post('/:id/unpublish', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.post('/:id/unpublish', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -249,7 +251,7 @@ router.post('/:id/unpublish', authenticate, async (req: AuthRequest, res: Respon
       return;
     }
 
-    if (trip.ownerId !== req.user.id) {
+    if (trip.ownerId !== authReq.user.id) {
       res.status(403).json({ detail: 'Only the owner can unpublish this trip' });
       return;
     }
@@ -272,8 +274,9 @@ router.post('/:id/unpublish', authenticate, async (req: AuthRequest, res: Respon
 });
 
 // Import a published trip to user's own account
-router.post('/:id/import', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.post('/:id/import', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -305,7 +308,7 @@ router.post('/:id/import', authenticate, async (req: AuthRequest, res: Response)
     // Create new trip for the user (don't copy body/story - user should write their own)
     const newTrip = await prisma.trip.create({
       data: {
-        ownerId: req.user.id,
+        ownerId: authReq.user.id,
         title: `${sourceTrip.title} (Imported)`,
         description: sourceTrip.description,
         // body is intentionally not copied - user should write their own story
@@ -321,7 +324,7 @@ router.post('/:id/import', authenticate, async (req: AuthRequest, res: Response)
     await prisma.tripMember.create({
       data: {
         tripId: newTrip.id,
-        userId: req.user.id,
+        userId: authReq.user.id,
         role: 'owner',
       },
     });

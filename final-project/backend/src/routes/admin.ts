@@ -1,11 +1,12 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { prisma } from '../database';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
-router.get('/metrics', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.get('/metrics', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }

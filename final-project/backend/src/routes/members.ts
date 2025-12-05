@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../database';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -14,8 +14,9 @@ const updateMemberRoleSchema = z.object({
   role: z.enum(['editor', 'viewer']),
 });
 
-router.get('/trips/:tripId/members', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.get('/trips/:tripId/members', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -32,9 +33,9 @@ router.get('/trips/:tripId/members', authenticate, async (req: AuthRequest, res:
     return;
   }
 
-  const isOwner = trip.ownerId === req.user.id;
+  const isOwner = trip.ownerId === authReq.user.id;
   const isMember = await prisma.tripMember.findFirst({
-    where: { tripId, userId: req.user.id },
+    where: { tripId, userId: authReq.user.id },
   });
 
   if (!isOwner && !isMember) {
@@ -62,8 +63,9 @@ router.get('/trips/:tripId/members', authenticate, async (req: AuthRequest, res:
   });
 });
 
-router.post('/trips/:tripId/members', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.post('/trips/:tripId/members', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -81,7 +83,7 @@ router.post('/trips/:tripId/members', authenticate, async (req: AuthRequest, res
       return;
     }
 
-    if (trip.ownerId !== req.user.id) {
+    if (trip.ownerId !== authReq.user.id) {
       res.status(403).json({ detail: 'Only the owner can invite members' });
       return;
     }
@@ -131,8 +133,9 @@ router.post('/trips/:tripId/members', authenticate, async (req: AuthRequest, res
   }
 });
 
-router.patch('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.patch('/:id', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -154,7 +157,7 @@ router.patch('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    if (member.trip.ownerId !== req.user.id) {
+    if (member.trip.ownerId !== authReq.user.id) {
       res.status(403).json({ detail: 'Only the owner can update member roles' });
       return;
     }
@@ -184,8 +187,9 @@ router.patch('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.delete('/:id', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -206,7 +210,7 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  if (member.trip.ownerId !== req.user.id) {
+  if (member.trip.ownerId !== authReq.user.id) {
     res.status(403).json({ detail: 'Only the owner can remove members' });
     return;
   }

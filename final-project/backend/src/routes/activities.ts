@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../database';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -42,8 +42,9 @@ const activityUpdateSchema = z.object({
   orderIndex: z.number().optional(),
 });
 
-router.post('/trips/:tripId/activities', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.post('/trips/:tripId/activities', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -61,9 +62,9 @@ router.post('/trips/:tripId/activities', authenticate, async (req: AuthRequest, 
       return;
     }
 
-    const isOwner = trip.ownerId === req.user.id;
+    const isOwner = trip.ownerId === authReq.user.id;
     const member = await prisma.tripMember.findFirst({
-      where: { tripId, userId: req.user.id },
+      where: { tripId, userId: authReq.user.id },
     });
     const isEditor = member?.role === 'owner' || member?.role === 'editor';
 
@@ -133,8 +134,9 @@ router.post('/trips/:tripId/activities', authenticate, async (req: AuthRequest, 
   }
 });
 
-router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.put('/:id', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -156,9 +158,9 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const isOwner = activity.trip.ownerId === req.user.id;
+    const isOwner = activity.trip.ownerId === authReq.user.id;
     const member = await prisma.tripMember.findFirst({
-      where: { tripId: activity.tripId, userId: req.user.id },
+      where: { tripId: activity.tripId, userId: authReq.user.id },
     });
     const isEditor = member?.role === 'owner' || member?.role === 'editor';
 
@@ -213,8 +215,9 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.delete('/:id', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -235,9 +238,9 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const isOwner = activity.trip.ownerId === req.user.id;
+  const isOwner = activity.trip.ownerId === authReq.user.id;
   const member = await prisma.tripMember.findFirst({
-    where: { tripId: activity.tripId, userId: req.user.id },
+    where: { tripId: activity.tripId, userId: authReq.user.id },
   });
   const isEditor = member?.role === 'owner' || member?.role === 'editor';
 
@@ -251,8 +254,9 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   res.json({ message: 'Activity deleted successfully' });
 });
 
-router.patch('/reorder', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.patch('/reorder', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -276,9 +280,9 @@ router.patch('/reorder', authenticate, async (req: AuthRequest, res: Response) =
     }
 
     for (const activity of activities) {
-      const isOwner = activity.trip.ownerId === req.user.id;
+      const isOwner = activity.trip.ownerId === authReq.user.id;
       const member = await prisma.tripMember.findFirst({
-        where: { tripId: activity.tripId, userId: req.user.id },
+        where: { tripId: activity.tripId, userId: authReq.user.id },
       });
       const isEditor = member?.role === 'owner' || member?.role === 'editor';
 

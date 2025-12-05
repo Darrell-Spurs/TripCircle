@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../database';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -35,14 +35,15 @@ const tripUpdateSchema = z.object({
   publishedAt: z.string().datetime().optional().nullable(),
 });
 
-router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.get('/', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
 
   const ownedTrips = await prisma.trip.findMany({
-    where: { ownerId: req.user.id },
+    where: { ownerId: authReq.user.id },
     include: {
       members: { include: { user: true } },
       activities: true,
@@ -54,7 +55,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 
   const memberTrips = await prisma.tripMember.findMany({
     where: { 
-      userId: req.user.id,
+      userId: authReq.user.id,
       // Exclude trips where user is already the owner
       tripId: { notIn: Array.from(ownedTripIds) }
     },
@@ -69,7 +70,23 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   });
 
   // Map owned trips
-  const ownedTripsMap = new Map(
+  const ownedTripsMap = new Map<number, {
+    id: number;
+    title: string;
+    description: string | null;
+    body: string | null;
+    coverImage: string | null;
+    startDate: string;
+    endDate: string;
+    status: string;
+    isPublished: boolean;
+    publishedAt: string | null;
+    ownerId: number;
+    isOwner: boolean;
+    role: 'owner' | 'editor' | 'viewer';
+    createdAt: string;
+    updatedAt: string;
+  }>(
     ownedTrips.map((trip) => [
       trip.id,
       {
@@ -108,7 +125,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         publishedAt: member.trip.publishedAt?.toISOString() || null,
         ownerId: member.trip.ownerId,
         isOwner: false,
-        role: member.role as 'owner' | 'editor' | 'viewer',
+        role: (member.role === 'owner' ? 'owner' : member.role === 'editor' ? 'editor' : 'viewer') as 'owner' | 'editor' | 'viewer',
         createdAt: member.trip.createdAt.toISOString(),
         updatedAt: member.trip.updatedAt.toISOString(),
       });
@@ -120,8 +137,9 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   res.json({ trips });
 });
 
-router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.post('/', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -141,7 +159,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 
     const trip = await prisma.trip.create({
       data: {
-        ownerId: req.user.id,
+        ownerId: authReq.user.id,
         title: data.title,
         description: data.description,
         body: data.body || null,
@@ -181,8 +199,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.get('/:id', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -207,15 +226,21 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const isOwner = trip.ownerId === req.user.id;
-  const isMember = trip.members.some((m) => m.userId === req.user.id);
+  if (!authReq.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const userId = authReq.user.id;
+  const isOwner = trip.ownerId === userId;
+  const isMember = trip.members.some((m) => m.userId === userId);
 
   if (!isOwner && !isMember) {
     res.status(403).json({ detail: "You don't have access to this trip" });
     return;
   }
 
-  const userMember = trip.members.find((m) => m.userId === req.user.id);
+  const userMember = trip.members.find((m) => m.userId === userId);
   const role = isOwner ? 'owner' : userMember?.role || 'viewer';
 
   res.json({
@@ -268,8 +293,9 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   });
 });
 
-router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.put('/:id', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -288,9 +314,9 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const isOwner = trip.ownerId === req.user.id;
+    const isOwner = trip.ownerId === authReq.user.id;
     const member = await prisma.tripMember.findFirst({
-      where: { tripId, userId: req.user.id },
+      where: { tripId, userId: authReq.user.id },
     });
     const isEditor = member?.role === 'editor';
 
@@ -354,8 +380,9 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.delete('/:id', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
@@ -373,7 +400,7 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  if (trip.ownerId !== req.user.id) {
+  if (trip.ownerId !== authReq.user.id) {
     res.status(403).json({ detail: 'Only the owner can delete this trip' });
     return;
   }

@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../database';
 import { authenticateOptional, AuthRequest } from '../middleware/auth';
@@ -11,13 +11,14 @@ const eventLogSchema = z.object({
   tripId: z.number().optional(),
 });
 
-router.post('/', authenticateOptional, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateOptional, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
   try {
     const data = eventLogSchema.parse(req.body);
 
     const event = await prisma.event.create({
       data: {
-        userId: req.user?.id || null,
+        userId: authReq.user?.id || null,
         tripId: data.tripId || null,
         eventType: data.eventType,
         metadata: data.metadata || {},

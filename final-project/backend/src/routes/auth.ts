@@ -152,18 +152,19 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/me', authenticate, (req: AuthRequest, res: Response) => {
-  if (!req.user) {
+router.get('/me', authenticate, (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
     res.status(401).json({ detail: 'Not authenticated' });
     return;
   }
 
   res.json({
-    id: req.user.id,
-    email: req.user.email,
-    name: req.user.name,
-    avatarUrl: req.user.avatarUrl,
-    provider: req.user.provider,
+    id: authReq.user.id,
+    email: authReq.user.email,
+    name: authReq.user.name,
+    avatarUrl: authReq.user.avatarUrl,
+    provider: authReq.user.provider,
   });
 });
 
