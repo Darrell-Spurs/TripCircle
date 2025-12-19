@@ -19,6 +19,16 @@ app.use(cors({
   origin: config.frontendUrls,
   credentials: true,
 }));
+
+// Add request logging middleware (for debugging)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
+    query: req.query,
+    origin: req.headers.origin,
+  });
+  next();
+});
+
 app.use(express.json());
 app.use(passport.initialize());
 

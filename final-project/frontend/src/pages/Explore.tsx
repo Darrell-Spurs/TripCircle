@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react'
 import { useSearchPlaces, Place } from '../hooks/usePlaces'
 import { useTrips } from '../hooks/useTrips'
 import { useCreateActivity } from '../hooks/useActivities'
-import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api'
+import { GoogleMap, LoadScript, InfoWindow, Marker } from '@react-google-maps/api'
 import { useNavigate, Link } from 'react-router-dom'
 import { trackEvent } from '../lib/amplitude'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
+import { useRef } from 'react'
+
+const GOOGLE_MAPS_MARKER_LIBRARIES = ['marker'] as any
 
 const mapContainerStyle = {
   width: '100%',
@@ -18,6 +21,9 @@ const defaultCenter = {
   lng: -122.4194,
 }
 
+const FIT_BOUNDS_PADDING = { top: 60, right: 60, bottom: 60, left: 60 } as any
+const SINGLE_POINT_ZOOM = 14
+
 export default function Explore() {
   const navigate = useNavigate()
   const { isGuest } = useAuth()
@@ -25,6 +31,8 @@ export default function Explore() {
   const [keyword, setKeyword] = useState('')
   const [location, setLocation] = useState('')
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
+  const [mapInstance, setMapInstance] = useState<any>(null)
+  const advancedMarkersRef = useRef<any[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
@@ -101,6 +109,74 @@ export default function Explore() {
   const mapCenter = places && places.length > 0
     ? { lat: places[0].lat, lng: places[0].lng }
     : defaultCenter
+
+  // Auto-fit map to show all results (still nicely zoomed in)
+  useEffect(() => {
+    if (!mapInstance) return
+    if (!places || places.length === 0) return
+
+    const g: any = (globalThis as any).google
+    if (!g?.maps?.LatLngBounds) return
+
+    if (places.length === 1) {
+      mapInstance.setCenter({ lat: places[0].lat, lng: places[0].lng })
+      mapInstance.setZoom(SINGLE_POINT_ZOOM)
+      return
+    }
+
+    const bounds = new g.maps.LatLngBounds()
+    places.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }))
+    mapInstance.fitBounds(bounds, FIT_BOUNDS_PADDING)
+  }, [mapInstance, places])
+
+  // Create advanced markers for search results
+  useEffect(() => {
+    if (!mapInstance) return
+
+    const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID
+    const useAdvancedMarkers = !!mapId
+    if (!useAdvancedMarkers) return
+
+    // clear old markers
+    while (advancedMarkersRef.current.length) {
+      const m = advancedMarkersRef.current.pop()
+      try {
+        m.map = null
+      } catch {
+        // ignore
+      }
+    }
+
+    const g: any = (globalThis as any).google
+    const AdvancedMarkerElement = g?.maps?.marker?.AdvancedMarkerElement
+    if (!AdvancedMarkerElement) return
+
+    places?.forEach((place) => {
+      const marker = new AdvancedMarkerElement({
+        map: mapInstance,
+        position: { lat: place.lat, lng: place.lng },
+      })
+      if (typeof marker.addListener === 'function') {
+        marker.addListener('gmp-click', (e: any) => {
+          if (e?.domEvent?.stopPropagation) e.domEvent.stopPropagation()
+          if (e?.domEvent?.preventDefault) e.domEvent.preventDefault()
+          setSelectedPlace(place)
+        })
+      }
+      advancedMarkersRef.current.push(marker)
+    })
+
+    return () => {
+      while (advancedMarkersRef.current.length) {
+        const m = advancedMarkersRef.current.pop()
+        try {
+          m.map = null
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }, [mapInstance, places])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -183,19 +259,34 @@ export default function Explore() {
             <div className="bg-white rounded-lg shadow-md p-4">
               <h2 className="text-xl font-semibold mb-4">{t.explore.map}</h2>
               {import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
-                <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+                <LoadScript
+                  googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+                  libraries={import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ? GOOGLE_MAPS_MARKER_LIBRARIES : undefined}
+                >
                   <GoogleMap
                     mapContainerStyle={mapContainerStyle}
                     center={mapCenter}
                     zoom={13}
+                    options={{
+                      ...(import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ? ({ mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID } as any) : {}),
+                      clickableIcons: false,
+                    } as any}
+                    onLoad={(map) => {
+                      setMapInstance(map)
+                      // Force-disable POI clicks on the live map instance (extra safety)
+                      map.setOptions({ clickableIcons: false })
+                    }}
+                    onUnmount={() => setMapInstance(null)}
                   >
-                    {places.map((place) => (
-                      <Marker
-                        key={place.placeId}
-                        position={{ lat: place.lat, lng: place.lng }}
-                        onClick={() => setSelectedPlace(place)}
-                      />
-                    ))}
+                    {/* Fallback markers when Map ID is not configured */}
+                    {!import.meta.env.VITE_GOOGLE_MAPS_MAP_ID &&
+                      places.map((place) => (
+                        <Marker
+                          key={place.placeId}
+                          position={{ lat: place.lat, lng: place.lng }}
+                          onClick={() => setSelectedPlace(place)}
+                        />
+                      ))}
                     {selectedPlace && (
                       <InfoWindow
                         position={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}

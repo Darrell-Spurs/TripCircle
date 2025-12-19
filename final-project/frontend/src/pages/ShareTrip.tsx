@@ -10,7 +10,7 @@ export default function ShareTrip() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
   const { user, isGuest } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { data, isLoading } = useSharedTrip(token || '')
   const importTrip = useImportSharedTrip()
 
@@ -40,7 +40,8 @@ export default function ShareTrip() {
   const formatTime = (timeStr?: string | null) => {
     if (!timeStr) return ''
     const date = new Date(timeStr)
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
   // Group activities by date (only dates with activities)

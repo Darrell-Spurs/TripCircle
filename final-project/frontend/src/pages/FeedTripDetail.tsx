@@ -6,7 +6,7 @@ import { Activity } from '../types'
 
 export default function FeedTripDetail() {
   const { id } = useParams<{ id: string }>()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const tripId = id ? parseInt(id) : 0
   const { data: trip, isLoading, error } = useFeedTrip(tripId)
 
@@ -14,7 +14,8 @@ export default function FeedTripDetail() {
   const formatTime = (timeStr?: string | null) => {
     if (!timeStr) return ''
     const date = new Date(timeStr)
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
   // Group activities by date (only dates with activities)

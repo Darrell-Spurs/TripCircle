@@ -31,6 +31,7 @@ export default function TripDetail() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [pace, setPace] = useState<'tight' | 'neutral' | 'relaxed'>('neutral')
   const createActivity = useCreateActivity()
   const updateActivity = useUpdateActivity()
   const deleteActivity = useDeleteActivity()
@@ -52,6 +53,15 @@ export default function TripDetail() {
 
   const canEdit = !isGuest && (trip?.role === 'owner' || trip?.role === 'editor')
   const isOwner = !isGuest && trip?.role === 'owner'
+
+  // Pace controls transportation buffer (pre + post), not just a single multiplier.
+  // Example: a 5m travel segment with Neutral adds 8% pre + 8% post (~0.8m + 0.8m) -> ~6.6m.
+  const paceBuffer =
+    pace === 'tight'
+      ? { prePct: 0.10, postPct: 0.10 }
+      : pace === 'relaxed'
+        ? { prePct: 0.20, postPct: 0.20 }
+        : { prePct: 0.15, postPct: 0.15 }
 
   // Sync trip body with state
   useEffect(() => {
@@ -538,28 +548,63 @@ export default function TripDetail() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">{t.trip.activities}</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  viewMode === 'list'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {t.trip.listView}
-              </button>
-              <button
-                onClick={() => setViewMode('calendar')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  viewMode === 'calendar'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {t.trip.calendarView}
-              </button>
-            </div>
+              <div className="flex flex-col md:flex-row md:items-center gap-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      viewMode === 'list'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {t.trip.listView}
+                  </button>
+                  <button
+                    onClick={() => setViewMode('calendar')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      viewMode === 'calendar'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {t.trip.calendarView}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">{t.route.paceLabel}:</span>
+                  <div className="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setPace('tight')}
+                      className={`px-3 py-1.5 text-sm font-medium transition ${
+                        pace === 'tight' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {t.route.paceTight}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPace('neutral')}
+                      className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
+                        pace === 'neutral' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {t.route.paceNeutral}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPace('relaxed')}
+                      className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
+                        pace === 'relaxed' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {t.route.paceRelaxed}
+                    </button>
+                  </div>
+                </div>
+              </div>
           </div>
 
           {days.map((date) => {
@@ -575,6 +620,7 @@ export default function TripDetail() {
                 onReorder={handleReorder}
                 onAddActivity={() => handleAddActivity(date)}
                 canEdit={canEdit}
+                paceBuffer={paceBuffer}
               />
             )
           })}

@@ -76,6 +76,39 @@ export default function ActivityModal({
     return new Date(`${dateStr}T${timeStr}:00`).toISOString()
   }
 
+  const clampToEndOfDayMinutes = (totalMinutes: number) => {
+    const max = 23 * 60 + 59
+    return Math.min(Math.max(totalMinutes, 0), max)
+  }
+
+  const adjustTime = (time: string, minutes: number) => {
+    const [hStr, mStr] = time.split(':')
+    const h = Number(hStr)
+    const m = Number(mStr)
+    if (Number.isNaN(h) || Number.isNaN(m)) return time
+
+    const nextTotal = clampToEndOfDayMinutes(h * 60 + m + minutes)
+    const nextH = String(Math.floor(nextTotal / 60)).padStart(2, '0')
+    const nextM = String(nextTotal % 60).padStart(2, '0')
+    return `${nextH}:${nextM}`
+  }
+
+  const adjustStartTime = (minutes: number) => {
+    if (!formData.startTime) return
+    setFormData((prev) => ({ ...prev, startTime: adjustTime(prev.startTime, minutes) }))
+  }
+
+  const adjustEndTime = (minutes: number) => {
+    if (formData.endTime) {
+      setFormData((prev) => ({ ...prev, endTime: adjustTime(prev.endTime, minutes) }))
+      return
+    }
+    // If endTime is empty but startTime exists, set endTime relative to startTime.
+    if (formData.startTime) {
+      setFormData((prev) => ({ ...prev, endTime: adjustTime(prev.startTime, minutes) }))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const data: any = {
@@ -148,6 +181,40 @@ export default function ActivityModal({
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    disabled={!formData.startTime}
+                    onClick={() => adjustStartTime(15)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.add15m}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!formData.startTime}
+                    onClick={() => adjustStartTime(30)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.add30m}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!formData.startTime}
+                    onClick={() => adjustStartTime(-15)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.minus15m}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!formData.startTime}
+                    onClick={() => adjustStartTime(-30)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.minus30m}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -160,6 +227,40 @@ export default function ActivityModal({
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    disabled={!formData.startTime && !formData.endTime}
+                    onClick={() => adjustEndTime(15)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.add15m}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!formData.startTime && !formData.endTime}
+                    onClick={() => adjustEndTime(30)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.add30m}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!formData.endTime}
+                    onClick={() => adjustEndTime(-15)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.minus15m}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!formData.endTime}
+                    onClick={() => adjustEndTime(-30)}
+                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    {t.activity.minus30m}
+                  </button>
+                </div>
               </div>
             </div>
 

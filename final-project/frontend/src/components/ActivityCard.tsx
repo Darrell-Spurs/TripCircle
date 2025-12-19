@@ -9,33 +9,33 @@ interface ActivityCardProps {
 }
 
 export default function ActivityCard({ activity, onEdit, onDelete, canEdit }: ActivityCardProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return ''
     const date = new Date(timeStr)
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    if (Number.isNaN(date.getTime())) return ''
+
+    const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+    // Always render 24-hour clock (e.g. 13:05)
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
-  const getDisplayTime = () => {
-    if (activity.startTime && activity.endTime) {
-      return `${formatTime(activity.startTime)} - ${formatTime(activity.endTime)}`
-    } else if (activity.startTime) {
-      return formatTime(activity.startTime)
-    } else if (activity.endTime) {
-      return formatTime(activity.endTime)
-    }
-    return null
-  }
-
-  const displayTime = getDisplayTime()
+  const start = activity.startTime ? formatTime(activity.startTime) : ''
+  const end = activity.endTime ? formatTime(activity.endTime) : ''
 
   return (
     <div className="flex gap-4 items-center">
       {/* Visiting Time - Separate Box/Rectangle */}
-      <div className="flex-shrink-0 w-36 bg-gray-50 border border-gray-300 rounded-lg p-3 flex items-center justify-center min-h-[80px]">
-        {displayTime ? (
-          <span className="text-sm text-gray-700 font-medium whitespace-nowrap text-center">{displayTime}</span>
+      <div className="flex-shrink-0 w-24 bg-gradient-to-b from-sky-50/80 to-white border border-sky-200/50 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm">
+        {start && end ? (
+          <div className="text-sm text-slate-800 font-semibold text-center leading-tight flex flex-col items-center justify-center">
+            <span className="whitespace-nowrap tabular-nums">{start}</span>
+            <span className="text-slate-300 text-xs my-0.5 rotate-90 leading-none">~</span>
+            <span className="whitespace-nowrap tabular-nums">{end}</span>
+          </div>
+        ) : start || end ? (
+          <span className="text-sm text-slate-800 font-semibold whitespace-nowrap text-center tabular-nums">{start || end}</span>
         ) : canEdit ? (
           <button
             onClick={(e) => {
@@ -52,16 +52,15 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit }: Ac
       </div>
       
       {/* Activity Content - Separate Box/Rectangle */}
-      <div className="flex-1 bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition flex gap-4 items-center">
+      <div className="flex-1 bg-gradient-to-b from-white to-sky-50/35 border border-sky-200/45 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-sky-300/45 transition flex gap-4 items-center">
         <div className="flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-2">
             <h4 className="font-semibold text-lg">{activity.title}</h4>
           </div>
           
-          {activity.locationName && (
+          {activity.address && (
             <p className="text-sm text-gray-600 mb-2">
-              📍 {activity.locationName}
-              {activity.address && <span className="text-gray-500"> - {activity.address}</span>}
+              {activity.address && <span className="text-xs text-gray-500">📍{activity.address}</span>}
             </p>
           )}
           

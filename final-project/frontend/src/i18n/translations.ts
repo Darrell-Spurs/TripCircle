@@ -161,10 +161,41 @@ export interface Translations {
     more: string
     addVisitingTime: string
     noAssignedTime: string
+    add15m: string
+    add30m: string
+    minus15m: string
+    minus30m: string
     storyForFeed: string
     storyPlaceholder: string
     storyDescription: string
     quickNotesPlaceholder: string
+  }
+
+  // Route / transportation between activities
+  route: {
+    title: string
+    between: string
+    and: string
+    modeLabel: string
+    driving: string
+    walking: string
+    transit: string
+    openInMaps: string
+    loading: string
+    error: string
+    noRouteData: string
+    showMap: string
+    hideMap: string
+    mapTitle: string
+    travelTime: string
+    travelDistance: string
+    mapsNotConfigured: string
+    paceLabel: string
+    paceTight: string
+    paceNeutral: string
+    paceRelaxed: string
+    scheduleConflicts: string
+    buffer: string
   }
 
   // Explore
@@ -407,10 +438,39 @@ export const translations: Record<Language, Translations> = {
       more: '更多',
       addVisitingTime: '新增參觀時間',
       noAssignedTime: '未指定時間',
+      add15m: '+15分',
+      add30m: '+30分',
+      minus15m: '-15分',
+      minus30m: '-30分',
       storyForFeed: '故事（用於動態）',
       storyPlaceholder: '分享您在此地點的體驗，當發布到動態時...',
       storyDescription: '這將在旅程發布時顯示',
       quickNotesPlaceholder: '快速備註...',
+    },
+    route: {
+      title: '交通',
+      between: '路線：從',
+      and: '到',
+      modeLabel: '交通方式',
+      driving: '開車',
+      walking: '步行',
+      transit: '大眾運輸',
+      openInMaps: '在 Google 地圖開啟',
+      loading: '載入路線中...',
+      error: '無法取得路線資訊',
+      noRouteData: '沒有可用的路線資訊',
+      showMap: '顯示地圖',
+      hideMap: '隱藏地圖',
+      mapTitle: '當天地圖',
+      travelTime: '交通時間',
+      travelDistance: '交通距離',
+      mapsNotConfigured: '未設定 Google Maps API Key',
+      paceLabel: '節奏',
+      paceTight: '緊湊',
+      paceNeutral: '一般',
+      paceRelaxed: '悠閒',
+      scheduleConflicts: '行程衝突',
+      buffer: '緩衝',
     },
     explore: {
       title: '探索地點',
@@ -641,10 +701,39 @@ export const translations: Record<Language, Translations> = {
       more: 'more',
       addVisitingTime: 'Add visiting time',
       noAssignedTime: 'No assigned time',
+      add15m: '+15m',
+      add30m: '+30m',
+      minus15m: '-15m',
+      minus30m: '-30m',
       storyForFeed: 'Story (for feed)',
       storyPlaceholder: 'Share your experience at this place when publishing to feed...',
       storyDescription: 'This will be shown when the trip is published',
       quickNotesPlaceholder: 'Quick notes for planning...',
+    },
+    route: {
+      title: 'Transportation',
+      between: 'Route from',
+      and: 'to',
+      modeLabel: 'Mode',
+      driving: 'Driving',
+      walking: 'Walking',
+      transit: 'Transit',
+      openInMaps: 'Open in Google Maps',
+      loading: 'Fetching route...',
+      error: 'Unable to fetch route information',
+      noRouteData: 'No route information available',
+      showMap: 'Show map',
+      hideMap: 'Hide map',
+      mapTitle: 'Day map',
+      travelTime: 'Travel time',
+      travelDistance: 'Travel distance',
+      mapsNotConfigured: 'Google Maps API key not configured',
+      paceLabel: 'Pace',
+      paceTight: 'Tight',
+      paceNeutral: 'Neutral',
+      paceRelaxed: 'Relaxed',
+      scheduleConflicts: 'Schedule conflicts',
+      buffer: 'buffer',
     },
     explore: {
       title: 'Explore Places',

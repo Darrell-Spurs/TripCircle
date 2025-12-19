@@ -26,12 +26,16 @@ const queryClient = new QueryClient({
   },
 })
 
+const routerFutureFlags = {
+  v7_startTransition: true,
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <AuthProvider>
-          <BrowserRouter>
+          <BrowserRouter future={routerFutureFlags}>
             <Navbar />
             <Routes>
               <Route path="/" element={<Feed />} />
