@@ -181,7 +181,7 @@ router.post('/:token/import', authenticate, async (req: Request, res: Response) 
       },
     });
 
-    // Copy all activities (notes are copied, but body/story is not)
+    // Copy all activities with importer as the creator
     if (sourceTrip.activities.length > 0) {
       await prisma.activity.createMany({
         data: sourceTrip.activities.map((a) => ({
@@ -198,8 +198,24 @@ router.post('/:token/import', authenticate, async (req: Request, res: Response) 
           lat: a.lat,
           lng: a.lng,
           orderIndex: a.orderIndex,
+          createdByUserId: authReq.user.id, // Set importer as the creator (添加者)
         })),
       });
+
+      // Add importer as participant for all imported activities
+      const createdActivities = await prisma.activity.findMany({
+        where: { tripId: newTrip.id },
+        select: { id: true },
+      });
+
+      if (createdActivities.length > 0) {
+        await prisma.activityParticipant.createMany({
+          data: createdActivities.map((activity) => ({
+            activityId: activity.id,
+            userId: authReq.user.id,
+          })),
+        });
+      }
     }
 
     res.json({
