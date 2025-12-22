@@ -310,24 +310,29 @@ export default function ActivityModal({
     }
 
     // Use locationName as title if no title field exists
+    // For updates: use null to clear fields, undefined means "don't change"
+    // For creates: use undefined to let backend use defaults
+    const isUpdate = !!activity
+    
     const data: any = {
       tripId,
       date,
       title: formData.locationName || 'Untitled Activity', // Use locationName as title
-      notes: formData.notes || undefined,
-      body: formData.body || undefined,
+      // For updates, send null to clear; for creates, send undefined to skip
+      notes: formData.notes || (isUpdate ? null : undefined),
+      body: formData.body || (isUpdate ? null : undefined),
       startTime: combineDateTime(date, formData.startTime),
       endTime: combineDateTime(date, formData.endTime),
-      locationName: formData.locationName || undefined,
-      address: formData.address || undefined,
-      lat: formData.lat,
-      lng: formData.lng,
-      placeId: formData.placeId,
+      locationName: formData.locationName || (isUpdate ? null : undefined),
+      address: formData.address || (isUpdate ? null : undefined),
+      lat: formData.lat ?? (isUpdate ? null : undefined),
+      lng: formData.lng ?? (isUpdate ? null : undefined),
+      placeId: formData.placeId ?? (isUpdate ? null : undefined),
       orderIndex: activity?.orderIndex ?? defaultOrderIndex,
       participantIds: participantIds.length > 0 ? participantIds : undefined,
-      cost: cost || undefined,
-      currency: currency || undefined,
-      tags: tags.length > 0 ? tags : undefined,
+      cost: cost ?? (isUpdate ? null : undefined),
+      currency: currency || (isUpdate ? null : undefined),
+      tags: tags.length > 0 ? tags : (isUpdate ? [] : undefined),
       // Include cost shares only if custom amounts are set (null means use equal split)
       // Backend will auto-calculate equal split if costShares is not provided
       costShares: costShares && costShares.length > 0 ? costShares : undefined,
