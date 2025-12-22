@@ -356,6 +356,37 @@ npx prisma migrate dev     # Apply migrations
 - Activity participants default to all trip members when creating new activities
 - Cost shares are auto-calculated as equal split when cost is set
 
+## 🚧 TODO - Upcoming Features
+
+> **Team members**: Pick one and start working on it! Update this list when you begin.
+
+### 1. Search & Filter Feed
+- [ ] Add search bar to filter published trips by title, destination, etc.
+- [ ] Add filters (date range, trip length, trip type etc.)
+
+### 2. Clickable Feed Content → Search/Explore
+- [ ] Make locations, tags, or keywords in feed posts clickable
+- [ ] Clicking should filter the feed OR jump to Explore page with that search term
+- [ ] Example: Click "Tokyo" in a post → see all Tokyo trips or explore Tokyo attractions
+
+### 3. Update Trip Dates (Tricky!)
+- [ ] Allow changing trip start/end dates after creation
+- [ ] **Challenge**: What happens to activities when dates change?
+  - If a day is removed, what happens to its activities? (Delete? Move? Warn user?)
+  - If dates shift, should activities shift too?
+  - Consider a confirmation dialog explaining the impact
+
+### 4. Save & Comment on Posts
+- [ ] Add "Save/Bookmark" button on feed posts
+- [ ] Show saved posts in user's dashboard
+- [ ] Add comment section on published trips
+- [ ] Consider: notifications when someone comments on your post?
+
+### 5. Publisher Analytics Dashboard
+- [ ] Show stats for your published trips: views, imports, saves
+- [ ] Add to existing dashboard or create new "My Posts" section
+- [ ] Track: view count, import count, comments count per post
+
 ## Deployment
 
 See deployment instructions in `PROJECT_SPEC.md`.
