@@ -74,7 +74,6 @@ model Activity {
   lng             Float?
   orderIndex      Int
   createdByUserId Int?
-  isImported      Boolean              @default(false)
   cost            Float?
   currency        String?
   createdAt       DateTime             @default(now())
