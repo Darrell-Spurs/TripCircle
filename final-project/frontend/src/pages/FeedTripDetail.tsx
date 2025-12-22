@@ -1,14 +1,16 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useFeedTrip } from '../hooks/useFeed'
 import { useLanguage } from '../context/LanguageContext'
-import { Activity } from '../types'
+import { Activity, FeedTripPhoto } from '../types'
+import TripCommentsSection from '../components/TripCommentsSection'
 
 export default function FeedTripDetail() {
   const { id } = useParams<{ id: string }>()
   const { t, language } = useLanguage()
   const tripId = id ? parseInt(id) : 0
   const { data: trip, isLoading, error } = useFeedTrip(tripId)
+  const [selectedPhoto, setSelectedPhoto] = useState<FeedTripPhoto | null>(null)
 
   // Format time without seconds
   const formatTime = (timeStr?: string | null) => {
@@ -88,13 +90,17 @@ export default function FeedTripDetail() {
           ← {t.feed.backToFeed}
         </Link>
 
-        {/* Cover Image */}
-        {trip.coverImage && (
+        {/* Cover Image - use feedCoverImage (includes album photos) */}
+        {trip.feedCoverImage ? (
           <img
-            src={trip.coverImage}
+            src={trip.feedCoverImage}
             alt={trip.title}
             className="w-full h-72 object-cover rounded-xl mb-6"
           />
+        ) : (
+          <div className="w-full h-48 bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center rounded-xl mb-6">
+            <span className="text-6xl">✈️</span>
+          </div>
         )}
 
         {/* Trip Header */}
@@ -223,6 +229,73 @@ export default function FeedTripDetail() {
           ) : (
             <p className="text-gray-500 text-center py-8">{t.feed.noActivitiesInTrip}</p>
           )}
+        </div>
+
+        {/* Public Photos Gallery */}
+        {trip.publicPhotos && trip.publicPhotos.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              📷 {t.photos?.tripPhotos || 'Trip Photos'} ({trip.publicPhotos.length})
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {trip.publicPhotos.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="relative aspect-square cursor-pointer group overflow-hidden rounded-lg"
+                  onClick={() => setSelectedPhoto(photo)}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.caption || 'Trip photo'}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  {photo.isFeedCover && (
+                    <span className="absolute top-2 left-2 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      ⭐ {t.photos?.cover || 'Cover'}
+                    </span>
+                  )}
+                  {photo.caption && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                      <p className="text-white text-sm line-clamp-2">{photo.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Photo Lightbox */}
+        {selectedPhoto && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+            onClick={() => setSelectedPhoto(null)}
+          >
+            <button
+              className="absolute top-4 right-4 text-white text-3xl hover:text-gray-300"
+              onClick={() => setSelectedPhoto(null)}
+            >
+              ×
+            </button>
+            <div className="max-w-4xl max-h-[90vh] p-4" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={selectedPhoto.url}
+                alt={selectedPhoto.caption || 'Trip photo'}
+                className="max-w-full max-h-[80vh] object-contain"
+              />
+              {selectedPhoto.caption && (
+                <p className="text-white text-center mt-4">{selectedPhoto.caption}</p>
+              )}
+              <p className="text-gray-400 text-sm text-center mt-2">
+                {t.photos?.addedBy || 'Added by'} {selectedPhoto.addedBy.name}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Comments Section */}
+        <div className="mt-6">
+          <TripCommentsSection tripId={tripId} tripOwnerId={trip.owner.id} />
         </div>
       </div>
     </div>

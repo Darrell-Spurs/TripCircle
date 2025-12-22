@@ -23,6 +23,8 @@ model User {
   activityCostShares   ActivityCostShare[]
   activityPreferences  ActivityPreference[]
   activityHistory      ActivityHistory[]
+  tripComments         TripComment[]
+  addedPhotos          TripPhoto[]          @relation("AddedPhotos")
   createdAt            DateTime             @default(now())
 }
 
@@ -43,6 +45,8 @@ model Trip {
   activities  Activity[]
   shareLinks  ShareLink[]
   events      Event[]
+  tripComments TripComment[]
+  photos      TripPhoto[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -172,5 +176,30 @@ model ActivityTag {
   createdAt  DateTime @default(now())
   @@unique([activityId, tag])
   @@index([tag])
+}
+
+model TripComment {
+  id        Int      @id @default(autoincrement())
+  tripId    Int
+  userId    Int
+  content   String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TripPhoto {
+  id            Int      @id @default(autoincrement())
+  tripId        Int
+  url           String
+  caption       String?
+  isPublic      Boolean  @default(false)
+  isFeedCover   Boolean  @default(false)
+  addedByUserId Int
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  addedBy       User     @relation("AddedPhotos", fields: [addedByUserId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 

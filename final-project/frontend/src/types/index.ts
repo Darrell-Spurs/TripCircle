@@ -113,6 +113,36 @@ export interface ActivityHistory {
   createdAt: string
 }
 
+export interface TripComment {
+  id: number
+  tripId: number
+  userId: number
+  user: {
+    id: number
+    name: string
+    avatarUrl?: string
+  }
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TripPhoto {
+  id: number
+  tripId: number
+  url: string
+  caption?: string
+  isPublic: boolean
+  isFeedCover: boolean
+  addedBy: {
+    id: number
+    name: string
+    avatarUrl?: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CreateActivityData {
   tripId: number
   date: string
@@ -181,6 +211,7 @@ export interface FeedTrip {
   description?: string
   body?: string
   coverImage?: string
+  feedCoverImage?: string | null
   startDate: string
   endDate: string
   status: string
@@ -191,11 +222,26 @@ export interface FeedTrip {
     avatarUrl?: string
   }
   activitiesCount: number
+  commentsCount: number
+  publicPhotosCount: number
   activitiesPreview: {
     id: number
     title: string
     locationName?: string
   }[]
+}
+
+export interface FeedTripPhoto {
+  id: number
+  url: string
+  caption?: string
+  isFeedCover: boolean
+  addedBy: {
+    id: number
+    name: string
+    avatarUrl?: string
+  }
+  createdAt: string
 }
 
 export interface FeedTripDetail {
@@ -204,6 +250,7 @@ export interface FeedTripDetail {
   description?: string
   body?: string
   coverImage?: string
+  feedCoverImage?: string | null
   startDate: string
   endDate: string
   status: string
@@ -215,5 +262,6 @@ export interface FeedTripDetail {
     avatarUrl?: string
   }
   activities: Activity[]
+  publicPhotos: FeedTripPhoto[]
 }
 

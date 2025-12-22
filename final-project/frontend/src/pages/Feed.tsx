@@ -41,10 +41,10 @@ export default function Feed() {
                   className="block break-inside-avoid"
                 >
                   <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
-                    {/* Cover Image */}
-                    {trip.coverImage ? (
+                    {/* Cover Image - use feedCoverImage (includes album photos) */}
+                    {trip.feedCoverImage ? (
                       <img
-                        src={trip.coverImage}
+                        src={trip.feedCoverImage}
                         alt={trip.title}
                         className="w-full h-48 object-cover"
                       />
@@ -92,22 +92,38 @@ export default function Feed() {
                         {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
                       </div>
 
-                      {/* Author */}
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                        {trip.owner.avatarUrl ? (
-                          <img
-                            src={trip.owner.avatarUrl}
-                            alt={trip.owner.name}
-                            className="w-6 h-6 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <span className="text-indigo-600 text-xs font-medium">
-                              {trip.owner.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        <span className="text-sm text-gray-700">{trip.owner.name}</span>
+                      {/* Author and Stats */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          {trip.owner.avatarUrl ? (
+                            <img
+                              src={trip.owner.avatarUrl}
+                              alt={trip.owner.name}
+                              className="w-6 h-6 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center">
+                              <span className="text-indigo-600 text-xs font-medium">
+                                {trip.owner.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-sm text-gray-700">{trip.owner.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-500 text-sm">
+                          {trip.publicPhotosCount > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span>📷</span>
+                              <span>{trip.publicPhotosCount}</span>
+                            </div>
+                          )}
+                          {trip.commentsCount > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span>💬</span>
+                              <span>{trip.commentsCount}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
