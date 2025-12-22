@@ -19,6 +19,7 @@ import ActivityModal from '../components/ActivityModal'
 import MemberList from '../components/MemberList'
 import InviteMemberModal from '../components/InviteMemberModal'
 import TripPhotosTab from '../components/TripPhotosTab'
+import ImportLocationModal from '../components/ImportLocationModal'
 import { Activity } from '../types'
 
 export default function TripDetail() {
@@ -30,6 +31,8 @@ export default function TripDetail() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importDate, setImportDate] = useState<string>('')
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [pace, setPace] = useState<'tight' | 'neutral' | 'relaxed'>('neutral')
@@ -589,6 +592,19 @@ export default function TripDetail() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">{t.trip.activities}</h2>
                   <div className="flex flex-col md:flex-row md:items-center gap-3">
+                    {canEdit && (
+                      <button
+                        onClick={() => {
+                          setShowImportModal(true)
+                          if (days.length > 0) {
+                            setImportDate(days[0])
+                          }
+                        }}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm"
+                      >
+                        📁 {t.locationFolders.importFromFolder}
+                      </button>
+                    )}
                     <div className="flex gap-2">
                       <button
                         onClick={() => setViewMode('list')}
@@ -672,6 +688,21 @@ export default function TripDetail() {
             <TripPhotosTab tripId={tripId} canEdit={canEdit} />
           )}
         </div>
+
+        {showImportModal && (
+          <ImportLocationModal
+            isOpen={showImportModal}
+            onClose={() => {
+              setShowImportModal(false)
+              setImportDate('')
+            }}
+            tripId={tripId}
+            defaultDate={importDate}
+            onSuccess={() => {
+              // Activities will be refreshed automatically via React Query
+            }}
+          />
+        )}
 
         <ActivityModal
           isOpen={isModalOpen}

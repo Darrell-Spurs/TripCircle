@@ -16,6 +16,7 @@ import ShareTrip from './pages/ShareTrip'
 import AdminAnalytics from './pages/AdminAnalytics'
 import Feed from './pages/Feed'
 import FeedTripDetail from './pages/FeedTripDetail'
+import LocationFolders from './pages/LocationFolders'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +86,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AdminAnalytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/location-folders"
+                element={
+                  <ProtectedRoute>
+                    <LocationFolders />
                   </ProtectedRoute>
                 }
               />

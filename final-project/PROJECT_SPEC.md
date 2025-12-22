@@ -156,6 +156,26 @@ Key capabilities include:
   - location  
 - Display map + results list  
 - Add a place directly into a trip's itinerary  
+- **Two-tab interface:**
+  - **Search Tab**: Discover new locations via Google Places
+  - **My Collections Tab**: Manage saved location folders
+- **Save to Folder**: Save discovered places to organized collections
+- **Folder Management**: Create, edit, delete folders with descriptions
+- **Location Notes & Tags**: Add custom notes and tags to saved locations
+- **Quick Import**: Import multiple locations from folders into trips
+
+---
+
+## **5.10 Location Collections**
+- **Save Locations**: Save favorite places from Explore to organized folders
+- **Folder Organization**: Create multiple folders to categorize locations (e.g., "Tokyo Restaurants", "Must-See Attractions")
+- **Location Details**: Store place data (name, address, lat/lng, placeId) plus user-added notes and tags
+- **Import to Trips**: Select multiple locations from folders and import them into trip activities
+- **Quick Select**: "Add from Folder" button in activity creation modal for fast location selection
+- **Folder Sharing**: Share location folders via share links (view or edit permissions)
+- **Import Shared Folders**: Copy shared folders to your account
+- **Folder Collaboration**: Invite others to folders with editor/viewer roles
+- **Public Folders**: Option to make folders publicly accessible
 
 ---
 
@@ -248,16 +268,18 @@ Displays:
 
 ```prisma
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  passwordHash String?
-  name         String
-  avatarUrl    String?
-  provider     String
-  trips        Trip[]   @relation("OwnerTrips")
-  tripMembers  TripMember[]
-  events       Event[]
-  createdAt    DateTime @default(now())
+  id                  Int                  @id @default(autoincrement())
+  email                String               @unique
+  passwordHash         String?
+  name                 String
+  avatarUrl            String?
+  provider             String
+  trips                Trip[]               @relation("OwnerTrips")
+  tripMembers          TripMember[]
+  events               Event[]
+  locationFolders      LocationFolder[]
+  locationFolderMembers LocationFolderMember[]
+  createdAt            DateTime             @default(now())
 }
 
 model Trip {
@@ -349,6 +371,57 @@ model TripPhoto {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model LocationFolder {
+  id          Int                      @id @default(autoincrement())
+  userId      Int
+  name        String
+  description String?
+  isPublic    Boolean                  @default(false)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  owner       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations   SavedLocation[]
+  shareLinks  LocationFolderShareLink[]
+  members     LocationFolderMember[]
+}
+
+model SavedLocation {
+  id        Int            @id @default(autoincrement())
+  folderId  Int
+  name      String
+  address   String
+  lat       Float
+  lng       Float
+  placeId   String
+  notes     String?
+  tags      Json?          // Array of strings
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  folder    LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+}
+
+model LocationFolderShareLink {
+  id         Int            @id @default(autoincrement())
+  folderId   Int
+  token      String         @unique
+  permission String
+  expiresAt  DateTime?
+  createdAt  DateTime       @default(now())
+  folder     LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+}
+
+model LocationFolderMember {
+  id        Int            @id @default(autoincrement())
+  folderId  Int
+  userId    Int
+  role      String
+  createdAt DateTime       @default(now())
+  folder    LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, userId])
+}
 ```
 
 ---
@@ -425,6 +498,21 @@ POST   /photos/trips/:tripId/photos/:id/set-feed-cover – Set feed cover
 DELETE /photos/trips/:tripId/feed-cover                – Clear feed cover
 ```
 
+## **Location Folders**
+```
+GET    /location-folders                               – List user's folders
+POST   /location-folders                               – Create folder
+GET    /location-folders/:id                           – Get folder with locations
+PUT    /location-folders/:id                           – Update folder
+DELETE /location-folders/:id                           – Delete folder
+POST   /location-folders/:id/locations                 – Save location to folder
+PUT    /location-folders/:id/locations/:locationId     – Update location (notes/tags)
+DELETE /location-folders/:id/locations/:locationId    – Remove location
+POST   /location-folders/:id/share-links                – Create share link
+GET    /location-folders/shared/:token                 – Access shared folder
+POST   /location-folders/:id/import                    – Import folder to account
+```
+
 ---
 
 # 10. Frontend Pages
@@ -437,7 +525,7 @@ DELETE /photos/trips/:tripId/feed-cover                – Clear feed cover
 /auth/register        – Register  
 /dashboard            – User trips  
 /trips/:id            – Trip planner (Itinerary + Photos tabs)
-/explore              – Explore attractions  
+/explore              – Explore attractions & manage location collections (Search/My Collections tabs)
 /share/:token         – Public trip view  
 /admin/analytics      – Admin dashboard  
 ```

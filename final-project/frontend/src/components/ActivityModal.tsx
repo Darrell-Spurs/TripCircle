@@ -6,7 +6,9 @@ import AlertModal from './AlertModal'
 import ActivityParticipantSelector from './ActivityParticipantSelector'
 import ActivityTagSelector from './ActivityTagSelector'
 import ActivityCostShareEditor from './ActivityCostShareEditor'
+import LocationSelectorModal from './LocationSelectorModal'
 import { useUpdateActivity } from '../hooks/useActivities'
+import { SavedLocation } from '../types'
 
 interface ActivityModalProps {
   isOpen: boolean
@@ -59,6 +61,7 @@ export default function ActivityModal({
   const [showConflictAlert, setShowConflictAlert] = useState(false)
   const [conflictData, setConflictData] = useState<{ currentVersion: Activity; error: string } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [showImportModal, setShowImportModal] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -455,9 +458,18 @@ export default function ActivityModal({
           <form id="activity-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Location Name with Autocomplete - Moved to top */}
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t.activity.locationName} <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t.activity.locationName} <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(true)}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  📁 {t.locationFolders.importFromFolder}
+                </button>
+              </div>
               <input
                 ref={searchInputRef}
                 type="text"
@@ -521,7 +533,9 @@ export default function ActivityModal({
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  step="60"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
                 />
                 <div className="mt-2 grid grid-cols-4 gap-2">
                   <button
@@ -567,7 +581,9 @@ export default function ActivityModal({
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  step="60"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
                 />
                 <div className="mt-2 grid grid-cols-4 gap-2">
                   <button
@@ -698,6 +714,33 @@ export default function ActivityModal({
         }
         type="error"
       />
+
+      {/* Location Selector Modal */}
+      {showImportModal && (
+        <LocationSelectorModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onSelect={(location: SavedLocation) => {
+            // Fill form with selected location data
+            setFormData((prev) => ({
+              ...prev,
+              locationName: location.name,
+              address: location.address,
+              lat: location.lat,
+              lng: location.lng,
+              placeId: location.placeId,
+            }))
+            setSearchQuery(location.name)
+            setSelectedPlace({
+              placeId: location.placeId,
+              name: location.name,
+              address: location.address,
+              lat: location.lat,
+              lng: location.lng,
+            })
+          }}
+        />
+      )}
 
       {/* Conflict Alert Modal - Custom implementation */}
       {showConflictAlert && conflictData && (

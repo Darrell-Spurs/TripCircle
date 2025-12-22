@@ -242,6 +242,7 @@ export interface Translations {
   // Explore
   explore: {
     title: string
+    search: string
     searchKeyword: string
     searchPlaceholder: string
     location: string
@@ -366,6 +367,49 @@ export interface Translations {
     deleteConfirm: string
     album: string
     tripPhotos: string
+  }
+
+  // Location Folders
+  locationFolders: {
+    title: string
+    createFolder: string
+    saveToFolder: string
+    importFromFolder: string
+    selectLocations: string
+    folderName: string
+    description: string
+    isPublic: string
+    share: string
+    shareLink: string
+    notes: string
+    tags: string
+    myCollections: string
+    noFoldersYet: string
+    noFoldersDescription: string
+    createFirstFolder: string
+    folderCreated: string
+    folderUpdated: string
+    folderDeleted: string
+    locationSaved: string
+    locationRemoved: string
+    locationUpdated: string
+    selectFolder: string
+    createNewFolder: string
+    addNotes: string
+    addTags: string
+    tagsPlaceholder: string
+    notesPlaceholder: string
+    locations: string
+    location: string
+    deleteFolderConfirm: string
+    deleteLocationConfirm: string
+    shareLinkCreated: string
+    folderImported: string
+    selectDate: string
+    importSelected: string
+    noLocationsSelected: string
+    importSuccess: string
+    importFailed: string
   }
 }
 
@@ -595,6 +639,7 @@ export const translations: Record<Language, Translations> = {
     },
     explore: {
       title: '探索地點',
+      search: '搜尋',
       searchKeyword: '搜尋關鍵字',
       searchPlaceholder: '例如：博物館、餐廳、公園',
       location: '地點（選填）',
@@ -709,6 +754,47 @@ export const translations: Record<Language, Translations> = {
       deleteConfirm: '您確定要刪除此照片嗎？',
       album: '照片',
       tripPhotos: '旅程照片',
+    },
+    locationFolders: {
+      title: '位置收藏',
+      createFolder: '建立收藏夾',
+      saveToFolder: '儲存到收藏夾',
+      importFromFolder: '從收藏夾匯入',
+      selectLocations: '選擇位置',
+      folderName: '收藏夾名稱',
+      description: '描述',
+      isPublic: '公開',
+      share: '分享',
+      shareLink: '分享連結',
+      notes: '備註',
+      tags: '標籤',
+      myCollections: '我的收藏',
+      noFoldersYet: '還沒有收藏夾',
+      noFoldersDescription: '建立收藏夾以整理您喜歡的位置',
+      createFirstFolder: '建立第一個收藏夾',
+      folderCreated: '收藏夾建立成功',
+      folderUpdated: '收藏夾更新成功',
+      folderDeleted: '收藏夾已刪除',
+      locationSaved: '位置已儲存',
+      locationRemoved: '位置已移除',
+      locationUpdated: '位置已更新',
+      selectFolder: '選擇收藏夾',
+      createNewFolder: '建立新收藏夾',
+      addNotes: '新增備註',
+      addTags: '新增標籤',
+      tagsPlaceholder: '輸入標籤，用逗號分隔',
+      notesPlaceholder: '新增備註...',
+      locations: '個位置',
+      location: '位置',
+      deleteFolderConfirm: '您確定要刪除此收藏夾嗎？這將刪除所有收藏的位置。',
+      deleteLocationConfirm: '您確定要移除此位置嗎？',
+      shareLinkCreated: '分享連結已建立',
+      folderImported: '收藏夾匯入成功',
+      selectDate: '選擇日期',
+      importSelected: '匯入選取的位置',
+      noLocationsSelected: '請至少選擇一個位置',
+      importSuccess: '位置匯入成功',
+      importFailed: '匯入失敗',
     },
   },
   en: {
@@ -936,6 +1022,7 @@ export const translations: Record<Language, Translations> = {
     },
     explore: {
       title: 'Explore Places',
+      search: 'Search',
       searchKeyword: 'Search Keyword',
       searchPlaceholder: 'e.g., museums, restaurants, parks',
       location: 'Location (optional)',
@@ -1050,6 +1137,47 @@ export const translations: Record<Language, Translations> = {
       deleteConfirm: 'Are you sure you want to delete this photo?',
       album: 'Photos',
       tripPhotos: 'Trip Photos',
+    },
+    locationFolders: {
+      title: 'Location Collections',
+      createFolder: 'Create Folder',
+      saveToFolder: 'Save to Folder',
+      importFromFolder: 'Import from Folder',
+      selectLocations: 'Select Locations',
+      folderName: 'Folder Name',
+      description: 'Description',
+      isPublic: 'Public',
+      share: 'Share',
+      shareLink: 'Share Link',
+      notes: 'Notes',
+      tags: 'Tags',
+      myCollections: 'My Collections',
+      noFoldersYet: 'No folders yet',
+      noFoldersDescription: 'Create folders to organize your favorite locations',
+      createFirstFolder: 'Create First Folder',
+      folderCreated: 'Folder created successfully',
+      folderUpdated: 'Folder updated successfully',
+      folderDeleted: 'Folder deleted',
+      locationSaved: 'Location saved',
+      locationRemoved: 'Location removed',
+      locationUpdated: 'Location updated',
+      selectFolder: 'Select Folder',
+      createNewFolder: 'Create New Folder',
+      addNotes: 'Add Notes',
+      addTags: 'Add Tags',
+      tagsPlaceholder: 'Enter tags, separated by commas',
+      notesPlaceholder: 'Add notes...',
+      locations: 'locations',
+      location: 'Location',
+      deleteFolderConfirm: 'Are you sure you want to delete this folder? This will delete all saved locations.',
+      deleteLocationConfirm: 'Are you sure you want to remove this location?',
+      shareLinkCreated: 'Share link created',
+      folderImported: 'Folder imported successfully',
+      selectDate: 'Select Date',
+      importSelected: 'Import Selected',
+      noLocationsSelected: 'Please select at least one location',
+      importSuccess: 'Locations imported successfully',
+      importFailed: 'Import failed',
     },
   },
 }

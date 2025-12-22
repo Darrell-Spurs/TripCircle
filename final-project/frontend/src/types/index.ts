@@ -265,3 +265,39 @@ export interface FeedTripDetail {
   publicPhotos: FeedTripPhoto[]
 }
 
+export interface LocationFolder {
+  id: number
+  userId: number
+  name: string
+  description?: string
+  isPublic: boolean
+  locationsCount?: number
+  locations?: SavedLocation[]
+  owner?: User
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SavedLocation {
+  id: number
+  folderId: number
+  name: string
+  address: string
+  lat: number
+  lng: number
+  placeId: string
+  notes?: string
+  tags?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LocationFolderShareLink {
+  id: number
+  folderId: number
+  token: string
+  permission: string
+  expiresAt?: string
+  url: string
+}
+

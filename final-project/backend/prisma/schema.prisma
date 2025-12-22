@@ -25,6 +25,8 @@ model User {
   activityHistory      ActivityHistory[]
   tripComments         TripComment[]
   addedPhotos          TripPhoto[]          @relation("AddedPhotos")
+  locationFolders       LocationFolder[]
+  locationFolderMembers LocationFolderMember[] @relation("LocationFolderMembers")
   createdAt            DateTime             @default(now())
 }
 
@@ -201,5 +203,62 @@ model TripPhoto {
   addedBy       User     @relation("AddedPhotos", fields: [addedByUserId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model LocationFolder {
+  id          Int                      @id @default(autoincrement())
+  userId      Int
+  name        String
+  description String?
+  isPublic    Boolean                  @default(false)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  owner       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations   SavedLocation[]
+  shareLinks  LocationFolderShareLink[]
+  members     LocationFolderMember[]
+
+  @@index([userId])
+}
+
+model SavedLocation {
+  id        Int            @id @default(autoincrement())
+  folderId  Int
+  name      String
+  address   String
+  lat       Float
+  lng       Float
+  placeId   String
+  notes     String?
+  tags      Json?          // Array of strings
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  folder    LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+}
+
+model LocationFolderShareLink {
+  id         Int            @id @default(autoincrement())
+  folderId   Int
+  token      String         @unique
+  permission String
+  expiresAt  DateTime?
+  createdAt  DateTime       @default(now())
+  folder     LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+model LocationFolderMember {
+  id        Int            @id @default(autoincrement())
+  folderId  Int
+  userId    Int
+  role      String
+  createdAt DateTime       @default(now())
+  folder    LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User           @relation("LocationFolderMembers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, userId])
 }
 

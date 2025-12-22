@@ -27,6 +27,9 @@ final-project/
     │   │   │   ├── TripCommentsSection.tsx
     │   │   │   ├── TripPhotosTab.tsx
     │   │   │   ├── AddPhotoModal.tsx
+    │   │   │   ├── LocationFolderSelector.tsx
+    │   │   │   ├── ImportLocationModal.tsx
+    │   │   │   ├── LocationSelectorModal.tsx
     │   │   │   ├── LanguageSwitcher.tsx
     │   │   │   ├── ProtectedRoute.tsx
     │   │   │   └── AlertModal.tsx
@@ -57,7 +60,10 @@ final-project/
     │   │   │   ├── useActivityTags.ts
     │   │   │   ├── useActivityHistory.ts
     │   │   │   ├── useTripComments.ts
-    │   │   │   └── useTripPhotos.ts
+    │   │   │   ├── useTripPhotos.ts
+    │   │   │   ├── useLocationFolders.ts
+    │   │   │   ├── useSavedLocations.ts
+    │   │   │   └── useLocationFolderShare.ts
 │   │   ├── context/       # React context
 │   │   │   ├── AuthContext.tsx
 │   │   │   └── LanguageContext.tsx
@@ -79,6 +85,7 @@ final-project/
     │   │   │   ├── members.ts
     │   │   │   ├── photos.ts
     │   │   │   ├── places.ts
+    │   │   │   ├── locationFolders.ts
     │   │   │   ├── events.ts
     │   │   │   └── admin.ts
 │   │   ├── middleware/    # Auth middleware
@@ -198,6 +205,13 @@ npm start
 ### Explore & Discovery
 - **Google Places Integration** - Search and explore attractions
 - **Add to Trip** - Add discovered places directly to your itinerary
+- **Location Collections** - Save favorite locations to organized folders
+- **Save to Folder** - Save discovered places to collections for later use
+- **Import from Folder** - Quickly add multiple saved locations to trips
+- **Folder Management** - Create, edit, and delete location folders
+- **Folder Sharing** - Share location folders via share links
+- **Location Notes & Tags** - Add custom notes and tags to saved locations
+- **Quick Location Select** - "Add from Folder" button in activity creation for fast location selection
 
 ### Admin & Analytics
 - **Analytics Dashboard** - View user and trip statistics
@@ -319,6 +333,19 @@ npm start
 ### Places
 - `GET /places/search` - Search Google Places
 
+### Location Folders
+- `GET /location-folders` - List user's folders
+- `POST /location-folders` - Create folder
+- `GET /location-folders/:id` - Get folder with locations
+- `PUT /location-folders/:id` - Update folder
+- `DELETE /location-folders/:id` - Delete folder
+- `POST /location-folders/:id/locations` - Save location to folder
+- `PUT /location-folders/:id/locations/:locationId` - Update location (notes/tags)
+- `DELETE /location-folders/:id/locations/:locationId` - Remove location from folder
+- `POST /location-folders/:id/share-links` - Create share link
+- `GET /location-folders/shared/:token` - Access shared folder
+- `POST /location-folders/:id/import` - Import folder to user's account
+
 ### Events & Admin
 - `POST /events` - Log analytics event
 - `GET /admin/metrics` - Get admin metrics
@@ -347,6 +374,12 @@ Key models (see `backend/prisma/schema.prisma` for full schema):
 - **TripComment** - Comments on published trips
 - **TripPhoto** - Photos in trip album (url, caption, isPublic, isFeedCover)
 
+### Location Collection Models
+- **LocationFolder** - User-created folders for organizing saved locations
+- **SavedLocation** - Saved place data (name, address, lat/lng, placeId, notes, tags)
+- **LocationFolderShareLink** - Share tokens for location folders
+- **LocationFolderMember** - Folder collaborators with editor/viewer roles
+
 ## Development
 
 | Service | URL |
@@ -371,7 +404,7 @@ npx prisma migrate dev     # Apply migrations
 | `/dashboard` | My Trips - user's own trips |
 | `/trips/new` | Create new trip |
 | `/trips/:id` | Trip planner/editor |
-| `/explore` | Search attractions via Google Places |
+| `/explore` | Search attractions & manage location collections (two tabs: Search, My Collections) |
 | `/share/:token` | View shared trip |
 | `/admin/analytics` | Admin dashboard |
 | `/auth/login` | Login page |
@@ -413,6 +446,17 @@ npx prisma migrate dev     # Apply migrations
 - [x] Locale-aware date formatting (dates display in user's selected language)
 - [x] Complete photo-related translations (upload methods, file validation messages, etc.)
 - [x] All feed-related text now supports Traditional Chinese and English
+
+### Location Collections (Completed)
+- [x] Save locations from Explore page to organized folders
+- [x] Create, edit, and delete location folders
+- [x] Add notes and tags to saved locations
+- [x] Import multiple locations from folders into trips
+- [x] Share folders via share links with view/edit permissions
+- [x] Import shared folders to your account
+- [x] "Add from Folder" quick select button in activity creation modal
+- [x] Merged collections management into Explore page with tab navigation
+- [x] Full i18n support for all location folder features
 
 ## 🚧 TODO - Upcoming Features
 

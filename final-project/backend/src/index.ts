@@ -12,6 +12,7 @@ import eventsRoutes from './routes/events';
 import adminRoutes from './routes/admin';
 import feedRoutes from './routes/feed';
 import photosRoutes from './routes/photos';
+import locationFoldersRoutes from './routes/locationFolders';
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use('/events', eventsRoutes);
 app.use('/admin', adminRoutes);
 app.use('/feed', feedRoutes);
 app.use('/photos', photosRoutes);
+app.use('/location-folders', locationFoldersRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
