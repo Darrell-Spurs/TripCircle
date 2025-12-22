@@ -97,14 +97,17 @@ router.post('/trips/:tripId/activities', authenticate, async (req: Request, res:
       orderIndex = existing[0]?.orderIndex !== undefined ? existing[0].orderIndex + 1 : 0;
     }
 
-    // Determine participants - default to all trip members if not specified
+    // Determine participants - default to all trip members + owner if not specified
     let participantIds = data.participantIds;
     if (!participantIds || participantIds.length === 0) {
       const allMembers = await prisma.tripMember.findMany({
         where: { tripId },
         select: { userId: true },
       });
-      participantIds = allMembers.map((m) => m.userId);
+      // Include trip owner (not in TripMember table by design) + all members
+      const memberUserIds = allMembers.map((m) => m.userId);
+      // Use Set to avoid duplicates in case owner is somehow in TripMember table
+      participantIds = Array.from(new Set([trip.ownerId, ...memberUserIds]));
     }
 
     // Validate tags

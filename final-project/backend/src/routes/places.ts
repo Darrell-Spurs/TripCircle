@@ -49,6 +49,13 @@ router.get('/search', async (req: express.Request, res: Response) => {
       params,
     });
 
+    // Handle ZERO_RESULTS as valid empty response (not an error)
+    if (response.data.status === 'ZERO_RESULTS') {
+      console.log('[Places Search] No results found for query');
+      res.json({ places: [] });
+      return;
+    }
+
     if (response.data.status !== 'OK') {
       res.status(400).json({ detail: `Google Places API error: ${response.data.status}` });
       return;

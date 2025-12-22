@@ -165,6 +165,8 @@ router.post('/:token/import', authenticate, async (req: Request, res: Response) 
     const sourceTrip = shareLink.trip;
 
     // Create new trip for the user (don't copy body/story - user should write their own)
+    // Note: Don't create TripMember entry for owner - ownership is already established via ownerId
+    // This matches the behavior in trips.ts to prevent duplicate trip entries in the dashboard
     const newTrip = await prisma.trip.create({
       data: {
         ownerId: authReq.user.id,
@@ -176,15 +178,6 @@ router.post('/:token/import', authenticate, async (req: Request, res: Response) 
         endDate: sourceTrip.endDate,
         status: 'planning', // Reset status to planning
         isPublished: false, // Don't publish imported trips
-      },
-    });
-
-    // Add user as owner member
-    await prisma.tripMember.create({
-      data: {
-        tripId: newTrip.id,
-        userId: authReq.user.id,
-        role: 'owner',
       },
     });
 

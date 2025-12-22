@@ -26,8 +26,10 @@ const queryClient = new QueryClient({
   },
 })
 
+// React Router v7 future flags for smoother migration
 const routerFutureFlags = {
   v7_startTransition: true,
+  v7_relativeSplatPath: true,
 }
 
 function App() {

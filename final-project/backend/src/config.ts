@@ -14,6 +14,15 @@ const parseFrontendUrls = (): string[] => {
   return defaultUrls;
 };
 
+// Get the backend URL for OAuth callbacks
+const getBackendUrl = (): string => {
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL;
+  }
+  const port = parseInt(process.env.PORT || '8000', 10);
+  return `http://localhost:${port}`;
+};
+
 export const config = {
   databaseUrl: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/tripcircle',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
@@ -25,6 +34,7 @@ export const config = {
   port: parseInt(process.env.PORT || '8000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   frontendUrls: parseFrontendUrls(),
+  backendUrl: getBackendUrl(),
 };
 
 // Only warn in development

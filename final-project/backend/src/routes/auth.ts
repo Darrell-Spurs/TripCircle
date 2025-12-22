@@ -16,7 +16,7 @@ if (config.googleClientId && config.googleClientSecret) {
       {
         clientID: config.googleClientId,
         clientSecret: config.googleClientSecret,
-        callbackURL: `http://localhost:${config.port}/auth/google/callback`,
+        callbackURL: `${config.backendUrl}/auth/google/callback`,
       },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -188,9 +188,10 @@ router.get('/google/callback', (req: Request, res: Response) => {
     }
 
     const token = createAccessToken(user.id);
-    const frontendUrl = 'http://localhost:3000/auth/callback';
+    // Use the first frontend URL for OAuth callback redirect
+    const frontendUrl = config.frontendUrls[0];
 
-    res.redirect(`${frontendUrl}?token=${token}`);
+    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
   })(req, res, () => {});
 });
 
