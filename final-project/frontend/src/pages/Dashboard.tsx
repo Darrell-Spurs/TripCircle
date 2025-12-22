@@ -112,11 +112,9 @@ export default function Dashboard() {
                 )}
                 <div className="p-4">
                   <h3 className="text-xl font-semibold mb-2">{trip.title}</h3>
-                  {trip.description && (
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {trip.description}
-                    </p>
-                  )}
+                  <div className="text-gray-600 text-sm mb-3 line-clamp-2 min-h-[0.5rem]">
+                    {trip.description || '\u00A0'}
+                  </div>
                   <div className="text-sm text-gray-500 mb-3">
                     <p>
                       {new Date(trip.startDate).toLocaleDateString()} -{' '}

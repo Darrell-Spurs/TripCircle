@@ -54,13 +54,33 @@ export function useUpdateActivity() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ activityId, data }: { activityId: number; data: UpdateActivityData }) => {
-      const response = await api.put(`/activities/${activityId}`, data)
-      return response.data as Activity
+    mutationFn: async ({ activityId, data, currentActivity }: { activityId: number; data: UpdateActivityData; currentActivity?: Activity }) => {
+      // Include lastModifiedAt for conflict resolution if available
+      const updateData = currentActivity?.lastModifiedAt
+        ? { ...data, lastModifiedAt: currentActivity.lastModifiedAt }
+        : data
+      
+      try {
+        const response = await api.put(`/activities/${activityId}`, updateData)
+        return { activity: response.data as Activity, conflict: false }
+      } catch (error: any) {
+        // Handle 409 Conflict
+        if (error.response?.status === 409) {
+          return {
+            activity: null,
+            conflict: true,
+            currentVersion: error.response.data.currentVersion as Activity,
+            error: error.response.data.detail,
+          }
+        }
+        throw error
+      }
     },
-    onSuccess: (activity) => {
-      queryClient.invalidateQueries({ queryKey: ['trips', activity.tripId] })
-      queryClient.invalidateQueries({ queryKey: ['trips'] })
+    onSuccess: (result, variables) => {
+      if (result.activity) {
+        queryClient.invalidateQueries({ queryKey: ['trips', result.activity.tripId] })
+        queryClient.invalidateQueries({ queryKey: ['trips'] })
+      }
     },
   })
 }

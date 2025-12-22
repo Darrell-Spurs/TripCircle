@@ -8,16 +8,22 @@ datasource db {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  passwordHash String?
-  name         String
-  avatarUrl    String?
-  provider     String
-  trips        Trip[]   @relation("OwnerTrips")
-  tripMembers  TripMember[]
-  events       Event[]
-  createdAt    DateTime @default(now())
+  id                  Int                  @id @default(autoincrement())
+  email                String               @unique
+  passwordHash         String?
+  name                 String
+  avatarUrl            String?
+  provider             String
+  trips                Trip[]               @relation("OwnerTrips")
+  tripMembers          TripMember[]
+  events               Event[]
+  createdActivities    Activity[]            @relation("CreatedActivities")
+  activityParticipants ActivityParticipant[]
+  activityComments     ActivityComment[]
+  activityCostShares   ActivityCostShare[]
+  activityPreferences  ActivityPreference[]
+  activityHistory      ActivityHistory[]
+  createdAt            DateTime             @default(now())
 }
 
 model Trip {
@@ -53,21 +59,33 @@ model TripMember {
 }
 
 model Activity {
-  id           Int      @id @default(autoincrement())
-  tripId       Int
-  date         DateTime
-  startTime    DateTime?
-  endTime      DateTime?
-  title        String
-  notes        String?
-  body         String?
-  placeId      String?
-  locationName String?
-  address      String?
-  lat          Float?
-  lng          Float?
-  orderIndex   Int
-  trip         Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  id              Int                  @id @default(autoincrement())
+  tripId          Int
+  date            DateTime
+  startTime       DateTime?
+  endTime         DateTime?
+  title           String
+  notes           String?
+  body            String?
+  placeId         String?
+  locationName    String?
+  address         String?
+  lat             Float?
+  lng             Float?
+  orderIndex      Int
+  createdByUserId Int?
+  cost            Float?
+  currency        String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  trip            Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy       User?                @relation("CreatedActivities", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  participants    ActivityParticipant[]
+  comments        ActivityComment[]
+  costShares      ActivityCostShare[]
+  preferences     ActivityPreference[]
+  tags            ActivityTag[]
+  history         ActivityHistory[]
 }
 
 model ShareLink {
@@ -88,5 +106,71 @@ model Event {
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   trip      Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+}
+
+model ActivityParticipant {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  @@unique([activityId, userId])
+}
+
+model ActivityComment {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  content    String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ActivityCostShare {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  amount     Float
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([activityId, userId])
+}
+
+model ActivityPreference {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  preference String   // "interested" or "not_interested"
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([activityId, userId])
+}
+
+model ActivityHistory {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  action     String   // "created", "updated", "deleted"
+  changes    Json?
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model ActivityTag {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  tag        String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  @@unique([activityId, tag])
+  @@index([tag])
 }
 

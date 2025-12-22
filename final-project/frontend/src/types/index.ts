@@ -49,6 +49,68 @@ export interface Activity {
   lat?: number
   lng?: number
   orderIndex: number
+  createdByUserId?: number
+  createdBy?: User
+  cost?: number
+  currency?: string
+  participants?: ActivityParticipant[]
+  comments?: ActivityComment[]
+  costShares?: ActivityCostShare[]
+  preferences?: ActivityPreference[]
+  tags?: string[]
+  preferenceCounts?: {
+    interested: number
+    not_interested: number
+  }
+  commentsCount?: number
+  lastModifiedAt?: string
+}
+
+export interface ActivityParticipant {
+  id: number
+  activityId: number
+  userId: number
+  user: User
+  createdAt: string
+}
+
+export interface ActivityComment {
+  id: number
+  activityId: number
+  userId: number
+  user: User
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityCostShare {
+  id: number
+  activityId: number
+  userId: number
+  user: User
+  amount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityPreference {
+  id: number
+  activityId: number
+  userId: number
+  user: User
+  preference: 'interested' | 'not_interested'
+  createdAt: string
+}
+
+export interface ActivityHistory {
+  id: number
+  activityId: number
+  userId: number
+  user: User
+  action: string
+  changes?: any
+  createdAt: string
 }
 
 export interface CreateActivityData {
@@ -65,6 +127,10 @@ export interface CreateActivityData {
   lat?: number
   lng?: number
   orderIndex: number
+  participantIds?: number[]
+  cost?: number
+  currency?: string
+  tags?: string[]
 }
 
 export interface UpdateActivityData {
@@ -80,6 +146,12 @@ export interface UpdateActivityData {
   lat?: number
   lng?: number
   orderIndex?: number
+  participantIds?: number[]
+  cost?: number | null
+  currency?: string | null
+  tags?: string[]
+  lastModifiedAt?: string
+  costShares?: { userId: number; amount: number }[]
 }
 
 export interface CreateTripData {

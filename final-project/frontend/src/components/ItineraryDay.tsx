@@ -730,7 +730,7 @@ export default function ItineraryDay({
             onClick={onAddActivity}
             className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
           >
-            + Add Activity
+            + {t.activity.addActivity}
           </button>
         )}
       </div>

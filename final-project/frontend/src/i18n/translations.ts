@@ -169,6 +169,46 @@ export interface Translations {
     storyPlaceholder: string
     storyDescription: string
     quickNotesPlaceholder: string
+    searchLocationPlaceholder: string
+    overlapErrorTitle: string
+    overlapErrorMessage: string
+    overlapErrorGeneric: string
+    participants: string
+    selectAll: string
+    deselectAll: string
+    noMembers: string
+    addedBy: string
+    createdBy: string
+    tags: string
+    addTag: string
+    createTag: string
+    predefinedTags: string
+    setBudget: string
+    totalCost: string
+    currency: string
+    splitMode: string
+    splitEqually: string
+    customAmounts: string
+    costPerPerson: string
+    costBreakdown: string
+    costMismatch: string
+    comments: string
+    addComment: string
+    editComment: string
+    deleteComment: string
+    deleteCommentConfirm: string
+    noComments: string
+    showComments: string
+    hideComments: string
+    interested: string
+    notInterested: string
+    peopleInterested: string
+    peopleNotInterested: string
+    conflictTitle: string
+    conflictMessage: string
+    conflictGeneric: string
+    overwrite: string
+    reload: string
   }
 
   // Route / transportation between activities
@@ -446,6 +486,46 @@ export const translations: Record<Language, Translations> = {
       storyPlaceholder: '分享您在此地點的體驗，當發布到動態時...',
       storyDescription: '這將在旅程發布時顯示',
       quickNotesPlaceholder: '快速備註...',
+      searchLocationPlaceholder: '搜尋地點...',
+      overlapErrorTitle: '時間衝突',
+      overlapErrorMessage: '此活動與另一個活動時間重疊，請調整時間。',
+      overlapErrorGeneric: '此活動與現有活動時間重疊，請調整時間。',
+      participants: '參與者',
+      selectAll: '全選',
+      deselectAll: '取消全選',
+      noMembers: '此行程沒有成員',
+      addedBy: '由...添加',
+      createdBy: '由...創建',
+      tags: '標籤',
+      addTag: '添加標籤...',
+      createTag: '創建',
+      predefinedTags: '預定義標籤',
+      setBudget: '設置預算',
+      totalCost: '總費用',
+      currency: '貨幣',
+      splitMode: '分攤方式',
+      splitEqually: '平均分攤',
+      customAmounts: '自定義金額',
+      costPerPerson: '每人費用',
+      costBreakdown: '費用明細',
+      costMismatch: '自定義金額總和必須等於總費用',
+      comments: '評論',
+      addComment: '添加評論',
+      editComment: '編輯評論',
+      deleteComment: '刪除評論',
+      deleteCommentConfirm: '確定要刪除這條評論嗎？',
+      noComments: '暫無評論',
+      showComments: '顯示評論',
+      hideComments: '隱藏評論',
+      interested: '感興趣',
+      notInterested: '不感興趣',
+      peopleInterested: '人感興趣',
+      peopleNotInterested: '人不感興趣',
+      conflictTitle: '衝突檢測',
+      conflictMessage: '此活動已被其他用戶修改。您要覆蓋他們的更改嗎？',
+      conflictGeneric: '活動已被其他用戶修改',
+      overwrite: '覆蓋',
+      reload: '重新載入',
     },
     route: {
       title: '交通',
@@ -709,6 +789,46 @@ export const translations: Record<Language, Translations> = {
       storyPlaceholder: 'Share your experience at this place when publishing to feed...',
       storyDescription: 'This will be shown when the trip is published',
       quickNotesPlaceholder: 'Quick notes for planning...',
+      searchLocationPlaceholder: 'Search for a location...',
+      overlapErrorTitle: 'Time Conflict',
+      overlapErrorMessage: 'This activity overlaps with another activity. Please adjust the time.',
+      overlapErrorGeneric: 'This activity overlaps with an existing activity. Please adjust the time.',
+      participants: 'Participants',
+      selectAll: 'Select All',
+      deselectAll: 'Deselect All',
+      noMembers: 'No members in this trip',
+      addedBy: 'Added by',
+      createdBy: 'Created by',
+      tags: 'Tags',
+      addTag: 'Add tag...',
+      createTag: 'Create',
+      predefinedTags: 'Predefined Tags',
+      setBudget: 'Set budget',
+      totalCost: 'Total Cost',
+      currency: 'Currency',
+      splitMode: 'Split Mode',
+      splitEqually: 'Split Equally',
+      customAmounts: 'Custom Amounts',
+      costPerPerson: 'Cost per Person',
+      costBreakdown: 'Cost Breakdown',
+      costMismatch: 'Total custom amounts must equal total cost',
+      comments: 'Comments',
+      addComment: 'Add Comment',
+      editComment: 'Edit Comment',
+      deleteComment: 'Delete Comment',
+      deleteCommentConfirm: 'Are you sure you want to delete this comment?',
+      noComments: 'No comments yet',
+      showComments: 'Show Comments',
+      hideComments: 'Hide Comments',
+      interested: 'Interested',
+      notInterested: 'Not Interested',
+      peopleInterested: 'people interested',
+      peopleNotInterested: 'people not interested',
+      conflictTitle: 'Conflict Detected',
+      conflictMessage: 'The activity was modified by another user. Do you want to overwrite their changes?',
+      conflictGeneric: 'Activity was modified by another user',
+      overwrite: 'Overwrite',
+      reload: 'Reload',
     },
     route: {
       title: 'Transportation',

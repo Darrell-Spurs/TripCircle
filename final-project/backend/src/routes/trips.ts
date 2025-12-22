@@ -217,7 +217,65 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
     include: {
       owner: true,
       members: { include: { user: true } },
-      activities: { orderBy: { orderIndex: 'asc' } },
+      activities: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+              email: true,
+              provider: true,
+            },
+          },
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  avatarUrl: true,
+                  email: true,
+                  provider: true,
+                },
+              },
+            },
+          },
+          tags: true,
+          costShares: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  avatarUrl: true,
+                  email: true,
+                  provider: true,
+                },
+              },
+            },
+          },
+          preferences: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  avatarUrl: true,
+                  email: true,
+                  provider: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -273,21 +331,73 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
         avatarUrl: m.user.avatarUrl,
       },
     })),
-    activities: trip.activities.map((a) => ({
-      id: a.id,
-      tripId: a.tripId,
-      date: a.date.toISOString(),
-      startTime: a.startTime?.toISOString() || null,
-      endTime: a.endTime?.toISOString() || null,
-      title: a.title,
-      notes: a.notes,
-      placeId: a.placeId,
-      locationName: a.locationName,
-      address: a.address,
-      lat: a.lat,
-      lng: a.lng,
-      orderIndex: a.orderIndex,
-    })),
+    activities: trip.activities.map((a) => {
+      const preferenceCounts = {
+        interested: a.preferences.filter((p) => p.preference === 'interested').length,
+        not_interested: a.preferences.filter((p) => p.preference === 'not_interested').length,
+      };
+
+      return {
+        id: a.id,
+        tripId: a.tripId,
+        date: a.date.toISOString(),
+        startTime: a.startTime?.toISOString() || null,
+        endTime: a.endTime?.toISOString() || null,
+        title: a.title,
+        notes: a.notes,
+        body: a.body,
+        placeId: a.placeId,
+        locationName: a.locationName,
+        address: a.address,
+        lat: a.lat,
+        lng: a.lng,
+        orderIndex: a.orderIndex,
+        createdByUserId: a.createdByUserId,
+        createdBy: a.createdBy
+          ? {
+              id: a.createdBy.id,
+              name: a.createdBy.name,
+              email: a.createdBy.email,
+              avatarUrl: a.createdBy.avatarUrl,
+              provider: a.createdBy.provider,
+            }
+          : null,
+        cost: a.cost,
+        currency: a.currency,
+        participants: a.participants.map((p) => ({
+          id: p.id,
+          activityId: p.activityId,
+          userId: p.userId,
+          user: {
+            id: p.user.id,
+            name: p.user.name,
+            email: p.user.email,
+            avatarUrl: p.user.avatarUrl,
+            provider: p.user.provider,
+          },
+          createdAt: p.createdAt.toISOString(),
+        })),
+        tags: a.tags.map((t) => t.tag),
+        costShares: a.costShares.map((cs) => ({
+          id: cs.id,
+          activityId: cs.activityId,
+          userId: cs.userId,
+          user: {
+            id: cs.user.id,
+            name: cs.user.name,
+            email: cs.user.email,
+            avatarUrl: cs.user.avatarUrl,
+            provider: cs.user.provider,
+          },
+          amount: cs.amount,
+          createdAt: cs.createdAt.toISOString(),
+          updatedAt: cs.updatedAt.toISOString(),
+        })),
+        preferenceCounts,
+        commentsCount: a._count.comments,
+        lastModifiedAt: a.updatedAt?.toISOString() || a.createdAt?.toISOString() || new Date().toISOString(),
+      };
+    }),
     createdAt: trip.createdAt.toISOString(),
     updatedAt: trip.updatedAt.toISOString(),
   });

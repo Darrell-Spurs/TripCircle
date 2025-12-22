@@ -637,6 +637,32 @@ export default function TripDetail() {
           tripId={tripId}
           date={selectedDate}
           defaultOrderIndex={activitiesByDate[selectedDate]?.length || 0}
+          existingActivities={activitiesByDate[selectedDate] || []}
+          members={
+            trip && trip.owner
+              ? (() => {
+                  // Check if owner is already in members list
+                  const ownerInMembers = members?.some((m) => m.userId === trip.owner.id)
+                  const allMembers = members || []
+                  
+                  if (ownerInMembers) {
+                    // Owner already in list, just return members
+                    return allMembers
+                  } else {
+                    // Add owner to the beginning of the list
+                    return [
+                      {
+                        id: -1, // Temporary ID for owner
+                        userId: trip.owner.id,
+                        role: 'owner',
+                        user: trip.owner,
+                      },
+                      ...allMembers,
+                    ]
+                  }
+                })()
+              : members || []
+          }
         />
 
         <InviteMemberModal

@@ -1,6 +1,13 @@
-import { useState, useEffect } from 'react'
-import { Activity, CreateActivityData, UpdateActivityData } from '../types'
+import { useState, useEffect, useRef } from 'react'
+import { Activity, CreateActivityData, UpdateActivityData, TripMember } from '../types'
 import { useLanguage } from '../context/LanguageContext'
+import { useSearchPlaces, Place } from '../hooks/usePlaces'
+import AlertModal from './AlertModal'
+import ActivityParticipantSelector from './ActivityParticipantSelector'
+import ActivityTagSelector from './ActivityTagSelector'
+import ActivityCostShareEditor from './ActivityCostShareEditor'
+import { useAuth } from '../context/AuthContext'
+import { useUpdateActivity } from '../hooks/useActivities'
 
 interface ActivityModalProps {
   isOpen: boolean
@@ -10,6 +17,8 @@ interface ActivityModalProps {
   tripId: number
   date: string
   defaultOrderIndex: number
+  existingActivities?: Activity[] // Activities for the same date to check overlaps
+  members?: TripMember[] // Trip members for participant selection
 }
 
 export default function ActivityModal({
@@ -20,52 +29,182 @@ export default function ActivityModal({
   tripId,
   date,
   defaultOrderIndex,
+  existingActivities = [],
+  members = [],
 }: ActivityModalProps) {
   const { t } = useLanguage()
+  const { user } = useAuth()
+  const updateActivity = useUpdateActivity()
   const [formData, setFormData] = useState({
-    title: '',
     notes: '',
     body: '',
     startTime: '',
     endTime: '',
     locationName: '',
     address: '',
+    lat: undefined as number | undefined,
+    lng: undefined as number | undefined,
+    placeId: undefined as string | undefined,
     noTime: false,
   })
+  const [participantIds, setParticipantIds] = useState<number[]>([])
+  const [cost, setCost] = useState<number | undefined>(undefined)
+  const [currency, setCurrency] = useState<string | undefined>(undefined)
+  const [tags, setTags] = useState<string[]>([])
+  const [costShares, setCostShares] = useState<{ userId: number; amount: number }[] | null>(null)
+  const [splitMode, setSplitMode] = useState<'equal' | 'custom'>('equal')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
+  const [showOverlapAlert, setShowOverlapAlert] = useState(false)
+  const [overlapActivity, setOverlapActivity] = useState<Activity | null>(null)
+  const [showConflictAlert, setShowConflictAlert] = useState(false)
+  const [conflictData, setConflictData] = useState<{ currentVersion: Activity; error: string } | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
 
-  // Extract time (HH:MM) from a datetime string
+  // Debounce search query
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Search places when user types
+  const { data: searchResults, isLoading: isSearching } = useSearchPlaces(
+    { keyword: debouncedQuery },
+    debouncedQuery.length > 2 && showSuggestions
+  )
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Extract time (HH:MM) from a datetime string - 24-hour format
   const extractTime = (dateTimeStr: string | null | undefined): string => {
     if (!dateTimeStr) return ''
     const d = new Date(dateTimeStr)
-    return d.toTimeString().slice(0, 5) // "HH:MM"
+    if (Number.isNaN(d.getTime())) return ''
+    const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+    // Always use 24-hour format
+    return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
   useEffect(() => {
     if (activity) {
       const hasNoTime = !activity.startTime && !activity.endTime
       setFormData({
-        title: activity.title,
         notes: activity.notes || '',
         body: activity.body || '',
         startTime: extractTime(activity.startTime),
         endTime: extractTime(activity.endTime),
         locationName: activity.locationName || '',
         address: activity.address || '',
+        lat: activity.lat,
+        lng: activity.lng,
+        placeId: activity.placeId,
         noTime: hasNoTime,
       })
+      setSearchQuery(activity.locationName || '')
+      setSelectedPlace(
+        activity.locationName && activity.lat && activity.lng
+          ? {
+              placeId: activity.placeId || '',
+              name: activity.locationName,
+              address: activity.address || '',
+              lat: activity.lat,
+              lng: activity.lng,
+            }
+          : null
+      )
+      setParticipantIds(activity.participants?.map((p) => p.userId) || [])
+      setCost(activity.cost)
+      setCurrency(activity.currency)
+      setTags(activity.tags || [])
+      const existingCostShares = activity.costShares?.map((cs) => ({ userId: cs.userId, amount: cs.amount })) || []
+      setCostShares(existingCostShares.length > 0 ? existingCostShares : null)
+      // Determine split mode based on whether cost shares exist and are equal
+      if (existingCostShares.length > 0 && activity.cost) {
+        const costPerPerson = activity.cost / existingCostShares.length
+        const isEqual = existingCostShares.every((cs) => Math.abs(cs.amount - costPerPerson) < 0.01)
+        setSplitMode(isEqual ? 'equal' : 'custom')
+      } else {
+        setSplitMode('equal')
+      }
     } else {
       setFormData({
-        title: '',
         notes: '',
         body: '',
         startTime: '',
         endTime: '',
         locationName: '',
         address: '',
+        lat: undefined,
+        lng: undefined,
+        placeId: undefined,
         noTime: false,
       })
+      setSearchQuery('')
+      setSelectedPlace(null)
+      // Default to all members
+      setParticipantIds(members.map((m) => m.userId))
+      setCost(undefined)
+      setCurrency(undefined)
+      setTags([])
+      setCostShares(null)
+      setSplitMode('equal')
     }
-  }, [activity, isOpen])
+    setShowSuggestions(false)
+  }, [activity, isOpen, members])
+
+  const handlePlaceSelect = (place: Place) => {
+    setFormData((prev) => ({
+      ...prev,
+      locationName: place.name,
+      address: place.address,
+      lat: place.lat,
+      lng: place.lng,
+      placeId: place.placeId,
+    }))
+    setSearchQuery(place.name)
+    setSelectedPlace(place)
+    setShowSuggestions(false)
+  }
+
+  const handleLocationNameChange = (value: string) => {
+    setSearchQuery(value)
+    setFormData((prev) => ({ ...prev, locationName: value }))
+    if (value.length > 2) {
+      setShowSuggestions(true)
+    } else {
+      setShowSuggestions(false)
+      // Clear place data if user clears the search
+      if (value === '') {
+        setFormData((prev) => ({
+          ...prev,
+          address: '',
+          lat: undefined,
+          lng: undefined,
+          placeId: undefined,
+        }))
+        setSelectedPlace(null)
+      }
+    }
+  }
 
   if (!isOpen) return null
 
@@ -109,19 +248,89 @@ export default function ActivityModal({
     }
   }
 
+  // Check if two time ranges overlap
+  const checkTimeOverlap = (
+    start1: string | undefined,
+    end1: string | undefined,
+    start2: string | undefined,
+    end2: string | undefined
+  ): boolean => {
+    // If either activity has no time, no overlap
+    if (!start1 || !end1 || !start2 || !end2) return false
+
+    const s1 = new Date(start1).getTime()
+    const e1 = new Date(end1).getTime()
+    const s2 = new Date(start2).getTime()
+    const e2 = new Date(end2).getTime()
+
+    // Check if ranges overlap: (s1 < e2) && (s2 < e1)
+    return s1 < e2 && s2 < e1
+  }
+
+  // Check for overlaps with existing activities
+  const checkForOverlaps = (): { hasOverlap: boolean; overlappingActivity: Activity | null } => {
+    const newStartTime = combineDateTime(date, formData.startTime)
+    const newEndTime = combineDateTime(date, formData.endTime)
+
+    // Need both start and end time to check overlap
+    if (!newStartTime || !newEndTime) {
+      return { hasOverlap: false, overlappingActivity: null }
+    }
+
+    // Check against existing activities (exclude the current activity if editing)
+    const activitiesToCheck = existingActivities.filter(
+      (a) => !activity || a.id !== activity.id
+    )
+
+    for (const existingActivity of activitiesToCheck) {
+      if (
+        checkTimeOverlap(
+          newStartTime,
+          newEndTime,
+          existingActivity.startTime || undefined,
+          existingActivity.endTime || undefined
+        )
+      ) {
+        return { hasOverlap: true, overlappingActivity: existingActivity }
+      }
+    }
+
+    return { hasOverlap: false, overlappingActivity: null }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Check for time overlaps
+    const { hasOverlap, overlappingActivity } = checkForOverlaps()
+    if (hasOverlap && overlappingActivity) {
+      setOverlapActivity(overlappingActivity)
+      setShowOverlapAlert(true)
+      return
+    }
+
+    // Use locationName as title if no title field exists
     const data: any = {
       tripId,
       date,
-      title: formData.title,
+      title: formData.locationName || 'Untitled Activity', // Use locationName as title
       notes: formData.notes || undefined,
       body: formData.body || undefined,
       startTime: combineDateTime(date, formData.startTime),
       endTime: combineDateTime(date, formData.endTime),
       locationName: formData.locationName || undefined,
       address: formData.address || undefined,
+      lat: formData.lat,
+      lng: formData.lng,
+      placeId: formData.placeId,
       orderIndex: activity?.orderIndex ?? defaultOrderIndex,
+      participantIds: participantIds.length > 0 ? participantIds : undefined,
+      cost: cost || undefined,
+      currency: currency || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      // Include cost shares only if custom amounts are set (null means use equal split)
+      // Backend will auto-calculate equal split if costShares is not provided
+      costShares: costShares && costShares.length > 0 ? costShares : undefined,
     }
 
     if (activity) {
@@ -130,10 +339,79 @@ export default function ActivityModal({
       if (data.date === new Date(activity.date).toISOString()) {
         delete data.date
       }
+      // Include lastModifiedAt for conflict resolution
+      if (activity.lastModifiedAt) {
+        data.lastModifiedAt = activity.lastModifiedAt
+      }
     }
 
-    await onSave(data)
+    // Handle conflict resolution for updates
+    if (activity) {
+      try {
+        const result = await updateActivity.mutateAsync({
+          activityId: activity.id,
+          data,
+          currentActivity: activity,
+        })
+
+        if (result.conflict) {
+          setConflictData({
+            currentVersion: result.currentVersion!,
+            error: result.error || 'Activity was modified by another user',
+          })
+          setShowConflictAlert(true)
+          return
+        }
+      } catch (error: any) {
+        if (error.response?.status === 409) {
+          setConflictData({
+            currentVersion: error.response.data.currentVersion,
+            error: error.response.data.detail,
+          })
+          setShowConflictAlert(true)
+          return
+        }
+        throw error
+      }
+    } else {
+      await onSave(data)
+    }
+
     onClose()
+  }
+
+  const handleOverwriteConflict = async () => {
+    if (!activity || !conflictData) return
+
+    const data: any = {
+      title: formData.locationName || 'Untitled Activity',
+      notes: formData.notes || undefined,
+      body: formData.body || undefined,
+      startTime: combineDateTime(date, formData.startTime),
+      endTime: combineDateTime(date, formData.endTime),
+      locationName: formData.locationName || undefined,
+      address: formData.address || undefined,
+      lat: formData.lat,
+      lng: formData.lng,
+      placeId: formData.placeId,
+      participantIds: participantIds.length > 0 ? participantIds : undefined,
+      cost: cost,
+      currency: currency,
+      tags: tags.length > 0 ? tags : undefined,
+      // Force overwrite by not including lastModifiedAt
+    }
+
+    try {
+      await updateActivity.mutateAsync({
+        activityId: activity.id,
+        data,
+        currentActivity: activity,
+      })
+      setShowConflictAlert(false)
+      onClose()
+    } catch (error) {
+      console.error('Failed to overwrite:', error)
+    }
   }
 
   return (
@@ -157,15 +435,61 @@ export default function ActivityModal({
         {/* Scrollable form content */}
         <div className="flex-1 overflow-y-auto p-6 pt-4">
           <form id="activity-form" onSubmit={handleSubmit} className="space-y-4">
+            {/* Location Name with Autocomplete - Moved to top */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t.activity.locationName} <span className="text-red-500">*</span>
+              </label>
+              <input
+                ref={searchInputRef}
+                type="text"
+                required
+                value={searchQuery}
+                onChange={(e) => handleLocationNameChange(e.target.value)}
+                onFocus={() => {
+                  if (searchQuery.length > 2) setShowSuggestions(true)
+                }}
+                placeholder={t.activity.searchLocationPlaceholder}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              {/* Autocomplete Suggestions Dropdown */}
+              {showSuggestions && (searchResults || isSearching) && (
+                <div
+                  ref={suggestionsRef}
+                  className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {isSearching && (
+                    <div className="px-3 py-2 text-sm text-gray-500">Searching...</div>
+                  )}
+                  {!isSearching && searchResults && searchResults.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-gray-500">No results found</div>
+                  )}
+                  {!isSearching &&
+                    searchResults &&
+                    searchResults.map((place) => (
+                      <button
+                        key={place.placeId}
+                        type="button"
+                        onClick={() => handlePlaceSelect(place)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-medium text-gray-900">{place.name}</div>
+                        <div className="text-sm text-gray-500">{place.address}</div>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Address field - auto-filled but editable */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t.activity.titleRequired}
+                {t.activity.address}
               </label>
               <input
                 type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -266,30 +590,6 @@ export default function ActivityModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t.activity.locationName}
-              </label>
-              <input
-                type="text"
-                value={formData.locationName}
-                onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t.activity.address}
-              </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t.activity.notes}
               </label>
               <textarea
@@ -314,6 +614,30 @@ export default function ActivityModal({
               />
               <p className="text-xs text-gray-500 mt-1">{t.activity.storyDescription}</p>
             </div>
+
+            {/* Participants Section */}
+            {members.length > 0 && (
+              <ActivityParticipantSelector
+                members={members}
+                selectedUserIds={participantIds}
+                onChange={setParticipantIds}
+              />
+            )}
+
+            {/* Budget Section */}
+            <ActivityCostShareEditor
+              cost={cost}
+              currency={currency}
+              participants={members.filter((m) => participantIds.includes(m.userId))}
+              costShares={costShares || undefined}
+              onCostChange={setCost}
+              onCurrencyChange={setCurrency}
+              onCostSharesChange={(shares) => setCostShares(shares)}
+              onSplitModeChange={setSplitMode}
+            />
+
+            {/* Tags Section */}
+            <ActivityTagSelector selectedTags={tags} onChange={setTags} />
           </form>
         </div>
 
@@ -335,6 +659,67 @@ export default function ActivityModal({
           </button>
         </div>
       </div>
+
+      {/* Overlap Alert Modal */}
+      <AlertModal
+        isOpen={showOverlapAlert}
+        onClose={() => setShowOverlapAlert(false)}
+        title={t.activity.overlapErrorTitle}
+        message={
+          overlapActivity
+            ? `${t.activity.overlapErrorMessage}\n\n"${overlapActivity.title || overlapActivity.locationName || t.activity.addActivity}" (${extractTime(overlapActivity.startTime)} - ${extractTime(overlapActivity.endTime)})`
+            : t.activity.overlapErrorGeneric
+        }
+        type="error"
+      />
+
+      {/* Conflict Alert Modal - Custom implementation */}
+      {showConflictAlert && conflictData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-md w-full shadow-xl border-2 border-red-200 bg-red-50">
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="text-3xl flex-shrink-0">⚠️</div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold mb-2 text-red-800">
+                    {t.activity.conflictTitle || 'Conflict Detected'}
+                  </h3>
+                  <p className="text-sm text-red-700 whitespace-pre-line mb-4">
+                    {conflictData.error}
+                    {'\n\n'}
+                    {t.activity.conflictMessage || 'The activity was modified by another user. Do you want to overwrite their changes?'}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleOverwriteConflict}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                    >
+                      {t.activity.overwrite || 'Overwrite'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowConflictAlert(false)
+                        if (conflictData.currentVersion) {
+                          window.location.reload()
+                        }
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
+                    >
+                      {t.activity.reload || 'Reload'}
+                    </button>
+                    <button
+                      onClick={() => setShowConflictAlert(false)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                    >
+                      {t.common.cancel}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

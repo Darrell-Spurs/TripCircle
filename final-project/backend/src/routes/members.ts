@@ -48,18 +48,61 @@ router.get('/trips/:tripId/members', authenticate, async (req: Request, res: Res
     include: { user: true },
   });
 
+  // Get owner information
+  const owner = await prisma.user.findUnique({
+    where: { id: trip.ownerId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      avatarUrl: true,
+    },
+  });
+
+  // Check if owner is already in members list
+  const ownerInMembers = members.some((m) => m.userId === trip.ownerId);
+
+  // Build members list with owner included
+  const allMembers = owner
+    ? [
+        // Add owner if not already in members
+        ...(ownerInMembers
+          ? []
+          : [
+              {
+                id: -1, // Temporary ID for owner
+                userId: owner.id,
+                role: 'owner' as const,
+                user: owner,
+              },
+            ]),
+        // Add all other members
+        ...members.map((m) => ({
+          id: m.id,
+          userId: m.userId,
+          role: m.role,
+          user: {
+            id: m.user.id,
+            email: m.user.email,
+            name: m.user.name,
+            avatarUrl: m.user.avatarUrl,
+          },
+        })),
+      ]
+    : members.map((m) => ({
+        id: m.id,
+        userId: m.userId,
+        role: m.role,
+        user: {
+          id: m.user.id,
+          email: m.user.email,
+          name: m.user.name,
+          avatarUrl: m.user.avatarUrl,
+        },
+      }));
+
   res.json({
-    members: members.map((m) => ({
-      id: m.id,
-      userId: m.userId,
-      role: m.role,
-      user: {
-        id: m.user.id,
-        email: m.user.email,
-        name: m.user.name,
-        avatarUrl: m.user.avatarUrl,
-      },
-    })),
+    members: allMembers,
   });
 });
 
