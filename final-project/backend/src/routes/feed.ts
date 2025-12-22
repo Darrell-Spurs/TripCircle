@@ -30,7 +30,7 @@ router.get('/', async (req, res: Response) => {
             take: 3, // Preview only first 3 activities
           },
           _count: {
-            select: { activities: true },
+            select: { activities: true, tripComments: true },
           },
         },
       }),
@@ -49,6 +49,7 @@ router.get('/', async (req, res: Response) => {
       publishedAt: trip.publishedAt?.toISOString(),
       owner: trip.owner,
       activitiesCount: trip._count.activities,
+      commentsCount: trip._count.tripComments,
       activitiesPreview: trip.activities.map((a) => ({
         id: a.id,
         title: a.title,
@@ -367,6 +368,245 @@ router.post('/:id/import', authenticate, async (req: Request, res: Response) => 
   } catch (error) {
     console.error('Import error:', error);
     res.status(500).json({ detail: 'Failed to import trip' });
+  }
+});
+
+// ============================================
+// Trip Comments Endpoints
+// ============================================
+
+// Get comments for a published trip (public)
+router.get('/:id/comments', async (req, res: Response) => {
+  const tripId = parseInt(req.params.id, 10);
+  if (isNaN(tripId)) {
+    res.status(400).json({ detail: 'Invalid trip ID' });
+    return;
+  }
+
+  try {
+    // Check if trip exists and is published
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { id: true, isPublished: true },
+    });
+
+    if (!trip) {
+      res.status(404).json({ detail: 'Trip not found' });
+      return;
+    }
+
+    if (!trip.isPublished) {
+      res.status(403).json({ detail: 'This trip is not published' });
+      return;
+    }
+
+    const comments = await prisma.tripComment.findMany({
+      where: { tripId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    res.json(
+      comments.map((comment) => ({
+        id: comment.id,
+        tripId: comment.tripId,
+        userId: comment.userId,
+        content: comment.content,
+        createdAt: comment.createdAt.toISOString(),
+        updatedAt: comment.updatedAt.toISOString(),
+        user: comment.user,
+      }))
+    );
+  } catch (error) {
+    console.error('Get comments error:', error);
+    res.status(500).json({ detail: 'Failed to fetch comments' });
+  }
+});
+
+// Add a comment to a published trip (authenticated)
+router.post('/:id/comments', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const tripId = parseInt(req.params.id, 10);
+  if (isNaN(tripId)) {
+    res.status(400).json({ detail: 'Invalid trip ID' });
+    return;
+  }
+
+  const { content } = req.body;
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    res.status(400).json({ detail: 'Comment content is required' });
+    return;
+  }
+
+  try {
+    // Check if trip exists and is published
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { id: true, isPublished: true },
+    });
+
+    if (!trip) {
+      res.status(404).json({ detail: 'Trip not found' });
+      return;
+    }
+
+    if (!trip.isPublished) {
+      res.status(403).json({ detail: 'Cannot comment on unpublished trips' });
+      return;
+    }
+
+    const comment = await prisma.tripComment.create({
+      data: {
+        tripId,
+        userId: authReq.user.id,
+        content: content.trim(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      id: comment.id,
+      tripId: comment.tripId,
+      userId: comment.userId,
+      content: comment.content,
+      createdAt: comment.createdAt.toISOString(),
+      updatedAt: comment.updatedAt.toISOString(),
+      user: comment.user,
+    });
+  } catch (error) {
+    console.error('Add comment error:', error);
+    res.status(500).json({ detail: 'Failed to add comment' });
+  }
+});
+
+// Edit own comment (authenticated)
+router.put('/comments/:commentId', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const commentId = parseInt(req.params.commentId, 10);
+  if (isNaN(commentId)) {
+    res.status(400).json({ detail: 'Invalid comment ID' });
+    return;
+  }
+
+  const { content } = req.body;
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    res.status(400).json({ detail: 'Comment content is required' });
+    return;
+  }
+
+  try {
+    const comment = await prisma.tripComment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      res.status(404).json({ detail: 'Comment not found' });
+      return;
+    }
+
+    if (comment.userId !== authReq.user.id) {
+      res.status(403).json({ detail: 'You can only edit your own comments' });
+      return;
+    }
+
+    const updatedComment = await prisma.tripComment.update({
+      where: { id: commentId },
+      data: { content: content.trim() },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      id: updatedComment.id,
+      tripId: updatedComment.tripId,
+      userId: updatedComment.userId,
+      content: updatedComment.content,
+      createdAt: updatedComment.createdAt.toISOString(),
+      updatedAt: updatedComment.updatedAt.toISOString(),
+      user: updatedComment.user,
+    });
+  } catch (error) {
+    console.error('Edit comment error:', error);
+    res.status(500).json({ detail: 'Failed to edit comment' });
+  }
+});
+
+// Delete own comment (authenticated)
+router.delete('/comments/:commentId', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const commentId = parseInt(req.params.commentId, 10);
+  if (isNaN(commentId)) {
+    res.status(400).json({ detail: 'Invalid comment ID' });
+    return;
+  }
+
+  try {
+    const comment = await prisma.tripComment.findUnique({
+      where: { id: commentId },
+      include: {
+        trip: {
+          select: { ownerId: true },
+        },
+      },
+    });
+
+    if (!comment) {
+      res.status(404).json({ detail: 'Comment not found' });
+      return;
+    }
+
+    // Allow deletion by comment author or trip owner
+    if (comment.userId !== authReq.user.id && comment.trip.ownerId !== authReq.user.id) {
+      res.status(403).json({ detail: 'You can only delete your own comments or comments on your trips' });
+      return;
+    }
+
+    await prisma.tripComment.delete({
+      where: { id: commentId },
+    });
+
+    res.json({ message: 'Comment deleted successfully' });
+  } catch (error) {
+    console.error('Delete comment error:', error);
+    res.status(500).json({ detail: 'Failed to delete comment' });
   }
 });
 

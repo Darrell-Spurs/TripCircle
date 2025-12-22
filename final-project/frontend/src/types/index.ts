@@ -113,6 +113,20 @@ export interface ActivityHistory {
   createdAt: string
 }
 
+export interface TripComment {
+  id: number
+  tripId: number
+  userId: number
+  user: {
+    id: number
+    name: string
+    avatarUrl?: string
+  }
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CreateActivityData {
   tripId: number
   date: string
@@ -191,6 +205,7 @@ export interface FeedTrip {
     avatarUrl?: string
   }
   activitiesCount: number
+  commentsCount: number
   activitiesPreview: {
     id: number
     title: string

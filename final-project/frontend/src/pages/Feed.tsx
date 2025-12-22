@@ -92,22 +92,30 @@ export default function Feed() {
                         {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
                       </div>
 
-                      {/* Author */}
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                        {trip.owner.avatarUrl ? (
-                          <img
-                            src={trip.owner.avatarUrl}
-                            alt={trip.owner.name}
-                            className="w-6 h-6 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <span className="text-indigo-600 text-xs font-medium">
-                              {trip.owner.name.charAt(0).toUpperCase()}
-                            </span>
+                      {/* Author and Stats */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          {trip.owner.avatarUrl ? (
+                            <img
+                              src={trip.owner.avatarUrl}
+                              alt={trip.owner.name}
+                              className="w-6 h-6 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center">
+                              <span className="text-indigo-600 text-xs font-medium">
+                                {trip.owner.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-sm text-gray-700">{trip.owner.name}</span>
+                        </div>
+                        {trip.commentsCount > 0 && (
+                          <div className="flex items-center gap-1 text-gray-500 text-sm">
+                            <span>💬</span>
+                            <span>{trip.commentsCount}</span>
                           </div>
                         )}
-                        <span className="text-sm text-gray-700">{trip.owner.name}</span>
                       </div>
                     </div>
                   </div>

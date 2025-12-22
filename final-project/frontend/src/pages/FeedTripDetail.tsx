@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useFeedTrip } from '../hooks/useFeed'
 import { useLanguage } from '../context/LanguageContext'
 import { Activity } from '../types'
+import TripCommentsSection from '../components/TripCommentsSection'
 
 export default function FeedTripDetail() {
   const { id } = useParams<{ id: string }>()
@@ -223,6 +224,11 @@ export default function FeedTripDetail() {
           ) : (
             <p className="text-gray-500 text-center py-8">{t.feed.noActivitiesInTrip}</p>
           )}
+        </div>
+
+        {/* Comments Section */}
+        <div className="mt-6">
+          <TripCommentsSection tripId={tripId} tripOwnerId={trip.owner.id} />
         </div>
       </div>
     </div>
