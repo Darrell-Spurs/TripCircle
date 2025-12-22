@@ -136,6 +136,7 @@ export interface Translations {
     publish: string
     publishing: string
     describePlaceholder: string
+    itinerary: string
   }
 
   // Activity
@@ -326,6 +327,45 @@ export interface Translations {
     published: string
     activities: string
     noActivitiesInTrip: string
+    comments: string
+    noComments: string
+  }
+
+  // Photos
+  photos: {
+    addPhoto: string
+    imageUrl: string
+    preview: string
+    unableToLoadImage: string
+    caption: string
+    captionPlaceholder: string
+    makePublic: string
+    publicDescription: string
+    optional: string
+    uploadMethod: string
+    fromUrl: string
+    fromDevice: string
+    selectImage: string
+    fileSizeLimit: string
+    invalidFileType: string
+    fileTooLarge: string
+    imageRequired: string
+    addPhotoFailed: string
+    albumTitle: string
+    photosCount: string
+    public: string
+    noPhotosYet: string
+    noPhotosDescription: string
+    addFirstPhoto: string
+    feedCoverSelected: string
+    feedCoverDescription: string
+    clearFeedCover: string
+    cover: string
+    addCaption: string
+    addedBy: string
+    deleteConfirm: string
+    album: string
+    tripPhotos: string
   }
 }
 
@@ -455,6 +495,7 @@ export const translations: Record<Language, Translations> = {
       publish: '發布',
       publishing: '發布中...',
       describePlaceholder: '描述您的旅程...',
+      itinerary: '行程',
     },
     activity: {
       addActivity: '新增活動',
@@ -631,6 +672,43 @@ export const translations: Record<Language, Translations> = {
       published: '發布於',
       activities: '個活動',
       noActivitiesInTrip: '此旅程尚未有活動。',
+      comments: '評論',
+      noComments: '暫無評論',
+    },
+    photos: {
+      addPhoto: '新增照片',
+      imageUrl: '圖片網址',
+      preview: '預覽',
+      unableToLoadImage: '無法載入圖片',
+      caption: '說明',
+      captionPlaceholder: '為這張照片添加說明...',
+      makePublic: '設為公開',
+      publicDescription: '當旅程發布時，此照片將顯示在動態中',
+      optional: '選填',
+      uploadMethod: '上傳方式',
+      fromUrl: '從網址',
+      fromDevice: '從裝置',
+      selectImage: '選擇圖片',
+      fileSizeLimit: '最大檔案大小：10MB',
+      invalidFileType: '請選擇圖片檔案',
+      fileTooLarge: '檔案大小必須小於 10MB',
+      imageRequired: '請提供圖片網址或選擇檔案',
+      addPhotoFailed: '新增照片失敗',
+      albumTitle: '旅程相簿',
+      photosCount: '張照片',
+      public: '公開',
+      noPhotosYet: '還沒有照片',
+      noPhotosDescription: '新增照片以記錄您的旅程回憶',
+      addFirstPhoto: '新增第一張照片',
+      feedCoverSelected: '已選為動態封面',
+      feedCoverDescription: '此照片將在動態中顯示為封面',
+      clearFeedCover: '清除',
+      cover: '封面',
+      addCaption: '新增說明...',
+      addedBy: '由',
+      deleteConfirm: '您確定要刪除此照片嗎？',
+      album: '照片',
+      tripPhotos: '旅程照片',
     },
   },
   en: {
@@ -758,6 +836,7 @@ export const translations: Record<Language, Translations> = {
       publish: 'Publish',
       publishing: 'Publishing...',
       describePlaceholder: 'Describe your trip...',
+      itinerary: 'Itinerary',
     },
     activity: {
       addActivity: 'Add Activity',
@@ -934,6 +1013,43 @@ export const translations: Record<Language, Translations> = {
       published: 'Published',
       activities: 'activities',
       noActivitiesInTrip: 'No activities in this trip yet.',
+      comments: 'Comments',
+      noComments: 'No comments yet',
+    },
+    photos: {
+      addPhoto: 'Add Photo',
+      imageUrl: 'Image URL',
+      preview: 'Preview',
+      unableToLoadImage: 'Unable to load image',
+      caption: 'Caption',
+      captionPlaceholder: 'Add a caption for this photo...',
+      makePublic: 'Make this photo public',
+      publicDescription: 'Will appear in feed when trip is published',
+      optional: 'optional',
+      uploadMethod: 'Upload Method',
+      fromUrl: 'From URL',
+      fromDevice: 'From Device',
+      selectImage: 'Select Image',
+      fileSizeLimit: 'Maximum file size: 10MB',
+      invalidFileType: 'Please select an image file',
+      fileTooLarge: 'File size must be less than 10MB',
+      imageRequired: 'Please provide an image URL or select a file',
+      addPhotoFailed: 'Failed to add photo',
+      albumTitle: 'Trip Album',
+      photosCount: 'photos',
+      public: 'public',
+      noPhotosYet: 'No photos yet',
+      noPhotosDescription: 'Add photos to capture your trip memories',
+      addFirstPhoto: 'Add First Photo',
+      feedCoverSelected: 'Feed Cover Selected',
+      feedCoverDescription: 'This photo will be displayed as the cover in the feed',
+      clearFeedCover: 'Clear',
+      cover: 'Cover',
+      addCaption: 'Add caption...',
+      addedBy: 'Added by',
+      deleteConfirm: 'Are you sure you want to delete this photo?',
+      album: 'Photos',
+      tripPhotos: 'Trip Photos',
     },
   },
 }

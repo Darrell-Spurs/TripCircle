@@ -190,7 +190,8 @@ npm start
 - **Trip Import** - Import published trips as templates for your own trips
 - **Allow Imports Toggle** - Publishers control if others can import their trips
 - **Trip Comments** - Comment and discuss on published trips in the feed
-- **Trip Photo Albums** - Add photos to trips with captions (via URL)
+- **Trip Photo Albums** - Add photos to trips with captions (via URL or direct file upload from device)
+- **Photo File Upload** - Upload images directly from device with validation (max 10MB, image types only)
 - **Public Photos** - Mark photos as public to display in the feed
 - **Feed Cover Image** - Choose a public photo as the feed cover (separate from trip cover)
 
@@ -203,7 +204,10 @@ npm start
 - **Amplitude Integration** - Track user behavior
 
 ### Multi-language Support
-- **i18n** - Language switcher for internationalization
+- **i18n** - Full internationalization support for Traditional Chinese (zh-TW) and English (en)
+- Language switcher in navigation bar
+- Locale-aware date and time formatting
+- All UI elements translated including tabs, comments, photo upload, and feed content
 
 ## Key Concepts
 
@@ -394,12 +398,21 @@ npx prisma migrate dev     # Apply migrations
 
 ### Trip Photo Albums (Completed)
 - [x] Add photos to trips via URL with optional caption
+- [x] Upload photos directly from device (file upload with base64 conversion)
+- [x] File validation (image types only, max 10MB)
 - [x] Photos tab in trip detail page (alongside Itinerary)
 - [x] Mark photos as public for feed display
 - [x] Select a public photo as feed cover (separate from trip cover)
 - [x] Feed cover priority: explicit cover > random public photo > trip cover > default
 - [x] Public photos gallery displayed on feed trip detail page
 - [x] Lightbox for viewing photos
+
+### Enhanced i18n Support (Completed)
+- [x] Full i18n support for all tabs (Itinerary, Photos)
+- [x] i18n support for Comments section in feed
+- [x] Locale-aware date formatting (dates display in user's selected language)
+- [x] Complete photo-related translations (upload methods, file validation messages, etc.)
+- [x] All feed-related text now supports Traditional Chinese and English
 
 ## 🚧 TODO - Upcoming Features
 

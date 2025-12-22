@@ -49,7 +49,8 @@ export default function FeedTripDetail() {
   // Format date for display
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00')
-    return date.toLocaleDateString('en-US', {
+    const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+    return date.toLocaleDateString(locale, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -137,7 +138,7 @@ export default function FeedTripDetail() {
               <p className="font-medium text-gray-900">{trip.owner.name}</p>
               {trip.publishedAt && (
                 <p className="text-sm text-gray-500">
-                  {t.feed.published} {new Date(trip.publishedAt).toLocaleDateString()}
+                  {t.feed.published} {new Date(trip.publishedAt).toLocaleDateString(language === 'zh-TW' ? 'zh-TW' : 'en-US')}
                 </p>
               )}
             </div>
@@ -159,7 +160,7 @@ export default function FeedTripDetail() {
             <div className="flex items-center gap-1">
               <span>📅</span>
               <span>
-                {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
+                {new Date(trip.startDate).toLocaleDateString(language === 'zh-TW' ? 'zh-TW' : 'en-US')} - {new Date(trip.endDate).toLocaleDateString(language === 'zh-TW' ? 'zh-TW' : 'en-US')}
               </span>
             </div>
             <div className="flex items-center gap-1">

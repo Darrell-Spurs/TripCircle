@@ -4,7 +4,7 @@ import { useFeed } from '../hooks/useFeed'
 import { useLanguage } from '../context/LanguageContext'
 
 export default function Feed() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [page, setPage] = useState(1)
   const { data, isLoading } = useFeed(page, 20)
 
@@ -89,7 +89,7 @@ export default function Feed() {
 
                       {/* Date range */}
                       <div className="text-xs text-gray-500 mb-3">
-                        {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
+                        {new Date(trip.startDate).toLocaleDateString(language === 'zh-TW' ? 'zh-TW' : 'en-US')} - {new Date(trip.endDate).toLocaleDateString(language === 'zh-TW' ? 'zh-TW' : 'en-US')}
                       </div>
 
                       {/* Author and Stats */}

@@ -93,7 +93,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
     <div className="bg-white rounded-xl shadow-sm p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
         <span>💬</span>
-        {t.feed?.comments || 'Comments'} ({comments?.length || 0})
+        {t.feed.comments} ({comments?.length || 0})
       </h2>
 
       {/* Comment input form */}
@@ -222,7 +222,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
         ) : (
           <div className="text-center py-8 text-gray-500">
             <div className="text-4xl mb-2">💭</div>
-            <p>{t.feed?.noComments || 'No comments yet. Be the first to share your thoughts!'}</p>
+            <p>{t.feed.noComments}. {t.feed.beFirstToShare}</p>
           </div>
         )}
       </div>

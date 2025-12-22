@@ -131,6 +131,8 @@ Key capabilities include:
 
 ## **5.5 Trip Photo Albums**
 - Add photos to trips via URL with optional caption
+- Upload photos directly from device (file upload with base64 data URL conversion)
+- File validation: image types only, maximum 10MB file size
 - Photos tab in trip detail page (alongside Itinerary)
 - Owner/Editor can add, edit, and delete photos
 - Mark photos as public for feed display
@@ -161,6 +163,17 @@ Key capabilities include:
 - OAuth with Google Calendar scopes  
 - Export activities as events  
 - Automatically assign event times and day mapping  
+
+## **5.9 Internationalization (i18n)**
+- Full multi-language support for Traditional Chinese (zh-TW) and English (en)
+- Language switcher in navigation bar
+- All UI text translated including:
+  - Navigation, tabs (Itinerary, Photos), buttons, labels
+  - Activity management, trip details, feed content
+  - Comments, photo upload, error messages
+- Locale-aware date and time formatting
+- Date displays adapt to selected language (e.g., "December 20, 2024" vs "2024年12月20日")
+- All photo-related features fully internationalized (upload methods, file validation, captions)
 
 ---
 
