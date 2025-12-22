@@ -24,6 +24,7 @@ model User {
   activityPreferences  ActivityPreference[]
   activityHistory      ActivityHistory[]
   tripComments         TripComment[]
+  addedPhotos          TripPhoto[]          @relation("AddedPhotos")
   createdAt            DateTime             @default(now())
 }
 
@@ -45,6 +46,7 @@ model Trip {
   shareLinks  ShareLink[]
   events      Event[]
   tripComments TripComment[]
+  photos      TripPhoto[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -185,5 +187,19 @@ model TripComment {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TripPhoto {
+  id            Int      @id @default(autoincrement())
+  tripId        Int
+  url           String
+  caption       String?
+  isPublic      Boolean  @default(false)
+  isFeedCover   Boolean  @default(false)
+  addedByUserId Int
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  addedBy       User     @relation("AddedPhotos", fields: [addedByUserId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 

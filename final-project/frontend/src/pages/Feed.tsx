@@ -41,10 +41,10 @@ export default function Feed() {
                   className="block break-inside-avoid"
                 >
                   <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
-                    {/* Cover Image */}
-                    {trip.coverImage ? (
+                    {/* Cover Image - use feedCoverImage (includes album photos) */}
+                    {trip.feedCoverImage ? (
                       <img
-                        src={trip.coverImage}
+                        src={trip.feedCoverImage}
                         alt={trip.title}
                         className="w-full h-48 object-cover"
                       />
@@ -110,12 +110,20 @@ export default function Feed() {
                           )}
                           <span className="text-sm text-gray-700">{trip.owner.name}</span>
                         </div>
-                        {trip.commentsCount > 0 && (
-                          <div className="flex items-center gap-1 text-gray-500 text-sm">
-                            <span>💬</span>
-                            <span>{trip.commentsCount}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 text-gray-500 text-sm">
+                          {trip.publicPhotosCount > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span>📷</span>
+                              <span>{trip.publicPhotosCount}</span>
+                            </div>
+                          )}
+                          {trip.commentsCount > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span>💬</span>
+                              <span>{trip.commentsCount}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

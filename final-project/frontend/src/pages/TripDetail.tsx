@@ -18,6 +18,7 @@ import ItineraryDay from '../components/ItineraryDay'
 import ActivityModal from '../components/ActivityModal'
 import MemberList from '../components/MemberList'
 import InviteMemberModal from '../components/InviteMemberModal'
+import TripPhotosTab from '../components/TripPhotosTab'
 import { Activity } from '../types'
 
 export default function TripDetail() {
@@ -32,6 +33,7 @@ export default function TripDetail() {
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [pace, setPace] = useState<'tight' | 'neutral' | 'relaxed'>('neutral')
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'photos'>('itinerary')
   const createActivity = useCreateActivity()
   const updateActivity = useUpdateActivity()
   const deleteActivity = useDeleteActivity()
@@ -557,84 +559,118 @@ export default function TripDetail() {
         )}
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">{t.trip.activities}</h2>
-              <div className="flex flex-col md:flex-row md:items-center gap-3">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      viewMode === 'list'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {t.trip.listView}
-                  </button>
-                  <button
-                    onClick={() => setViewMode('calendar')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      viewMode === 'calendar'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {t.trip.calendarView}
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{t.route.paceLabel}:</span>
-                  <div className="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setPace('tight')}
-                      className={`px-3 py-1.5 text-sm font-medium transition ${
-                        pace === 'tight' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {t.route.paceTight}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPace('neutral')}
-                      className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
-                        pace === 'neutral' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {t.route.paceNeutral}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPace('relaxed')}
-                      className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
-                        pace === 'relaxed' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {t.route.paceRelaxed}
-                    </button>
-                  </div>
-                </div>
-              </div>
+          {/* Tab Header */}
+          <div className="flex border-b border-gray-200 mb-6">
+            <button
+              onClick={() => setActiveTab('itinerary')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition ${
+                activeTab === 'itinerary'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              📅 {t.trip?.itinerary || 'Itinerary'}
+            </button>
+            <button
+              onClick={() => setActiveTab('photos')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition ${
+                activeTab === 'photos'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              📷 {t.photos?.album || 'Photos'}
+            </button>
           </div>
 
-          {days.map((date) => {
-            const activities = activitiesByDate[date] || []
+          {/* Itinerary Tab Content */}
+          {activeTab === 'itinerary' && (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">{t.trip.activities}</h2>
+                  <div className="flex flex-col md:flex-row md:items-center gap-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          viewMode === 'list'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {t.trip.listView}
+                      </button>
+                      <button
+                        onClick={() => setViewMode('calendar')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          viewMode === 'calendar'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {t.trip.calendarView}
+                      </button>
+                    </div>
 
-            return (
-              <ItineraryDay
-                key={date}
-                date={date}
-                activities={activities}
-                onEdit={handleEditActivity}
-                onDelete={handleDeleteActivity}
-                onReorder={handleReorder}
-                onAddActivity={() => handleAddActivity(date)}
-                canEdit={canEdit}
-                paceBuffer={paceBuffer}
-              />
-            )
-          })}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">{t.route.paceLabel}:</span>
+                      <div className="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setPace('tight')}
+                          className={`px-3 py-1.5 text-sm font-medium transition ${
+                            pace === 'tight' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {t.route.paceTight}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPace('neutral')}
+                          className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
+                            pace === 'neutral' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {t.route.paceNeutral}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPace('relaxed')}
+                          className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
+                            pace === 'relaxed' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {t.route.paceRelaxed}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+              </div>
+
+              {days.map((date) => {
+                const activities = activitiesByDate[date] || []
+
+                return (
+                  <ItineraryDay
+                    key={date}
+                    date={date}
+                    activities={activities}
+                    onEdit={handleEditActivity}
+                    onDelete={handleDeleteActivity}
+                    onReorder={handleReorder}
+                    onAddActivity={() => handleAddActivity(date)}
+                    canEdit={canEdit}
+                    paceBuffer={paceBuffer}
+                  />
+                )
+              })}
+            </>
+          )}
+
+          {/* Photos Tab Content */}
+          {activeTab === 'photos' && (
+            <TripPhotosTab tripId={tripId} canEdit={canEdit} />
+          )}
         </div>
 
         <ActivityModal

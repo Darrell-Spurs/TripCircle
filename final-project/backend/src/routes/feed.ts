@@ -29,6 +29,10 @@ router.get('/', async (req, res: Response) => {
             orderBy: { orderIndex: 'asc' },
             take: 3, // Preview only first 3 activities
           },
+          photos: {
+            where: { isPublic: true },
+            orderBy: [{ isFeedCover: 'desc' }, { createdAt: 'desc' }],
+          },
           _count: {
             select: { activities: true, tripComments: true },
           },
@@ -37,25 +41,34 @@ router.get('/', async (req, res: Response) => {
       prisma.trip.count({ where: { isPublished: true } }),
     ]);
 
-    const formattedTrips = trips.map((trip) => ({
-      id: trip.id,
-      title: trip.title,
-      description: trip.description,
-      body: trip.body,
-      coverImage: trip.coverImage,
-      startDate: trip.startDate.toISOString(),
-      endDate: trip.endDate.toISOString(),
-      status: trip.status,
-      publishedAt: trip.publishedAt?.toISOString(),
-      owner: trip.owner,
-      activitiesCount: trip._count.activities,
-      commentsCount: trip._count.tripComments,
-      activitiesPreview: trip.activities.map((a) => ({
-        id: a.id,
-        title: a.title,
-        locationName: a.locationName,
-      })),
-    }));
+    const formattedTrips = trips.map((trip) => {
+      // Feed cover logic: feedCover > random public photo > trip cover > null
+      const feedCoverPhoto = trip.photos.find((p) => p.isFeedCover);
+      const randomPublicPhoto = trip.photos.length > 0 ? trip.photos[0] : null;
+      const feedCoverImage = feedCoverPhoto?.url || randomPublicPhoto?.url || trip.coverImage || null;
+
+      return {
+        id: trip.id,
+        title: trip.title,
+        description: trip.description,
+        body: trip.body,
+        coverImage: trip.coverImage,
+        feedCoverImage,
+        startDate: trip.startDate.toISOString(),
+        endDate: trip.endDate.toISOString(),
+        status: trip.status,
+        publishedAt: trip.publishedAt?.toISOString(),
+        owner: trip.owner,
+        activitiesCount: trip._count.activities,
+        commentsCount: trip._count.tripComments,
+        publicPhotosCount: trip.photos.length,
+        activitiesPreview: trip.activities.map((a) => ({
+          id: a.id,
+          title: a.title,
+          locationName: a.locationName,
+        })),
+      };
+    });
 
     res.json({
       trips: formattedTrips,
@@ -94,6 +107,19 @@ router.get('/:id', async (req, res: Response) => {
         activities: {
           orderBy: [{ date: 'asc' }, { orderIndex: 'asc' }],
         },
+        photos: {
+          where: { isPublic: true },
+          orderBy: [{ isFeedCover: 'desc' }, { createdAt: 'desc' }],
+          include: {
+            addedBy: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
         shareLinks: {
           where: {
             OR: [
@@ -120,12 +146,18 @@ router.get('/:id', async (req, res: Response) => {
     // Get share token if available (for import functionality)
     const shareToken = trip.shareLinks.length > 0 ? trip.shareLinks[0].token : null;
 
+    // Feed cover logic
+    const feedCoverPhoto = trip.photos.find((p) => p.isFeedCover);
+    const randomPublicPhoto = trip.photos.length > 0 ? trip.photos[0] : null;
+    const feedCoverImage = feedCoverPhoto?.url || randomPublicPhoto?.url || trip.coverImage || null;
+
     res.json({
       id: trip.id,
       title: trip.title,
       description: trip.description,
       body: trip.body,
       coverImage: trip.coverImage,
+      feedCoverImage,
       startDate: trip.startDate.toISOString(),
       endDate: trip.endDate.toISOString(),
       status: trip.status,
@@ -147,6 +179,14 @@ router.get('/:id', async (req, res: Response) => {
         lat: a.lat,
         lng: a.lng,
         orderIndex: a.orderIndex,
+      })),
+      publicPhotos: trip.photos.map((p) => ({
+        id: p.id,
+        url: p.url,
+        caption: p.caption,
+        isFeedCover: p.isFeedCover,
+        addedBy: p.addedBy,
+        createdAt: p.createdAt.toISOString(),
       })),
     });
   } catch (error) {
@@ -340,7 +380,7 @@ router.post('/:id/import', authenticate, async (req: Request, res: Response) => 
           lat: a.lat,
           lng: a.lng,
           orderIndex: a.orderIndex,
-          createdByUserId: authReq.user.id, // Set importer as the creator (添加者)
+          createdByUserId: authReq.user!.id, // Set importer as the creator (添加者)
         })),
       });
 
@@ -354,7 +394,7 @@ router.post('/:id/import', authenticate, async (req: Request, res: Response) => 
         await prisma.activityParticipant.createMany({
           data: createdActivities.map((activity) => ({
             activityId: activity.id,
-            userId: authReq.user.id,
+            userId: authReq.user!.id,
           })),
         });
       }
