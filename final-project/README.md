@@ -13,20 +13,23 @@ final-project/
 ├── frontend/          # Vite + React + TypeScript
 │   ├── src/
 │   │   ├── components/    # Reusable UI components
-│   │   │   ├── Navbar.tsx
-│   │   │   ├── ItineraryDay.tsx
-│   │   │   ├── ActivityCard.tsx
-│   │   │   ├── ActivityModal.tsx
-│   │   │   ├── ActivityCommentsPanel.tsx
-│   │   │   ├── ActivityCostShareEditor.tsx
-│   │   │   ├── ActivityParticipantSelector.tsx
-│   │   │   ├── ActivityPreferenceButtons.tsx
-│   │   │   ├── ActivityTagSelector.tsx
-│   │   │   ├── MemberList.tsx
-│   │   │   ├── InviteMemberModal.tsx
-│   │   │   ├── LanguageSwitcher.tsx
-│   │   │   ├── ProtectedRoute.tsx
-│   │   │   └── AlertModal.tsx
+    │   │   │   ├── Navbar.tsx
+    │   │   │   ├── ItineraryDay.tsx
+    │   │   │   ├── ActivityCard.tsx
+    │   │   │   ├── ActivityModal.tsx
+    │   │   │   ├── ActivityCommentsPanel.tsx
+    │   │   │   ├── ActivityCostShareEditor.tsx
+    │   │   │   ├── ActivityParticipantSelector.tsx
+    │   │   │   ├── ActivityPreferenceButtons.tsx
+    │   │   │   ├── ActivityTagSelector.tsx
+    │   │   │   ├── MemberList.tsx
+    │   │   │   ├── InviteMemberModal.tsx
+    │   │   │   ├── TripCommentsSection.tsx
+    │   │   │   ├── TripPhotosTab.tsx
+    │   │   │   ├── AddPhotoModal.tsx
+    │   │   │   ├── LanguageSwitcher.tsx
+    │   │   │   ├── ProtectedRoute.tsx
+    │   │   │   └── AlertModal.tsx
 │   │   ├── pages/         # Page components (routes)
 │   │   │   ├── Feed.tsx
 │   │   │   ├── FeedTripDetail.tsx
@@ -41,18 +44,20 @@ final-project/
 │   │   │   ├── GoogleCallback.tsx
 │   │   │   └── Landing.tsx
 │   │   ├── hooks/         # Custom React hooks (API calls)
-│   │   │   ├── useTrips.ts
-│   │   │   ├── useActivities.ts
-│   │   │   ├── useFeed.ts
-│   │   │   ├── useMembers.ts
-│   │   │   ├── useShare.ts
-│   │   │   ├── usePlaces.ts
-│   │   │   ├── useActivityComments.ts
-│   │   │   ├── useActivityCostShares.ts
-│   │   │   ├── useActivityParticipants.ts
-│   │   │   ├── useActivityPreferences.ts
-│   │   │   ├── useActivityTags.ts
-│   │   │   └── useActivityHistory.ts
+    │   │   │   ├── useTrips.ts
+    │   │   │   ├── useActivities.ts
+    │   │   │   ├── useFeed.ts
+    │   │   │   ├── useMembers.ts
+    │   │   │   ├── useShare.ts
+    │   │   │   ├── usePlaces.ts
+    │   │   │   ├── useActivityComments.ts
+    │   │   │   ├── useActivityCostShares.ts
+    │   │   │   ├── useActivityParticipants.ts
+    │   │   │   ├── useActivityPreferences.ts
+    │   │   │   ├── useActivityTags.ts
+    │   │   │   ├── useActivityHistory.ts
+    │   │   │   ├── useTripComments.ts
+    │   │   │   └── useTripPhotos.ts
 │   │   ├── context/       # React context
 │   │   │   ├── AuthContext.tsx
 │   │   │   └── LanguageContext.tsx
@@ -66,15 +71,16 @@ final-project/
 ├── backend/           # Express.js + TypeScript + Prisma
 │   ├── src/
 │   │   ├── routes/        # API route handlers
-│   │   │   ├── auth.ts
-│   │   │   ├── trips.ts
-│   │   │   ├── activities.ts
-│   │   │   ├── feed.ts
-│   │   │   ├── share.ts
-│   │   │   ├── members.ts
-│   │   │   ├── places.ts
-│   │   │   ├── events.ts
-│   │   │   └── admin.ts
+    │   │   │   ├── auth.ts
+    │   │   │   ├── trips.ts
+    │   │   │   ├── activities.ts
+    │   │   │   ├── feed.ts
+    │   │   │   ├── share.ts
+    │   │   │   ├── members.ts
+    │   │   │   ├── photos.ts
+    │   │   │   ├── places.ts
+    │   │   │   ├── events.ts
+    │   │   │   └── admin.ts
 │   │   ├── middleware/    # Auth middleware
 │   │   ├── constants/     # Tag validation, etc.
 │   │   ├── utils/
@@ -183,6 +189,10 @@ npm start
 - **Activity Stories** - Add rich descriptions to activities for feed display
 - **Trip Import** - Import published trips as templates for your own trips
 - **Allow Imports Toggle** - Publishers control if others can import their trips
+- **Trip Comments** - Comment and discuss on published trips in the feed
+- **Trip Photo Albums** - Add photos to trips with captions (via URL)
+- **Public Photos** - Mark photos as public to display in the feed
+- **Feed Cover Image** - Choose a public photo as the feed cover (separate from trip cover)
 
 ### Explore & Discovery
 - **Google Places Integration** - Search and explore attractions
@@ -273,10 +283,24 @@ npm start
 - `GET /activities/:id/history` - Get change history
 
 ### Feed (Public)
-- `GET /feed` - List published trips (paginated)
-- `GET /feed/:id` - Get published trip details
+- `GET /feed` - List published trips (paginated, includes feedCoverImage)
+- `GET /feed/:id` - Get published trip details with public photos
 - `POST /feed/:id/publish` - Publish trip (with `allowImports` option)
 - `POST /feed/:id/unpublish` - Unpublish trip
+
+### Trip Comments
+- `GET /feed/:id/comments` - List comments on published trip (public)
+- `POST /feed/:id/comments` - Add comment (authenticated)
+- `PUT /feed/comments/:commentId` - Edit own comment
+- `DELETE /feed/comments/:commentId` - Delete own comment (or trip owner can delete)
+
+### Trip Photos
+- `GET /photos/trips/:tripId/photos` - List all photos in album (members only)
+- `POST /photos/trips/:tripId/photos` - Add photo (Owner/Editor)
+- `PUT /photos/:id` - Update photo (caption, isPublic)
+- `DELETE /photos/:id` - Delete photo
+- `POST /photos/trips/:tripId/photos/:id/set-feed-cover` - Set as feed cover
+- `DELETE /photos/trips/:tripId/feed-cover` - Clear feed cover selection
 
 ### Share
 - `POST /share` - Create share link
@@ -314,6 +338,10 @@ Key models (see `backend/prisma/schema.prisma` for full schema):
 - **ActivityPreference** - Interest votes on activities
 - **ActivityTag** - Tags assigned to activities
 - **ActivityHistory** - Audit trail of activity changes
+
+### Feed & Social Models
+- **TripComment** - Comments on published trips
+- **TripPhoto** - Photos in trip album (url, caption, isPublic, isFeedCover)
 
 ## Development
 
@@ -356,6 +384,23 @@ npx prisma migrate dev     # Apply migrations
 - Activity participants default to all trip members when creating new activities
 - Cost shares are auto-calculated as equal split when cost is set
 
+## ✅ Recently Completed Features
+
+### Trip Comments (Completed)
+- [x] Add comment section on published trips
+- [x] Users can add, edit, delete their own comments
+- [x] Trip owners can delete any comment on their posts
+- [x] Comment count displayed on feed cards
+
+### Trip Photo Albums (Completed)
+- [x] Add photos to trips via URL with optional caption
+- [x] Photos tab in trip detail page (alongside Itinerary)
+- [x] Mark photos as public for feed display
+- [x] Select a public photo as feed cover (separate from trip cover)
+- [x] Feed cover priority: explicit cover > random public photo > trip cover > default
+- [x] Public photos gallery displayed on feed trip detail page
+- [x] Lightbox for viewing photos
+
 ## 🚧 TODO - Upcoming Features
 
 > **Team members**: Pick one and start working on it! Update this list when you begin.
@@ -376,10 +421,9 @@ npx prisma migrate dev     # Apply migrations
   - If dates shift, should activities shift too?
   - Consider a confirmation dialog explaining the impact
 
-### 4. Save & Comment on Posts
+### 4. Save/Bookmark Posts
 - [ ] Add "Save/Bookmark" button on feed posts
 - [ ] Show saved posts in user's dashboard
-- [ ] Add comment section on published trips
 - [ ] Consider: notifications when someone comments on your post?
 
 ### 5. Publisher Analytics Dashboard

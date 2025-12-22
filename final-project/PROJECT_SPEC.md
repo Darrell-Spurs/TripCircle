@@ -129,17 +129,35 @@ Key capabilities include:
 
 ---
 
-## **5.5 Explore Tab**
+## **5.5 Trip Photo Albums**
+- Add photos to trips via URL with optional caption
+- Photos tab in trip detail page (alongside Itinerary)
+- Owner/Editor can add, edit, and delete photos
+- Mark photos as public for feed display
+- Select a public photo as feed cover image
+- Feed cover priority: explicit cover > random public photo > trip cover > default gradient
+
+---
+
+## **5.6 Trip Comments (Feed)**
+- Comment on published trips in the feed
+- Users can add, edit, and delete their own comments
+- Trip owners can delete any comment on their posts
+- Comment count displayed on feed cards
+
+---
+
+## **5.7 Explore Tab**
 - Search attractions using Google Places API  
 - Search inputs:
   - keyword  
   - location  
 - Display map + results list  
-- Add a place directly into a trip’s itinerary  
+- Add a place directly into a trip's itinerary  
 
 ---
 
-## **5.6 Optional: Google Calendar Export**
+## **5.8 Optional: Google Calendar Export**
 - OAuth with Google Calendar scopes  
 - Export activities as events  
 - Automatically assign event times and day mapping  
@@ -293,6 +311,31 @@ model Event {
   user      User?    @relation(fields: [userId], references: [id])
   trip      Trip?    @relation(fields: [tripId], references: [id])
 }
+
+model TripComment {
+  id        Int      @id @default(autoincrement())
+  tripId    Int
+  userId    Int
+  content   String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TripPhoto {
+  id            Int      @id @default(autoincrement())
+  tripId        Int
+  url           String
+  caption       String?
+  isPublic      Boolean  @default(false)
+  isFeedCover   Boolean  @default(false)
+  addedByUserId Int
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  addedBy       User     @relation(fields: [addedByUserId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
 ```
 
 ---
@@ -351,16 +394,36 @@ POST /events
 GET /admin/metrics
 ```
 
+## **Trip Comments**
+```
+GET    /feed/:id/comments         – List comments (public)
+POST   /feed/:id/comments         – Add comment (auth)
+PUT    /feed/comments/:commentId  – Edit own comment
+DELETE /feed/comments/:commentId  – Delete comment
+```
+
+## **Trip Photos**
+```
+GET    /photos/trips/:tripId/photos                    – List album photos
+POST   /photos/trips/:tripId/photos                    – Add photo
+PUT    /photos/:id                                     – Update photo
+DELETE /photos/:id                                     – Delete photo
+POST   /photos/trips/:tripId/photos/:id/set-feed-cover – Set feed cover
+DELETE /photos/trips/:tripId/feed-cover                – Clear feed cover
+```
+
 ---
 
 # 10. Frontend Pages
 
 ```
-/                     – Landing  
+/                     – Redirects to /feed  
+/feed                 – Public feed (browse published trips)  
+/feed/:id             – Published trip details + comments + public photos
 /auth/login           – Login  
 /auth/register        – Register  
 /dashboard            – User trips  
-/trips/:id            – Trip planner  
+/trips/:id            – Trip planner (Itinerary + Photos tabs)
 /explore              – Explore attractions  
 /share/:token         – Public trip view  
 /admin/analytics      – Admin dashboard  
