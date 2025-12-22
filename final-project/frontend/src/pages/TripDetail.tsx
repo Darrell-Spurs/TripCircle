@@ -136,13 +136,23 @@ export default function TripDetail() {
     return days
   }, [trip])
 
+  // Helper to get local date string (YYYY-MM-DD) from a date to avoid timezone issues
+  const getLocalDateString = (dateStr: string): string => {
+    const d = new Date(dateStr)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   // Group activities by date
   const activitiesByDate = useMemo(() => {
     if (!trip?.activities) return {}
     const grouped: Record<string, Activity[]> = {}
     
     trip.activities.forEach((activity) => {
-      const date = new Date(activity.date).toISOString().split('T')[0]
+      // Use local date parsing to avoid timezone shift issues
+      const date = getLocalDateString(activity.date)
       if (!grouped[date]) {
         grouped[date] = []
       }
@@ -182,7 +192,8 @@ export default function TripDetail() {
   }
 
   const handleEditActivity = (activity: Activity) => {
-    setSelectedDate(new Date(activity.date).toISOString().split('T')[0])
+    // Use local date parsing to avoid timezone shift issues
+    setSelectedDate(getLocalDateString(activity.date))
     setSelectedActivity(activity)
     setIsModalOpen(true)
   }

@@ -34,20 +34,20 @@ const activityCreateSchema = z.object({
 
 const activityUpdateSchema = z.object({
   date: dateStringSchema.optional(),
-  startTime: dateStringSchema.optional(),
-  endTime: dateStringSchema.optional(),
+  startTime: dateStringSchema.nullable().optional(),
+  endTime: dateStringSchema.nullable().optional(),
   title: z.string().min(1).optional(),
-  notes: z.string().optional(),
-  body: z.string().optional(),
-  placeId: z.string().optional(),
-  locationName: z.string().optional(),
-  address: z.string().optional(),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
+  notes: z.string().nullable().optional(),
+  body: z.string().nullable().optional(),
+  placeId: z.string().nullable().optional(),
+  locationName: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  lat: z.number().nullable().optional(),
+  lng: z.number().nullable().optional(),
   orderIndex: z.number().optional(),
   participantIds: z.array(z.number()).optional(),
-  cost: z.number().optional().nullable(),
-  currency: z.string().optional().nullable(),
+  cost: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
   lastModifiedAt: dateStringSchema.optional(),
   costShares: z.array(z.object({ userId: z.number(), amount: z.number() })).optional(),
@@ -97,14 +97,17 @@ router.post('/trips/:tripId/activities', authenticate, async (req: Request, res:
       orderIndex = existing[0]?.orderIndex !== undefined ? existing[0].orderIndex + 1 : 0;
     }
 
-    // Determine participants - default to all trip members if not specified
+    // Determine participants - default to all trip members + owner if not specified
     let participantIds = data.participantIds;
     if (!participantIds || participantIds.length === 0) {
       const allMembers = await prisma.tripMember.findMany({
         where: { tripId },
         select: { userId: true },
       });
-      participantIds = allMembers.map((m) => m.userId);
+      // Include trip owner (not in TripMember table by design) + all members
+      const memberUserIds = allMembers.map((m) => m.userId);
+      // Use Set to avoid duplicates in case owner is somehow in TripMember table
+      participantIds = Array.from(new Set([trip.ownerId, ...memberUserIds]));
     }
 
     // Validate tags

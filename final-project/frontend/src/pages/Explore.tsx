@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchPlaces, Place } from '../hooks/usePlaces'
 import { useTrips } from '../hooks/useTrips'
 import { useCreateActivity } from '../hooks/useActivities'
-import { GoogleMap, LoadScript, InfoWindow, Marker } from '@react-google-maps/api'
+import { GoogleMap, useLoadScript, InfoWindow, Marker } from '@react-google-maps/api'
 import { useNavigate, Link } from 'react-router-dom'
 import { trackEvent } from '../lib/amplitude'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
-import { useRef } from 'react'
 
-const GOOGLE_MAPS_MARKER_LIBRARIES = ['marker'] as any
+// Libraries for Google Maps - must be defined outside component to prevent re-renders
+const GOOGLE_MAPS_LIBRARIES: ('marker')[] = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ? ['marker'] : []
 
 const mapContainerStyle = {
   width: '100%',
@@ -37,6 +37,13 @@ export default function Explore() {
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
+
+  // Load Google Maps script once at component mount (not conditionally)
+  // This prevents the script from being unmounted/remounted when search results change
+  const { isLoaded: isMapLoaded, loadError: mapLoadError } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES as any,
+  })
   
   const { data: trips } = useTrips()
   
@@ -258,52 +265,55 @@ export default function Explore() {
 
             <div className="bg-white rounded-lg shadow-md p-4">
               <h2 className="text-xl font-semibold mb-4">{t.explore.map}</h2>
-              {import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
-                <LoadScript
-                  googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-                  libraries={import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ? GOOGLE_MAPS_MARKER_LIBRARIES : undefined}
-                >
-                  <GoogleMap
-                    mapContainerStyle={mapContainerStyle}
-                    center={mapCenter}
-                    zoom={13}
-                    options={{
-                      ...(import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ? ({ mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID } as any) : {}),
-                      clickableIcons: false,
-                    } as any}
-                    onLoad={(map) => {
-                      setMapInstance(map)
-                      // Force-disable POI clicks on the live map instance (extra safety)
-                      map.setOptions({ clickableIcons: false })
-                    }}
-                    onUnmount={() => setMapInstance(null)}
-                  >
-                    {/* Fallback markers when Map ID is not configured */}
-                    {!import.meta.env.VITE_GOOGLE_MAPS_MAP_ID &&
-                      places.map((place) => (
-                        <Marker
-                          key={place.placeId}
-                          position={{ lat: place.lat, lng: place.lng }}
-                          onClick={() => setSelectedPlace(place)}
-                        />
-                      ))}
-                    {selectedPlace && (
-                      <InfoWindow
-                        position={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}
-                        onCloseClick={() => setSelectedPlace(null)}
-                      >
-                        <div>
-                          <h3 className="font-semibold">{selectedPlace.name}</h3>
-                          <p className="text-sm">{selectedPlace.address}</p>
-                        </div>
-                      </InfoWindow>
-                    )}
-                  </GoogleMap>
-                </LoadScript>
-              ) : (
+              {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? (
                 <div className="flex items-center justify-center h-96 bg-gray-100 rounded">
                   <p className="text-gray-500">{t.explore.googleMapsNotConfigured}</p>
                 </div>
+              ) : mapLoadError ? (
+                <div className="flex items-center justify-center h-96 bg-gray-100 rounded">
+                  <p className="text-red-500">Failed to load Google Maps</p>
+                </div>
+              ) : !isMapLoaded ? (
+                <div className="flex items-center justify-center h-96 bg-gray-100 rounded">
+                  <p className="text-gray-500">{t.common.loading}</p>
+                </div>
+              ) : (
+                <GoogleMap
+                  mapContainerStyle={mapContainerStyle}
+                  center={mapCenter}
+                  zoom={13}
+                  options={{
+                    ...(import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ? ({ mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID } as any) : {}),
+                    clickableIcons: false,
+                  } as any}
+                  onLoad={(map) => {
+                    setMapInstance(map)
+                    // Force-disable POI clicks on the live map instance (extra safety)
+                    map.setOptions({ clickableIcons: false })
+                  }}
+                  onUnmount={() => setMapInstance(null)}
+                >
+                  {/* Fallback markers when Map ID is not configured */}
+                  {!import.meta.env.VITE_GOOGLE_MAPS_MAP_ID &&
+                    places.map((place) => (
+                      <Marker
+                        key={place.placeId}
+                        position={{ lat: place.lat, lng: place.lng }}
+                        onClick={() => setSelectedPlace(place)}
+                      />
+                    ))}
+                  {selectedPlace && (
+                    <InfoWindow
+                      position={{ lat: selectedPlace.lat, lng: selectedPlace.lng }}
+                      onCloseClick={() => setSelectedPlace(null)}
+                    >
+                      <div>
+                        <h3 className="font-semibold">{selectedPlace.name}</h3>
+                        <p className="text-sm">{selectedPlace.address}</p>
+                      </div>
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
               )}
             </div>
           </div>

@@ -24,8 +24,10 @@ export function validateTagName(tag: string): { valid: boolean; error?: string }
     return { valid: false, error: 'Tag name must be 50 characters or less' }
   }
   
-  // Allow alphanumeric, spaces, hyphens, and underscores
-  if (!/^[a-zA-Z0-9\s\-_]+$/.test(tag)) {
+  // Allow Unicode letters/numbers, spaces, hyphens, and underscores (supports Chinese, Japanese, etc.)
+  // \p{L} matches any letter from any language
+  // \p{N} matches any number from any language
+  if (!/^[\p{L}\p{N}\s\-_]+$/u.test(tag)) {
     return { valid: false, error: 'Tag name can only contain letters, numbers, spaces, hyphens, and underscores' }
   }
   

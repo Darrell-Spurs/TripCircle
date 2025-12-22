@@ -58,6 +58,7 @@ export default function ActivityModal({
   const [overlapActivity, setOverlapActivity] = useState<Activity | null>(null)
   const [showConflictAlert, setShowConflictAlert] = useState(false)
   const [conflictData, setConflictData] = useState<{ currentVersion: Activity; error: string } | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -167,6 +168,7 @@ export default function ActivityModal({
       setSplitMode('equal')
     }
     setShowSuggestions(false)
+    setSubmitError(null)
   }, [activity, isOpen, members])
 
   const handlePlaceSelect = (place: Place) => {
@@ -308,40 +310,47 @@ export default function ActivityModal({
     }
 
     // Use locationName as title if no title field exists
+    // For updates: use null to clear fields, undefined means "don't change"
+    // For creates: use undefined to let backend use defaults
+    const isUpdate = !!activity
+    
     const data: any = {
       tripId,
       date,
       title: formData.locationName || 'Untitled Activity', // Use locationName as title
-      notes: formData.notes || undefined,
-      body: formData.body || undefined,
+      // For updates, send null to clear; for creates, send undefined to skip
+      notes: formData.notes || (isUpdate ? null : undefined),
+      body: formData.body || (isUpdate ? null : undefined),
       startTime: combineDateTime(date, formData.startTime),
       endTime: combineDateTime(date, formData.endTime),
-      locationName: formData.locationName || undefined,
-      address: formData.address || undefined,
-      lat: formData.lat,
-      lng: formData.lng,
-      placeId: formData.placeId,
+      locationName: formData.locationName || (isUpdate ? null : undefined),
+      address: formData.address || (isUpdate ? null : undefined),
+      lat: formData.lat ?? (isUpdate ? null : undefined),
+      lng: formData.lng ?? (isUpdate ? null : undefined),
+      placeId: formData.placeId ?? (isUpdate ? null : undefined),
       orderIndex: activity?.orderIndex ?? defaultOrderIndex,
       participantIds: participantIds.length > 0 ? participantIds : undefined,
-      cost: cost || undefined,
-      currency: currency || undefined,
-      tags: tags.length > 0 ? tags : undefined,
+      cost: cost ?? (isUpdate ? null : undefined),
+      currency: currency || (isUpdate ? null : undefined),
+      tags: tags.length > 0 ? tags : (isUpdate ? [] : undefined),
       // Include cost shares only if custom amounts are set (null means use equal split)
       // Backend will auto-calculate equal split if costShares is not provided
       costShares: costShares && costShares.length > 0 ? costShares : undefined,
     }
 
     if (activity) {
-      // Update - remove tripId and date if not changing
+      // Update - always remove tripId and date (edit modal doesn't allow changing these)
+      // Note: Previously the date comparison was broken because it compared "YYYY-MM-DD" to ISO string
       delete data.tripId
-      if (data.date === new Date(activity.date).toISOString()) {
-        delete data.date
-      }
+      delete data.date
       // Include lastModifiedAt for conflict resolution
       if (activity.lastModifiedAt) {
         data.lastModifiedAt = activity.lastModifiedAt
       }
     }
+
+    // Clear any previous error
+    setSubmitError(null)
 
     // Handle conflict resolution for updates
     if (activity) {
@@ -369,10 +378,21 @@ export default function ActivityModal({
           setShowConflictAlert(true)
           return
         }
-        throw error
+        // Show error to user instead of silently failing
+        const errorMessage = error.response?.data?.detail || error.message || 'Failed to update activity'
+        setSubmitError(errorMessage)
+        console.error('Activity update error:', error)
+        return
       }
     } else {
-      await onSave(data)
+      try {
+        await onSave(data)
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.detail || error.message || 'Failed to create activity'
+        setSubmitError(errorMessage)
+        console.error('Activity create error:', error)
+        return
+      }
     }
 
     onClose()
@@ -640,21 +660,29 @@ export default function ActivityModal({
         </div>
 
         {/* Footer buttons - fixed at bottom, outside scrollable area */}
-        <div className="flex gap-4 p-6 pt-4 border-t border-gray-100 flex-shrink-0">
-          <button
-            type="submit"
-            form="activity-form"
-            className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-          >
-            {activity ? t.common.update : t.common.create}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-          >
-            {t.common.cancel}
-          </button>
+        <div className="p-6 pt-4 border-t border-gray-100 flex-shrink-0">
+          {/* Error message display */}
+          {submitError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {submitError}
+            </div>
+          )}
+          <div className="flex gap-4">
+            <button
+              type="submit"
+              form="activity-form"
+              className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+            >
+              {activity ? t.common.update : t.common.create}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            >
+              {t.common.cancel}
+            </button>
+          </div>
         </div>
       </div>
 

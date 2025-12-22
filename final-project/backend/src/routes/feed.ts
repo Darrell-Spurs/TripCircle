@@ -306,6 +306,8 @@ router.post('/:id/import', authenticate, async (req: Request, res: Response) => 
     }
 
     // Create new trip for the user (don't copy body/story - user should write their own)
+    // Note: Don't create TripMember entry for owner - ownership is already established via ownerId
+    // This matches the behavior in trips.ts to prevent duplicate trip entries in the dashboard
     const newTrip = await prisma.trip.create({
       data: {
         ownerId: authReq.user.id,
@@ -320,16 +322,7 @@ router.post('/:id/import', authenticate, async (req: Request, res: Response) => 
       },
     });
 
-    // Add user as owner member
-    await prisma.tripMember.create({
-      data: {
-        tripId: newTrip.id,
-        userId: authReq.user.id,
-        role: 'owner',
-      },
-    });
-
-    // Copy all activities (notes are copied, but body/story is not)
+    // Copy all activities with importer as the creator
     if (sourceTrip.activities.length > 0) {
       await prisma.activity.createMany({
         data: sourceTrip.activities.map((a) => ({
@@ -346,8 +339,24 @@ router.post('/:id/import', authenticate, async (req: Request, res: Response) => 
           lat: a.lat,
           lng: a.lng,
           orderIndex: a.orderIndex,
+          createdByUserId: authReq.user.id, // Set importer as the creator (添加者)
         })),
       });
+
+      // Add importer as participant for all imported activities
+      const createdActivities = await prisma.activity.findMany({
+        where: { tripId: newTrip.id },
+        select: { id: true },
+      });
+
+      if (createdActivities.length > 0) {
+        await prisma.activityParticipant.createMany({
+          data: createdActivities.map((activity) => ({
+            activityId: activity.id,
+            userId: authReq.user.id,
+          })),
+        });
+      }
     }
 
     res.json({
