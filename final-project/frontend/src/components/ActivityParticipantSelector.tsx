@@ -30,9 +30,6 @@ export default function ActivityParticipantSelector({
     onChange([])
   }
 
-  const allSelected = members.length > 0 && selectedUserIds.length === members.length
-  const noneSelected = selectedUserIds.length === 0
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">

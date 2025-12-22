@@ -47,7 +47,7 @@ export function useDeleteActivityComment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ commentId, activityId }: { commentId: number; activityId: number }) => {
+    mutationFn: async ({ commentId }: { commentId: number; activityId: number }) => {
       await api.delete(`/activities/comments/${commentId}`)
     },
     onSuccess: (_, variables) => {

@@ -6,7 +6,6 @@ import AlertModal from './AlertModal'
 import ActivityParticipantSelector from './ActivityParticipantSelector'
 import ActivityTagSelector from './ActivityTagSelector'
 import ActivityCostShareEditor from './ActivityCostShareEditor'
-import { useAuth } from '../context/AuthContext'
 import { useUpdateActivity } from '../hooks/useActivities'
 
 interface ActivityModalProps {
@@ -32,8 +31,7 @@ export default function ActivityModal({
   existingActivities = [],
   members = [],
 }: ActivityModalProps) {
-  const { t } = useLanguage()
-  const { user } = useAuth()
+  const { t, language } = useLanguage()
   const updateActivity = useUpdateActivity()
   const [formData, setFormData] = useState({
     notes: '',
@@ -52,10 +50,10 @@ export default function ActivityModal({
   const [currency, setCurrency] = useState<string | undefined>(undefined)
   const [tags, setTags] = useState<string[]>([])
   const [costShares, setCostShares] = useState<{ userId: number; amount: number }[] | null>(null)
-  const [splitMode, setSplitMode] = useState<'equal' | 'custom'>('equal')
+  const [_splitMode, setSplitMode] = useState<'equal' | 'custom'>('equal')
   const [searchQuery, setSearchQuery] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
+  const [, setSelectedPlace] = useState<Place | null>(null)
   const [showOverlapAlert, setShowOverlapAlert] = useState(false)
   const [overlapActivity, setOverlapActivity] = useState<Activity | null>(null)
   const [showConflictAlert, setShowConflictAlert] = useState(false)

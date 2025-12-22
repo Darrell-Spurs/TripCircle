@@ -269,7 +269,7 @@ router.post('/trips/:tripId/activities', authenticate, async (req: Request, res:
         createdAt: cs.createdAt.toISOString(),
         updatedAt: cs.updatedAt.toISOString(),
       })),
-      lastModifiedAt: activityWithCostShares!.updatedAt?.toISOString() || activityWithCostShares!.createdAt?.toISOString() || new Date().toISOString(),
+      lastModifiedAt: (activityWithCostShares as any).updatedAt?.toISOString() || (activityWithCostShares as any).createdAt?.toISOString() || new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error creating activity:', error);
@@ -325,7 +325,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
     // Conflict resolution: last-write-wins
     if (data.lastModifiedAt) {
       const clientTime = new Date(data.lastModifiedAt);
-      const serverTime = activity.updatedAt || activity.createdAt || new Date();
+      const serverTime = (activity as any).updatedAt || (activity as any).createdAt || new Date();
 
       if (serverTime > clientTime) {
         // Conflict detected - return current version
@@ -409,7 +409,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
               createdAt: cs.createdAt.toISOString(),
               updatedAt: cs.updatedAt.toISOString(),
             })),
-            lastModifiedAt: currentActivity!.updatedAt?.toISOString() || currentActivity!.createdAt?.toISOString() || new Date().toISOString(),
+            lastModifiedAt: (currentActivity as any).updatedAt?.toISOString() || (currentActivity as any).createdAt?.toISOString() || new Date().toISOString(),
           },
         });
       }
@@ -652,7 +652,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
         createdAt: cs.createdAt.toISOString(),
         updatedAt: cs.updatedAt.toISOString(),
       })),
-      lastModifiedAt: updatedActivity.updatedAt?.toISOString() || updatedActivity.createdAt?.toISOString() || new Date().toISOString(),
+      lastModifiedAt: (updatedActivity as any).updatedAt?.toISOString() || (updatedActivity as any).createdAt?.toISOString() || new Date().toISOString(),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

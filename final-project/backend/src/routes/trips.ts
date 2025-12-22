@@ -395,7 +395,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
         })),
         preferenceCounts,
         commentsCount: a._count.comments,
-        lastModifiedAt: a.updatedAt?.toISOString() || a.createdAt?.toISOString() || new Date().toISOString(),
+        lastModifiedAt: (a as any).updatedAt?.toISOString() || (a as any).createdAt?.toISOString() || new Date().toISOString(),
       };
     }),
     createdAt: trip.createdAt.toISOString(),

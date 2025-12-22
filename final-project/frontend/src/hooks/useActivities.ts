@@ -76,7 +76,7 @@ export function useUpdateActivity() {
         throw error
       }
     },
-    onSuccess: (result, variables) => {
+    onSuccess: (result) => {
       if (result.activity) {
         queryClient.invalidateQueries({ queryKey: ['trips', result.activity.tripId] })
         queryClient.invalidateQueries({ queryKey: ['trips'] })

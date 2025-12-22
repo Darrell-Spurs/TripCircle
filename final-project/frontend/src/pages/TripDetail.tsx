@@ -642,7 +642,7 @@ export default function TripDetail() {
             trip && trip.owner
               ? (() => {
                   // Check if owner is already in members list
-                  const ownerInMembers = members?.some((m) => m.userId === trip.owner.id)
+                  const ownerInMembers = members?.some((m) => m.userId === trip.owner!.id)
                   const allMembers = members || []
                   
                   if (ownerInMembers) {
