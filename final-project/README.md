@@ -2,40 +2,7 @@
 
 A full-stack travel planning application built with React (Vite + TypeScript) frontend and Express.js (TypeScript) backend. Users can plan trips, collaborate with others, and share their travel experiences with the community.
 
-Deploy link: http://wp-final-five.vercel.app/
-
----
-
-## 🚧 TODO - Upcoming Features
-
-> **Team members**: Pick one and start working on it! Update this list when you begin.
-
-### 1. Search & Filter Feed
-- [ ] Add search bar to filter published trips by title, destination, etc.
-- [ ] Add filters (date range, trip length, trip type etc.)
-
-### 2. Clickable Feed Content → Search/Explore
-- [ ] Make locations, tags, or keywords in feed posts clickable
-- [ ] Clicking should filter the feed OR jump to Explore page with that search term
-- [ ] Example: Click "Tokyo" in a post → see all Tokyo trips or explore Tokyo attractions
-
-### 3. Update Trip Dates (Tricky!)
-- [ ] Allow changing trip start/end dates after creation
-- [ ] **Challenge**: What happens to activities when dates change?
-  - If a day is removed, what happens to its activities? (Delete? Move? Warn user?)
-  - If dates shift, should activities shift too?
-  - Consider a confirmation dialog explaining the impact
-
-### 4. Save & Comment on Posts
-- [ ] Add "Save/Bookmark" button on feed posts
-- [ ] Show saved posts in user's dashboard
-- [ ] Add comment section on published trips
-- [ ] Consider: notifications when someone comments on your post?
-
-### 5. Publisher Analytics Dashboard
-- [ ] Show stats for your published trips: views, imports, saves
-- [ ] Add to existing dashboard or create new "My Posts" section
-- [ ] Track: view count, import count, comments count per post
+Deploy link: https://trip-circle.vercel.app/
 
 ---
 
@@ -46,16 +13,71 @@ final-project/
 ├── frontend/          # Vite + React + TypeScript
 │   ├── src/
 │   │   ├── components/    # Reusable UI components
+│   │   │   ├── Navbar.tsx
+│   │   │   ├── ItineraryDay.tsx
+│   │   │   ├── ActivityCard.tsx
+│   │   │   ├── ActivityModal.tsx
+│   │   │   ├── ActivityCommentsPanel.tsx
+│   │   │   ├── ActivityCostShareEditor.tsx
+│   │   │   ├── ActivityParticipantSelector.tsx
+│   │   │   ├── ActivityPreferenceButtons.tsx
+│   │   │   ├── ActivityTagSelector.tsx
+│   │   │   ├── MemberList.tsx
+│   │   │   ├── InviteMemberModal.tsx
+│   │   │   ├── LanguageSwitcher.tsx
+│   │   │   ├── ProtectedRoute.tsx
+│   │   │   └── AlertModal.tsx
 │   │   ├── pages/         # Page components (routes)
+│   │   │   ├── Feed.tsx
+│   │   │   ├── FeedTripDetail.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── TripDetail.tsx
+│   │   │   ├── CreateTrip.tsx
+│   │   │   ├── Explore.tsx
+│   │   │   ├── ShareTrip.tsx
+│   │   │   ├── AdminAnalytics.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── Register.tsx
+│   │   │   ├── GoogleCallback.tsx
+│   │   │   └── Landing.tsx
 │   │   ├── hooks/         # Custom React hooks (API calls)
-│   │   ├── context/       # React context (Auth)
+│   │   │   ├── useTrips.ts
+│   │   │   ├── useActivities.ts
+│   │   │   ├── useFeed.ts
+│   │   │   ├── useMembers.ts
+│   │   │   ├── useShare.ts
+│   │   │   ├── usePlaces.ts
+│   │   │   ├── useActivityComments.ts
+│   │   │   ├── useActivityCostShares.ts
+│   │   │   ├── useActivityParticipants.ts
+│   │   │   ├── useActivityPreferences.ts
+│   │   │   ├── useActivityTags.ts
+│   │   │   └── useActivityHistory.ts
+│   │   ├── context/       # React context
+│   │   │   ├── AuthContext.tsx
+│   │   │   └── LanguageContext.tsx
 │   │   ├── lib/           # Utilities (API client, analytics)
-│   │   └── types/         # TypeScript interfaces
+│   │   │   ├── api.ts
+│   │   │   ├── auth.ts
+│   │   │   └── amplitude.ts
+│   │   ├── types/         # TypeScript interfaces
+│   │   └── i18n/          # Internationalization
 │   └── ...
 ├── backend/           # Express.js + TypeScript + Prisma
 │   ├── src/
 │   │   ├── routes/        # API route handlers
+│   │   │   ├── auth.ts
+│   │   │   ├── trips.ts
+│   │   │   ├── activities.ts
+│   │   │   ├── feed.ts
+│   │   │   ├── share.ts
+│   │   │   ├── members.ts
+│   │   │   ├── places.ts
+│   │   │   ├── events.ts
+│   │   │   └── admin.ts
 │   │   ├── middleware/    # Auth middleware
+│   │   ├── constants/     # Tag validation, etc.
+│   │   ├── utils/
 │   │   └── database.ts    # Prisma client
 │   ├── prisma/
 │   │   └── schema.prisma  # Database schema
@@ -138,26 +160,40 @@ npm start
 ## Features
 
 ### Core Features
-- ✅ **User Authentication** - Email/Password + Google OAuth
-- ✅ **Trip Management** - Create, edit, delete trips with cover images
-- ✅ **Itinerary Planning** - Day-by-day activities with times and locations
-- ✅ **Drag-and-Drop** - Reorder activities within each day
-- ✅ **Collaboration** - Invite members with Owner/Editor/Viewer roles
-- ✅ **Share Links** - Generate permanent links for trip sharing
+- **User Authentication** - Email/Password + Google OAuth
+- **Trip Management** - Create, edit, delete trips with cover images
+- **Itinerary Planning** - Day-by-day activities with times and locations
+- **Drag-and-Drop** - Reorder activities within each day
+- **Collaboration** - Invite members with Owner/Editor/Viewer roles
+- **Share Links** - Generate permanent links for trip sharing
 
-### Feed & Social Features (NEW)
-- ✅ **Public Feed** - Browse published trips from the community (home page)
-- ✅ **Trip Publishing** - Publish trips to feed with optional "story" text
-- ✅ **Activity Stories** - Add rich descriptions to activities for feed display
-- ✅ **Trip Import** - Import published trips as templates for your own trips
-- ✅ **Allow Imports Toggle** - Publishers control if others can import their trips
+### Activity Collaboration Features
+- **Activity Participants** - Track who's joining each activity (defaults to all members)
+- **Activity Comments** - Discussion threads on individual activities
+- **Cost Tracking** - Set activity costs with currency support
+- **Cost Shares** - Split expenses among participants (auto-equal or custom amounts)
+- **Activity Preferences** - Vote "interested" or "not interested" on activities
+- **Activity Tags** - Categorize activities with custom tags
+- **Activity History** - View audit trail of changes (who edited what and when)
+- **Activity Creator** - Track who created each activity
+
+### Feed & Social Features
+- **Public Feed** - Browse published trips from the community (home page)
+- **Trip Publishing** - Publish trips to feed with optional "story" text
+- **Activity Stories** - Add rich descriptions to activities for feed display
+- **Trip Import** - Import published trips as templates for your own trips
+- **Allow Imports Toggle** - Publishers control if others can import their trips
 
 ### Explore & Discovery
-- ✅ **Google Places Integration** - Search and explore attractions
-- ✅ **Analytics Tracking** - Amplitude integration for user behavior
+- **Google Places Integration** - Search and explore attractions
+- **Add to Trip** - Add discovered places directly to your itinerary
 
-### Admin
-- ✅ **Analytics Dashboard** - View user and trip statistics
+### Admin & Analytics
+- **Analytics Dashboard** - View user and trip statistics
+- **Amplitude Integration** - Track user behavior
+
+### Multi-language Support
+- **i18n** - Language switcher for internationalization
 
 ## Key Concepts
 
@@ -180,6 +216,12 @@ npm start
 3. Trip is copied to your account with "(Imported)" suffix
 4. Notes are preserved, but stories are cleared for you to write your own
 
+### Activity Collaboration
+- **Participants**: By default, all trip members are added to new activities. Editors can customize who joins each activity.
+- **Cost Splitting**: When you set a cost, it's automatically split equally among participants. Custom splits are also supported.
+- **Preferences**: Members can indicate interest level to help group decision-making.
+- **Comments**: Discuss details, suggest alternatives, or coordinate logistics.
+
 ## API Endpoints
 
 ### Auth
@@ -199,7 +241,36 @@ npm start
 - `POST /activities/trips/:tripId/activities` - Create activity
 - `PUT /activities/:id` - Update activity
 - `DELETE /activities/:id` - Delete activity
-- `PUT /activities/trips/:tripId/reorder` - Reorder activities
+- `PATCH /activities/reorder` - Reorder activities
+
+### Activity Participants
+- `GET /activities/:id/participants` - List participants
+- `POST /activities/:id/participants` - Set participants (array of userIds)
+- `DELETE /activities/:id/participants/:userId` - Remove participant
+
+### Activity Comments
+- `GET /activities/:id/comments` - List comments
+- `POST /activities/:id/comments` - Add comment
+- `PUT /activities/comments/:commentId` - Edit comment
+- `DELETE /activities/comments/:commentId` - Delete comment
+
+### Activity Cost Shares
+- `GET /activities/:id/cost-shares` - List cost shares
+- `POST /activities/:id/cost-shares` - Set cost shares
+- `DELETE /activities/:id/cost-shares` - Clear cost shares
+
+### Activity Preferences
+- `GET /activities/:id/preferences` - Get preferences with counts
+- `POST /activities/:id/preferences` - Set preference (interested/not_interested)
+- `DELETE /activities/:id/preferences` - Remove preference
+
+### Activity Tags
+- `GET /activities/:id/tags` - List tags
+- `POST /activities/:id/tags` - Add tags
+- `DELETE /activities/:id/tags/:tag` - Remove tag
+
+### Activity History
+- `GET /activities/:id/history` - Get change history
 
 ### Feed (Public)
 - `GET /feed` - List published trips (paginated)
@@ -217,16 +288,32 @@ npm start
 - `POST /trips/:tripId/members` - Add member
 - `DELETE /trips/:tripId/members/:userId` - Remove member
 
+### Places
+- `GET /places/search` - Search Google Places
+
+### Events & Admin
+- `POST /events` - Log analytics event
+- `GET /admin/metrics` - Get admin metrics
+
 ## Database Schema
 
 Key models (see `backend/prisma/schema.prisma` for full schema):
 
+### Core Models
 - **User** - Authentication and profile
 - **Trip** - Trip details, dates, publish status
-- **Activity** - Itinerary items with location data
+- **Activity** - Itinerary items with location, cost, times
 - **TripMember** - User-trip relationships with roles
 - **ShareLink** - Permanent share tokens
 - **Event** - Analytics events
+
+### Activity Collaboration Models
+- **ActivityParticipant** - Users joining an activity
+- **ActivityComment** - Discussion comments on activities
+- **ActivityCostShare** - Cost split per user per activity
+- **ActivityPreference** - Interest votes on activities
+- **ActivityTag** - Tags assigned to activities
+- **ActivityHistory** - Audit trail of activity changes
 
 ## Development
 
@@ -242,27 +329,33 @@ npx prisma generate        # Regenerate client
 npx prisma migrate dev     # Apply migrations
 ```
 
-## Recent Changes
+## Frontend Pages
 
-### December 2024
-- **Feed System** - Added public feed as home page where users can browse published trips
-- **Trip Stories** - Publishers can add rich text descriptions for feed display
-- **Activity Stories** - Each activity can have its own story for the feed
-- **Import Feature** - Users can import trips from feed or share links as templates
-- **Allow Imports Toggle** - Publishers control whether their trip can be imported
-- **Edit Trip Details** - Inline editing for title, description, and cover image
-- **UI Improvements** - Renamed "Dashboard" to "My Trips", feed is now the home page
+| Route | Description |
+|-------|-------------|
+| `/` | Redirects to Feed |
+| `/feed` | Public feed - browse published trips |
+| `/feed/:id` | View published trip details |
+| `/dashboard` | My Trips - user's own trips |
+| `/trips/new` | Create new trip |
+| `/trips/:id` | Trip planner/editor |
+| `/explore` | Search attractions via Google Places |
+| `/share/:token` | View shared trip |
+| `/admin/analytics` | Admin dashboard |
+| `/auth/login` | Login page |
+| `/auth/register` | Registration page |
 
 ## Team Notes
 
-- The feed is now the main landing page (`/`)
+- The feed is the main landing page (`/` redirects to `/feed`)
 - "My Trips" shows the user's own trips (`/dashboard`)
 - Share links are permanent unless explicitly deleted
 - When publishing with "Allow imports" unchecked, existing share links are deleted
 - Stories (`body` field) are NOT copied during import - users write their own
 - Notes ARE copied during import - useful for practical trip info
+- Activity participants default to all trip members when creating new activities
+- Cost shares are auto-calculated as equal split when cost is set
 
 ## Deployment
 
 See deployment instructions in `PROJECT_SPEC.md`.
-

@@ -38,7 +38,7 @@ function App() {
           <BrowserRouter future={routerFutureFlags}>
             <Navbar />
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Navigate to="/feed" replace />} />
               <Route path="/landing" element={<Landing />} />
               <Route path="/feed" element={<Feed />} />
               <Route path="/feed/:id" element={<FeedTripDetail />} />
