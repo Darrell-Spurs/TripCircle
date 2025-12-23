@@ -142,7 +142,7 @@ export default function LocationFolders() {
       })
       const fullUrl = `${window.location.origin}/location-folders/shared/${shareLink.token}`
       navigator.clipboard.writeText(fullUrl)
-      alert(t.locationFolders.shareLinkCreated + ': ' + fullUrl)
+      alert(t.share.linkCopied || t.locationFolders.shareLinkCreated || 'Link copied to clipboard!')
     } catch (error: any) {
       alert(error.response?.data?.detail || 'Failed to create share link')
     }
@@ -202,9 +202,13 @@ export default function LocationFolders() {
                     <span>
                       {folder.locationsCount || 0} {t.locationFolders.locations}
                     </span>
-                    {folder.isPublic && (
-                      <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">
-                        {t.photos.public}
+                    {folder.isPublic ? (
+                      <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs" title={t.locationFolders.publicDescription || 'Public: Anyone can view this collection'}>
+                        🌐 {t.photos.public}
+                      </span>
+                    ) : (
+                      <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs" title={t.locationFolders.privateDescription || 'Private: Only you and invited members can view this collection'}>
+                        🔒 {t.locationFolders.private || 'Private'}
                       </span>
                     )}
                   </div>
@@ -444,12 +448,22 @@ export default function LocationFolders() {
               )}
 
               <div className="flex gap-2 mt-6 pt-4 border-t">
-                <button
-                  onClick={() => handleCreateShareLink(viewingFolder.id)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                >
-                  {t.locationFolders.share}
-                </button>
+                {viewingFolder.isPublic ? (
+                  <button
+                    onClick={() => handleCreateShareLink(viewingFolder.id)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    {t.locationFolders.share}
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    title={t.locationFolders.privateCollectionsCannotBeShared || 'Private collections cannot be shared. Make the collection public to share it.'}
+                    className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed transition"
+                  >
+                    {t.locationFolders.share}
+                  </button>
+                )}
                 <button
                   onClick={() => setViewingFolder(null)}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"

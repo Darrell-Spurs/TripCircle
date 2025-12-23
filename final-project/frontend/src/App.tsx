@@ -17,6 +17,7 @@ import AdminAnalytics from './pages/AdminAnalytics'
 import Feed from './pages/Feed'
 import FeedTripDetail from './pages/FeedTripDetail'
 import LocationFolders from './pages/LocationFolders'
+import ShareLocationFolder from './pages/ShareLocationFolder'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +98,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/location-folders/shared/:token" element={<ShareLocationFolder />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

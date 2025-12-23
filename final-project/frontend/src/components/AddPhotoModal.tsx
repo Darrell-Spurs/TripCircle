@@ -93,7 +93,21 @@ export default function AddPhotoModal({ isOpen, onClose, tripId }: AddPhotoModal
       }
       onClose()
     } catch (error: any) {
-      alert(error.response?.data?.detail || t.photos?.addPhotoFailed || 'Failed to add photo')
+      // Handle specific error cases
+      let errorMessage = t.photos?.addPhotoFailed || 'Failed to add photo'
+
+      if (error.response?.status === 413) {
+        // Payload too large
+        errorMessage =
+          error.response?.data?.detail ||
+          'File size too large. Please use an image smaller than 10MB, or use a URL instead of uploading directly.'
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      alert(errorMessage)
     }
   }
 

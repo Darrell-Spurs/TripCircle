@@ -330,7 +330,7 @@ export default function Explore() {
       })
       const fullUrl = `${window.location.origin}/location-folders/shared/${shareLink.token}`
       navigator.clipboard.writeText(fullUrl)
-      alert(t.locationFolders.shareLinkCreated + ': ' + fullUrl)
+      alert(t.share.linkCopied || t.locationFolders.shareLinkCreated || 'Link copied to clipboard!')
     } catch (error: any) {
       alert(error.response?.data?.detail || 'Failed to create share link')
     }
@@ -918,12 +918,22 @@ export default function Explore() {
                   )}
 
                   <div className="flex gap-2 mt-6 pt-4 border-t">
-                    <button
-                      onClick={() => handleCreateShareLink(viewingFolder.id)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                    >
-                      {t.locationFolders.share}
-                    </button>
+                    {viewingFolder.isPublic ? (
+                      <button
+                        onClick={() => handleCreateShareLink(viewingFolder.id)}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                      >
+                        {t.locationFolders.share}
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        title={t.locationFolders.privateCollectionsCannotBeShared || 'Private collections cannot be shared. Make the collection public to share it.'}
+                        className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed transition"
+                      >
+                        {t.locationFolders.share}
+                      </button>
+                    )}
                     <button
                       onClick={() => setViewingFolder(null)}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"

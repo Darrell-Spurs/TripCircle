@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { trackEvent } from '../lib/amplitude'
@@ -12,6 +12,8 @@ export default function Login() {
   const { login, googleLogin, continueAsGuest } = useAuth()
   const { t } = useLanguage()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const returnUrl = searchParams.get('return') || '/dashboard'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,7 +23,7 @@ export default function Login() {
     try {
       await login(email, password)
       trackEvent('user_logged_in', { email })
-      navigate('/dashboard')
+      navigate(returnUrl)
     } catch (err: any) {
       setError(err.response?.data?.detail || t.auth.loginFailed)
     } finally {
@@ -97,7 +99,13 @@ export default function Login() {
             <div className="mt-6">
               <button
                 type="button"
-                onClick={googleLogin}
+                onClick={() => {
+                  // Store return URL in localStorage for Google callback
+                  if (returnUrl !== '/dashboard') {
+                    localStorage.setItem('returnUrl', returnUrl)
+                  }
+                  googleLogin()
+                }}
                 className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
               >
                 <span>{t.auth.google}</span>
@@ -113,7 +121,7 @@ export default function Login() {
               type="button"
               onClick={() => {
                 continueAsGuest()
-                navigate('/dashboard')
+                navigate(returnUrl)
               }}
               className="text-gray-600 hover:text-gray-800 underline text-sm"
             >

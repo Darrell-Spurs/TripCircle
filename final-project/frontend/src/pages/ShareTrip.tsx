@@ -22,7 +22,8 @@ export default function ShareTrip() {
     if (!isLoggedIn) {
       // Redirect to login with return URL
       alert(t.share.pleaseLoginToImport)
-      navigate('/auth/login')
+      const currentPath = `/share/${token}`
+      navigate(`/auth/login?return=${encodeURIComponent(currentPath)}`)
       return
     }
 
