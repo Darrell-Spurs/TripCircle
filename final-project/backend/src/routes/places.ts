@@ -41,18 +41,59 @@ router.get('/search', async (req: express.Request, res: Response) => {
       // If no coordinates provided, geocode the location string
       if (!searchLat || !searchLng) {
         try {
+          // Add region bias for Taiwan if location contains Taiwan-related terms
+          const geocodeParams: any = {
+            address: location,
+            key: config.googlePlacesApiKey,
+          };
+          
+          // Add region bias for Taiwan to improve accuracy
+          const locationLower = location.toLowerCase();
+          if (locationLower.includes('台灣') || 
+              locationLower.includes('taiwan') || locationLower.includes('tw') ||
+              locationLower.includes('台北') || locationLower.includes('新北') ||
+              locationLower.includes('桃園') ||
+              locationLower.includes('台中') || locationLower.includes('台南') ||
+              locationLower.includes('高雄') || locationLower.includes('新竹') ||
+              locationLower.includes('基隆') || locationLower.includes('嘉義') ||
+              locationLower.includes('宜蘭') ||
+              locationLower.includes('花蓮') ||
+              locationLower.includes('台東') ||
+              locationLower.includes('屏東') ||
+              locationLower.includes('苗栗') ||
+              locationLower.includes('彰化') || locationLower.includes('南投') ||
+              locationLower.includes('雲林') ||
+              locationLower.includes('澎湖') || locationLower.includes('金門') ||
+              locationLower.includes('連江')) {
+            geocodeParams.region = 'tw'; // Taiwan region code
+          }
+          
           const geocodeResponse = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-            params: {
-              address: location,
-              key: config.googlePlacesApiKey,
-            },
+            params: geocodeParams,
           });
 
           if (geocodeResponse.data.status === 'OK' && geocodeResponse.data.results.length > 0) {
-            const locationData = geocodeResponse.data.results[0].geometry.location;
+            // Try to find the most specific result (prefer city-level results)
+            let bestResult = geocodeResponse.data.results[0];
+            
+            // Look for a result with more specific address components
+            for (const result of geocodeResponse.data.results) {
+              const components = result.address_components || [];
+              // Prefer results that have locality or administrative_area_level_1
+              const hasLocality = components.some((c: any) => 
+                c.types.includes('locality') || c.types.includes('administrative_area_level_1')
+              );
+              if (hasLocality) {
+                bestResult = result;
+                break;
+              }
+            }
+            
+            const locationData = bestResult.geometry.location;
             searchLat = locationData.lat;
             searchLng = locationData.lng;
             console.log(`[Places Search] Geocoded "${location}" to coordinates: ${searchLat}, ${searchLng}`);
+            console.log(`[Places Search] Geocoded address: ${bestResult.formatted_address}`);
           }
         } catch (geocodeError) {
           console.warn(`[Places Search] Failed to geocode location "${location}":`, geocodeError);
@@ -64,7 +105,8 @@ router.get('/search', async (req: express.Request, res: Response) => {
     const params: any = {
       query,
       key: config.googlePlacesApiKey,
-      type: 'tourist_attraction|point_of_interest',
+      // Remove type restriction to allow all place types (restaurants, hotels, lodgings, etc.)
+      // This allows finding restaurants, hotels, B&Bs, and other accommodations
     };
 
     // Add language parameter if provided (zh-TW for Traditional Chinese, en for English)
@@ -77,6 +119,22 @@ router.get('/search', async (req: express.Request, res: Response) => {
       params.location = `${searchLat},${searchLng}`;
       params.radius = 50000; // 50km radius
       console.log(`[Places Search] Using location bias: ${params.location} with ${params.radius}m radius`);
+    } else {
+      // If no location coordinates, add region bias for Taiwan if query contains Taiwan-related terms
+      const queryLower = query.toLowerCase();
+      if (queryLower.includes('台灣') || 
+          queryLower.includes('taiwan') || queryLower.includes('台北') ||
+          queryLower.includes('taipei') || queryLower.includes('新北') ||
+          queryLower.includes('桃園') ||
+          queryLower.includes('taoyuan') || queryLower.includes('台中') ||
+          queryLower.includes('taichung') || queryLower.includes('台南') ||
+          queryLower.includes('tainan') || queryLower.includes('高雄') ||
+          queryLower.includes('kaohsiung')) {
+        // Use region parameter to bias results toward Taiwan
+        // Note: region parameter is not directly supported in Text Search API,
+        // but we can add it to help with query interpretation
+        console.log(`[Places Search] Query appears to be Taiwan-related, using query-based location`);
+      }
     }
 
     const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
