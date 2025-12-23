@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useFeedTrip } from '../hooks/useFeed'
 import { useLanguage } from '../context/LanguageContext'
 import { Activity, FeedTripPhoto } from '../types'
@@ -8,7 +8,6 @@ import TripCommentsSection from '../components/TripCommentsSection'
 export default function FeedTripDetail() {
   const { id } = useParams<{ id: string }>()
   const { t, language } = useLanguage()
-  const navigate = useNavigate()
   const tripId = id ? parseInt(id) : 0
   const { data: trip, isLoading, error } = useFeedTrip(tripId)
   const [selectedPhoto, setSelectedPhoto] = useState<FeedTripPhoto | null>(null)
