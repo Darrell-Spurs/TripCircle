@@ -55,9 +55,20 @@ export default function TripDetail() {
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editCoverImage, setEditCoverImage] = useState('')
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
 
   const canEdit = !isGuest && (trip?.role === 'owner' || trip?.role === 'editor')
   const isOwner = !isGuest && trip?.role === 'owner'
+
+  // Helper to get local date string (YYYY-MM-DD) from a date to avoid timezone issues
+  const getLocalDateString = (dateStr: string): string => {
+    const d = new Date(dateStr)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
   // Pace controls transportation buffer (pre + post), not just a single multiplier.
   // Example: a 5m travel segment with Neutral adds 8% pre + 8% post (~0.8m + 0.8m) -> ~6.6m.
@@ -81,6 +92,8 @@ export default function TripDetail() {
       setEditTitle(trip.title)
       setEditDescription(trip.description || '')
       setEditCoverImage(trip.coverImage || '')
+      setEditStartDate(getLocalDateString(trip.startDate))
+      setEditEndDate(getLocalDateString(trip.endDate))
     }
   }, [trip])
 
@@ -92,6 +105,8 @@ export default function TripDetail() {
           title: editTitle,
           description: editDescription,
           coverImage: editCoverImage,
+          startDate: editStartDate,
+          endDate: editEndDate,
         },
       })
       setIsEditingDetails(false)
@@ -105,6 +120,8 @@ export default function TripDetail() {
       setEditTitle(trip.title)
       setEditDescription(trip.description || '')
       setEditCoverImage(trip.coverImage || '')
+      setEditStartDate(getLocalDateString(trip.startDate))
+      setEditEndDate(getLocalDateString(trip.endDate))
     }
     setIsEditingDetails(false)
   }
@@ -140,15 +157,6 @@ export default function TripDetail() {
     
     return days
   }, [trip])
-
-  // Helper to get local date string (YYYY-MM-DD) from a date to avoid timezone issues
-  const getLocalDateString = (dateStr: string): string => {
-    const d = new Date(dateStr)
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
 
   // Group activities by date
   const activitiesByDate = useMemo(() => {
@@ -305,6 +313,33 @@ export default function TripDetail() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.trip.startDate}
+                  </label>
+                  <input
+                    type="date"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.trip.endDate}
+                  </label>
+                  <input
+                    type="date"
+                    value={editEndDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                    min={editStartDate}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t.trip.description}

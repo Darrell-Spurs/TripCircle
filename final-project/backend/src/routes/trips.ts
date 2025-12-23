@@ -452,8 +452,8 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
       const startDate = data.startDate ? new Date(data.startDate) : trip.startDate;
       const endDate = data.endDate ? new Date(data.endDate) : trip.endDate;
 
-      if (endDate <= startDate) {
-        res.status(400).json({ detail: 'End date must be after start date' });
+      if (endDate < startDate) {
+        res.status(400).json({ detail: 'End date must be after or equal to start date' });
         return;
       }
 
