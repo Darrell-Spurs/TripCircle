@@ -1,12 +1,86 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useFeed } from '../hooks/useFeed'
 import { useLanguage } from '../context/LanguageContext'
 
 export default function Feed() {
   const { t, language } = useLanguage()
-  const [page, setPage] = useState(1)
-  const { data, isLoading } = useFeed(page, 20)
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Get initial values from URL or defaults
+  const [page, setPage] = useState(parseInt(searchParams.get('page') || '1', 10))
+  // Separate input value (for immediate UI feedback) from actual search query (for API calls)
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
+  const [query, setQuery] = useState(searchParams.get('q') || '')
+  const [startDate, setStartDate] = useState(searchParams.get('startDate') || '')
+  const [endDate, setEndDate] = useState(searchParams.get('endDate') || '')
+  
+  // Debounce timer ref
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  
+  const { data, isLoading } = useFeed({ page, limit: 20, q: query || undefined, startDate: startDate || undefined, endDate: endDate || undefined })
+
+  // Reset page when filters change (but not when page itself changes)
+  useEffect(() => {
+    setPage(1)
+  }, [query, startDate, endDate])
+
+  // Sync URL params when state changes
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (page > 1) params.set('page', page.toString())
+    if (query) params.set('q', query)
+    if (startDate) params.set('startDate', startDate)
+    if (endDate) params.set('endDate', endDate)
+    setSearchParams(params, { replace: true })
+  }, [page, query, startDate, endDate, setSearchParams])
+
+  // Debounce search input: update actual query after user stops typing
+  useEffect(() => {
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    // Set new timer to update query after 500ms of no typing
+    debounceTimerRef.current = setTimeout(() => {
+      setQuery(searchInput)
+      setPage(1)
+    }, 500)
+
+    // Cleanup on unmount or when searchInput changes
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [searchInput])
+
+  const handleSearch = (searchTerm: string) => {
+    setSearchInput(searchTerm)
+    // Don't update query immediately - let debounce handle it
+  }
+
+  const handleClearFilters = () => {
+    setSearchInput('')
+    setQuery('')
+    setStartDate('')
+    setEndDate('')
+    setPage(1)
+  }
+
+  const handleLocationClick = (locationName: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    handleSearch(locationName)
+  }
+
+  const handleSearchInExplore = (locationName: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    navigate(`/explore?keyword=${encodeURIComponent(locationName)}`)
+  }
 
   if (isLoading) {
     return (
@@ -16,6 +90,8 @@ export default function Feed() {
     )
   }
 
+  const hasActiveFilters = query || startDate || endDate
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -24,11 +100,89 @@ export default function Feed() {
           <p className="text-gray-600 mt-2">{t.feed.exploreDescription}</p>
         </div>
 
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-1">
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                {t.common.search}
+              </label>
+              <input
+                id="search"
+                type="text"
+                value={searchInput}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder={t.feed.searchPlaceholder || t.common.search}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+                {t.feed.startDate || 'Start Date'}
+              </label>
+              <input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  setPage(1)
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+                {t.feed.endDate || 'End Date'}
+              </label>
+              <input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value)
+                  setPage(1)
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={handleClearFilters}
+                className="text-sm text-indigo-600 hover:text-indigo-700 underline"
+              >
+                {t.feed.clearFilters || 'Clear Filters'}
+              </button>
+              {data?.appliedFilters && (
+                <span className="text-sm text-gray-500">
+                  {t.feed.filtersApplied || 'Filters applied'}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
         {!data || data.trips.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🌍</div>
-            <h2 className="text-xl font-semibold text-gray-700 mb-2">{t.feed.noTripsYet}</h2>
-            <p className="text-gray-500">{t.feed.beFirstToShare}</p>
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+              {hasActiveFilters ? (t.feed.noResults || 'No trips found') : t.feed.noTripsYet}
+            </h2>
+            <p className="text-gray-500 mb-4">
+              {hasActiveFilters
+                ? t.feed.tryDifferentFilters || 'Try adjusting your search or filters'
+                : t.feed.beFirstToShare}
+            </p>
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearFilters}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                {t.feed.clearFilters || 'Clear Filters'}
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -70,14 +224,30 @@ export default function Feed() {
                       {trip.activitiesPreview.length > 0 && (
                         <div className="mb-3">
                           <div className="flex flex-wrap gap-1">
-                            {trip.activitiesPreview.slice(0, 3).map((activity) => (
-                              <span
-                                key={activity.id}
-                                className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
-                              >
-                                📍 {activity.locationName || activity.title}
-                              </span>
-                            ))}
+                            {trip.activitiesPreview.slice(0, 3).map((activity) => {
+                              const locationName = activity.locationName || activity.title
+                              return (
+                                <div
+                                  key={activity.id}
+                                  className="inline-flex items-center gap-1 group"
+                                >
+                                  <button
+                                    onClick={(e) => handleLocationClick(locationName, e)}
+                                    className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hover:bg-indigo-100 hover:text-indigo-700 transition cursor-pointer"
+                                    title={t.feed.filterByLocation || `Filter by ${locationName}`}
+                                  >
+                                    📍 {locationName}
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleSearchInExplore(locationName, e)}
+                                    className="opacity-0 group-hover:opacity-100 inline-flex items-center px-1.5 py-0.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition"
+                                    title={t.feed.searchInExplore || `Search ${locationName} in Explore`}
+                                  >
+                                    🔍
+                                  </button>
+                                </div>
+                              )
+                            })}
                             {trip.activitiesCount > 3 && (
                               <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full">
                                 +{trip.activitiesCount - 3} {t.feed.moreActivities}

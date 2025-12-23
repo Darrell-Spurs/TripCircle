@@ -149,7 +149,14 @@ Key capabilities include:
 
 ---
 
-## **5.7 Explore Tab**
+## **5.7 Feed Search & Clickable Content**
+- Feed search with keyword filtering (title/description/places) and date range filters
+- Activity location chips in the feed are clickable to filter by that location
+- Chips also provide a "Search in Explore" shortcut that pre-fills the Explore page with the location keyword
+
+---
+
+## **5.8 Explore Tab**
 - Search attractions using Google Places API  
 - Search inputs:
   - keyword  
@@ -159,7 +166,7 @@ Key capabilities include:
 
 ---
 
-## **5.8 Optional: Google Calendar Export**
+## **5.9 Optional: Google Calendar Export**
 - OAuth with Google Calendar scopes  
 - Export activities as events  
 - Automatically assign event times and day mapping  
