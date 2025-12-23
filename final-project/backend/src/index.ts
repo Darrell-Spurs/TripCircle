@@ -31,7 +31,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+// Increase body parser limit to handle base64-encoded images (10MB file = ~13.3MB base64)
+// Set to 15MB to provide some headroom
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(passport.initialize());
 
 // Routes
@@ -58,7 +61,20 @@ app.use('/location-folders', locationFoldersRoutes);
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err);
-  res.status(500).json({ detail: 'Internal server error' });
+
+  // Handle payload too large error specifically
+  if (err.type === 'entity.too.large' || err.name === 'PayloadTooLargeError') {
+    res.status(413).json({
+      detail: 'File size too large. Please use an image smaller than 10MB, or use a URL instead of uploading directly.',
+    });
+    return;
+  }
+
+  // Handle other errors
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    detail: err.message || 'Internal server error',
+  });
 });
 
 const PORT = config.port;
