@@ -19,7 +19,8 @@ export default function ShareLocationFolder() {
     
     if (!isLoggedIn) {
       alert(t.share.pleaseLoginToImport || 'Please login to import this collection')
-      navigate('/auth/login')
+      const currentPath = `/location-folders/shared/${token}`
+      navigate(`/auth/login?return=${encodeURIComponent(currentPath)}`)
       return
     }
 

@@ -12,7 +12,10 @@ export default function GoogleCallback() {
     if (token) {
       localStorage.setItem('token', token)
       refreshUser().then(() => {
-        navigate('/dashboard')
+        // Get return URL from localStorage (set by Login page) or default to dashboard
+        const returnUrl = localStorage.getItem('returnUrl') || '/dashboard'
+        localStorage.removeItem('returnUrl')
+        navigate(returnUrl)
       })
     } else {
       navigate('/auth/login')

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext'
 import { useTripComments, useCreateTripComment, useUpdateTripComment, useDeleteTripComment } from '../hooks/useTripComments'
 import { useAuth } from '../context/AuthContext'
@@ -12,6 +13,8 @@ interface TripCommentsSectionProps {
 export default function TripCommentsSection({ tripId, tripOwnerId }: TripCommentsSectionProps) {
   const { t } = useLanguage()
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { data: comments, isLoading } = useTripComments(tripId)
   const createComment = useCreateTripComment()
   const updateComment = useUpdateTripComment()
@@ -133,9 +136,18 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
         </form>
       ) : (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-2">
             {t.feed.loginToComment}
           </p>
+          <button
+            onClick={() => {
+              const currentPath = location.pathname + location.search
+              navigate(`/auth/login?return=${encodeURIComponent(currentPath)}`)
+            }}
+            className="text-indigo-600 hover:text-indigo-700 underline text-sm"
+          >
+            {t.nav.login || 'Login'}
+          </button>
         </div>
       )}
 
