@@ -10,13 +10,35 @@ interface FeedResponse {
     total: number
     totalPages: number
   }
+  appliedFilters?: {
+    q: string | null
+    startDate: string | null
+    endDate: string | null
+  }
 }
 
-export function useFeed(page: number = 1, limit: number = 20) {
+interface FeedOptions {
+  page?: number
+  limit?: number
+  q?: string
+  startDate?: string
+  endDate?: string
+}
+
+export function useFeed(options: FeedOptions = {}) {
+  const { page = 1, limit = 20, q, startDate, endDate } = options
+
   return useQuery({
-    queryKey: ['feed', page, limit],
+    queryKey: ['feed', page, limit, q, startDate, endDate],
     queryFn: async () => {
-      const response = await api.get(`/feed?page=${page}&limit=${limit}`)
+      const params = new URLSearchParams()
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
+      if (q) params.append('q', q)
+      if (startDate) params.append('startDate', startDate)
+      if (endDate) params.append('endDate', endDate)
+
+      const response = await api.get(`/feed?${params.toString()}`)
       return response.data as FeedResponse
     },
   })

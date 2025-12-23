@@ -3,7 +3,7 @@ import { useSearchPlaces, Place } from '../hooks/usePlaces'
 import { useTrips } from '../hooks/useTrips'
 import { useCreateActivity } from '../hooks/useActivities'
 import { GoogleMap, useLoadScript, InfoWindow, Marker } from '@react-google-maps/api'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { trackEvent } from '../lib/amplitude'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -38,11 +38,24 @@ export default function Explore() {
   const navigate = useNavigate()
   const { isGuest } = useAuth()
   const { t } = useLanguage()
+  const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<'search' | 'collections'>('search')
   
-  // Search tab state
-  const [keyword, setKeyword] = useState('')
-  const [location, setLocation] = useState('')
+  // Search tab state - initialize from URL params if present
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '')
+  const [location, setLocation] = useState(searchParams.get('location') || '')
+  
+  // Pre-fill search from URL params on mount
+  useEffect(() => {
+    const urlKeyword = searchParams.get('keyword')
+    const urlLocation = searchParams.get('location')
+    if (urlKeyword) {
+      setKeyword(urlKeyword)
+    }
+    if (urlLocation) {
+      setLocation(urlLocation)
+    }
+  }, [searchParams])
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
   const [mapInstance, setMapInstance] = useState<any>(null)
   const advancedMarkersRef = useRef<any[]>([])

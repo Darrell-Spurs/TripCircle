@@ -335,6 +335,15 @@ export interface Translations {
     addCommentPlaceholder: string
     postComment: string
     loginToComment: string
+    searchPlaceholder: string
+    startDate: string
+    endDate: string
+    clearFilters: string
+    filtersApplied: string
+    filterByLocation: string
+    searchInExplore: string
+    noResults: string
+    tryDifferentFilters: string
   }
 
   // Photos
@@ -738,6 +747,15 @@ export const translations: Record<Language, Translations> = {
       addCommentPlaceholder: '分享您對這個旅程的想法...',
       postComment: '發布評論',
       loginToComment: '請登入以留言',
+      searchPlaceholder: '搜尋旅程標題、地點...',
+      startDate: '開始日期',
+      endDate: '結束日期',
+      clearFilters: '清除篩選',
+      filtersApplied: '已套用篩選',
+      filterByLocation: '依此地點篩選',
+      searchInExplore: '在探索頁面搜尋',
+      noResults: '找不到符合條件的旅程',
+      tryDifferentFilters: '請嘗試調整搜尋條件或篩選',
     },
     photos: {
       addPhoto: '新增照片',
@@ -1135,6 +1153,15 @@ export const translations: Record<Language, Translations> = {
       addCommentPlaceholder: 'Share your thoughts about this trip...',
       postComment: 'Post Comment',
       loginToComment: 'Please log in to leave a comment.',
+      searchPlaceholder: 'Search trip titles, locations...',
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      clearFilters: 'Clear Filters',
+      filtersApplied: 'Filters applied',
+      filterByLocation: 'Filter by this location',
+      searchInExplore: 'Search in Explore',
+      noResults: 'No trips found',
+      tryDifferentFilters: 'Try adjusting your search or filters',
     },
     photos: {
       addPhoto: 'Add Photo',

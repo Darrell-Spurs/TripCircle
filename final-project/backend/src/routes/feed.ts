@@ -10,10 +10,42 @@ router.get('/', async (req, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
+    const q = (req.query.q as string)?.trim() || '';
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+
+    // Build where clause for filtering
+    const whereClause: any = { isPublished: true };
+
+    // Text search: search in title, description, body, and activity location names
+    if (q) {
+      whereClause.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+        { body: { contains: q, mode: 'insensitive' } },
+        {
+          activities: {
+            some: {
+              locationName: { contains: q, mode: 'insensitive' },
+            },
+          },
+        },
+      ];
+    }
+
+    // Date range filters
+    if (startDate) {
+      const startDateObj = new Date(startDate);
+      whereClause.startDate = { gte: startDateObj };
+    }
+    if (endDate) {
+      const endDateObj = new Date(endDate);
+      whereClause.endDate = { lte: endDateObj };
+    }
 
     const [trips, total] = await Promise.all([
       prisma.trip.findMany({
-        where: { isPublished: true },
+        where: whereClause,
         orderBy: { publishedAt: 'desc' },
         skip,
         take: limit,
@@ -38,7 +70,7 @@ router.get('/', async (req, res: Response) => {
           },
         },
       }),
-      prisma.trip.count({ where: { isPublished: true } }),
+      prisma.trip.count({ where: whereClause }),
     ]);
 
     const formattedTrips = trips.map((trip) => {
@@ -77,6 +109,11 @@ router.get('/', async (req, res: Response) => {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      appliedFilters: {
+        q: q || null,
+        startDate: startDate || null,
+        endDate: endDate || null,
       },
     });
   } catch (error) {
