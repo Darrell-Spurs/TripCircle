@@ -113,7 +113,7 @@ export default function Explore() {
 
     try {
       // Convert date to ISO format at midnight UTC to avoid timezone issues
-      const dateObj = new Date(selectedDate + 'T00:00:00.000Z')
+      const dateObj = new Date(selectedDate + 'T00:00:00.000')
       await createActivity.mutateAsync({
         tripId: selectedTripId,
         date: dateObj.toISOString(),

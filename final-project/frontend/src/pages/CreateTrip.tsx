@@ -39,10 +39,10 @@ export default function CreateTrip() {
       const submitData = {
         ...formData,
         startDate: formData.startDate 
-          ? new Date(formData.startDate + 'T00:00:00.000Z').toISOString() 
+          ? new Date(formData.startDate + 'T00:00:00.000').toISOString() 
           : '',
         endDate: formData.endDate 
-          ? new Date(formData.endDate + 'T23:59:59.999Z').toISOString() 
+          ? new Date(formData.endDate + 'T23:59:59.999').toISOString() 
           : '',
         status: formData.status || 'planning',
       }

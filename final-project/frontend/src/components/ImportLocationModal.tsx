@@ -64,7 +64,7 @@ export default function ImportLocationModal({
     setIsImporting(true)
     try {
       const locationsToImport = locations.filter((loc) => selectedLocations.has(loc.id))
-      const dateObj = new Date(selectedDate + 'T00:00:00.000Z')
+      const dateObj = new Date(selectedDate + 'T00:00:00.000')
 
       // Create activities for each selected location
       for (let i = 0; i < locationsToImport.length; i++) {
