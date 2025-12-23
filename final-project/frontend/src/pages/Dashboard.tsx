@@ -4,6 +4,14 @@ import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { Trip } from '../types'
 
+// Random travel-related emojis (Transportation only)
+const TRAVEL_EMOJIS = ['✈️', '🚗', '🚋', '🚞', '🚂', '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', '🚝', '🚠', '🚡', '🚢', '🚣', '🚤', '🛳️', '⛴️', '🛥️', '🚌', '🚍', '🚎', '🚐', '🚕', '🚖', '🏎️', '🏍️', '🛵', '🚲', '🛴', '🛶', '⛵', '🚁', '🚀']
+
+// Helper function to get a deterministic random emoji based on trip ID
+const getTripEmoji = (id: number) => {
+  return TRAVEL_EMOJIS[id % TRAVEL_EMOJIS.length]
+}
+
 export default function Dashboard() {
   const { isGuest } = useAuth()
   const { t } = useLanguage()
@@ -101,14 +109,18 @@ export default function Dashboard() {
             {trips.map((trip: Trip) => (
               <div
                 key={trip.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition"
+                className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
               >
-                {trip.coverImage && (
+                {trip.coverImage ? (
                   <img
                     src={trip.coverImage}
                     alt={trip.title}
                     className="w-full h-48 object-cover"
                   />
+                ) : (
+                  <div className="w-full h-32 bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+                    <span className="text-4xl">{getTripEmoji(trip.id)}</span>
+                  </div>
                 )}
                 <div className="p-4">
                   <h3 className="text-xl font-semibold mb-2">{trip.title}</h3>
