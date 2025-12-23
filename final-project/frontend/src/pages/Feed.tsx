@@ -17,7 +17,7 @@ export default function Feed() {
   const [endDate, setEndDate] = useState(searchParams.get('endDate') || '')
   
   // Debounce timer ref
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   const { data, isLoading } = useFeed({ page, limit: 20, q: query || undefined, startDate: startDate || undefined, endDate: endDate || undefined })
 
