@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useFeed } from '../hooks/useFeed'
 import { useLanguage } from '../context/LanguageContext'
@@ -10,9 +10,14 @@ export default function Feed() {
   
   // Get initial values from URL or defaults
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '1', 10))
+  // Separate input value (for immediate UI feedback) from actual search query (for API calls)
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '')
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [startDate, setStartDate] = useState(searchParams.get('startDate') || '')
   const [endDate, setEndDate] = useState(searchParams.get('endDate') || '')
+  
+  // Debounce timer ref
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   
   const { data, isLoading } = useFeed({ page, limit: 20, q: query || undefined, startDate: startDate || undefined, endDate: endDate || undefined })
 
@@ -31,12 +36,34 @@ export default function Feed() {
     setSearchParams(params, { replace: true })
   }, [page, query, startDate, endDate, setSearchParams])
 
+  // Debounce search input: update actual query after user stops typing
+  useEffect(() => {
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    // Set new timer to update query after 500ms of no typing
+    debounceTimerRef.current = setTimeout(() => {
+      setQuery(searchInput)
+      setPage(1)
+    }, 500)
+
+    // Cleanup on unmount or when searchInput changes
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [searchInput])
+
   const handleSearch = (searchTerm: string) => {
-    setQuery(searchTerm)
-    setPage(1)
+    setSearchInput(searchTerm)
+    // Don't update query immediately - let debounce handle it
   }
 
   const handleClearFilters = () => {
+    setSearchInput('')
     setQuery('')
     setStartDate('')
     setEndDate('')
@@ -83,7 +110,7 @@ export default function Feed() {
               <input
                 id="search"
                 type="text"
-                value={query}
+                value={searchInput}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder={t.feed.searchPlaceholder || t.common.search}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
