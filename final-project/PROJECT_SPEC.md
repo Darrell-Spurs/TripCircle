@@ -9,9 +9,9 @@
 This project is developed as the **final project for the Web Programming course**, demonstrating a complete full‑stack architecture including:
 
 - A modern React SPA frontend  
-- A FastAPI backend with REST APIs  
+- An Express.js (TypeScript) backend with REST APIs  
 - A relational Postgres database  
-- Third‑party integrations (Google Places/Maps/Calendar)  
+- Third‑party integrations (Google Places/Maps/Directions)  
 - Authentication (Email + Google OAuth)  
 - Website analytics (Amplitude + custom analytics dashboard)
 
@@ -109,13 +109,24 @@ Key capabilities include:
 ## **5.3 Itinerary Planning**
 - Days automatically generated from date range  
 - Activities per day:
-  - title  
+  - title (uses location name, with "Untitled Activity" fallback)
   - notes  
-  - start/end time  
+  - body (rich description/story for feed display)
+  - start/end time (24-hour clock format)
   - ordering index  
   - place info from Google Places (optional)  
+  - Google Places Autocomplete integration for location search
+  - Time overlap detection with custom error alerts
+  - Quick time adjustment buttons (+15m, +30m, -15m, -30m) for start and end times
 
 - Drag‑and‑drop reordering of activities  
+- **Transportation Segments**: Automatic route calculation between consecutive activities
+  - Google Directions API integration
+  - Distance and duration display
+  - Transportation mode selection (driving, walking, bicycling, transit)
+  - Pace buffer settings (Tight: 10% pre/post, Neutral: 15%, Relaxed: 20%)
+  - Visual transportation time blocks between activities
+  - Google Maps route visualization with polyline decoding  
 
 ---
 
@@ -127,6 +138,16 @@ Key capabilities include:
   - **Viewer**
 - Generate share links with limited permissions (view or edit)
 - Public read‑only trip page via `/share/:token`
+- **Activity Collaboration Features**:
+  - **Activity Participants**: Track who's joining each activity (defaults to all trip members)
+  - **Activity Comments**: Discussion threads on individual activities
+  - **Cost Tracking**: Set activity costs with currency support
+  - **Cost Shares**: Split expenses among participants (auto-equal or custom amounts)
+  - **Activity Preferences**: Vote "interested" or "not interested" on activities
+  - **Activity Tags**: Categorize activities with custom tags
+  - **Activity History**: View audit trail of changes (who edited what and when)
+  - **Activity Creator**: Track who created each activity
+  - **Conflict Resolution**: Optimistic locking with last-write-wins strategy
 
 ---
 
@@ -157,19 +178,62 @@ Key capabilities include:
 ---
 
 ## **5.8 Explore Tab**
-- Search attractions using Google Places API  
-- Search inputs:
-  - keyword  
-  - location  
-- Display map + results list  
-- Add a place directly into a trip's itinerary  
+- Two-tab interface: **Search** and **My Collections**
+- **Search Tab**:
+  - Search attractions using Google Places API  
+  - Search inputs:
+    - keyword  
+    - location  
+  - Display map + results list  
+  - Add a place directly into a trip's itinerary
+  - Save places to location collections
+- **My Collections Tab**:
+  - Manage location folders (create, edit, delete)
+  - View saved locations in each folder
+  - Edit location notes and tags
+  - Import locations from folders into trips
+  - Share public folders via share links  
 
 ---
 
-## **5.9 Optional: Google Calendar Export**
-- OAuth with Google Calendar scopes  
-- Export activities as events  
-- Automatically assign event times and day mapping  
+## **5.9 Internationalization (i18n)**
+- Full multi-language support (English and Traditional Chinese)
+- Language switcher in navigation
+- All UI elements translated (buttons, labels, messages, tabs)
+- Locale-aware date and time formatting
+- Translated error messages and validation feedback
+- Language preference persisted in user context
+
+## **5.10 Location Collections**
+- **Location Folders**: Organize saved places into named collections
+  - Create, edit, delete folders
+  - Public/private folder settings
+  - Folder descriptions
+- **Saved Locations**: Store place data with metadata
+  - Name, address, coordinates (lat/lng), placeId
+  - Custom notes and tags
+  - Multiple locations per folder
+- **Folder Sharing**: Share public folders via share links
+  - View or edit permissions
+  - Optional expiration dates
+  - Import shared folders to your account
+- **Quick Import**: Import multiple locations from folders into trips
+  - Select folder and locations
+  - Choose target date
+  - Bulk create activities
+- **Integration**: 
+  - "Save to Folder" from Explore search results
+  - "Add from Folder" button in Activity Modal for quick location selection
+  - "Import from Folder" in Trip Detail page
+
+## **5.11 Google Maps Integration**
+- Interactive map display in itinerary view
+- Activity markers with custom info windows
+- Route visualization between activities using Google Directions API
+- Polyline decoding for route display
+- Map auto-zoom to contain all locations
+- POI click prevention (clickableIcons: false)
+- Advanced Markers support (when Map ID is configured)  
 
 ---
 
@@ -217,15 +281,16 @@ Displays:
 │                Frontend                   │
 │     React + Vite + TS + React Query       │
 │     Google Maps JS SDK + Amplitude        │
+│     i18n (English/Traditional Chinese)     │
 └───────────────────────▲───────────────────┘
                         │
                         │ (JSON API calls)
                         ▼
 ┌───────────────────────────────────────────┐
-│                FastAPI Backend            │
-│ JWT Auth  |  Google OAuth  |  Pydantic    │
-│ Trips API | Activities API | Explore API  │
-│ Calendar Sync (optional)                 │
+│            Express.js Backend             │
+│ JWT Auth  |  Google OAuth  |  Zod         │
+│ Trips API | Activities API | Places API   │
+│ Directions API | Location Folders API    │
 │ Custom event logging                       │
 └───────────────────────▲───────────────────┘
                         │
@@ -235,6 +300,8 @@ Displays:
 │                PostgreSQL                 │
 │  users          trips          events     │
 │  trip_members   activities     share_links│
+│  activity_*     location_folders          │
+│  saved_locations trip_photos               │
 └───────────────────────────────────────────┘
 ```
 
@@ -244,16 +311,26 @@ Displays:
 
 ```prisma
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  passwordHash String?
-  name         String
-  avatarUrl    String?
-  provider     String
-  trips        Trip[]   @relation("OwnerTrips")
-  tripMembers  TripMember[]
-  events       Event[]
-  createdAt    DateTime @default(now())
+  id                  Int                  @id @default(autoincrement())
+  email               String               @unique
+  passwordHash        String?
+  name                String
+  avatarUrl           String?
+  provider            String
+  trips               Trip[]               @relation("OwnerTrips")
+  tripMembers         TripMember[]
+  events              Event[]
+  createdActivities   Activity[]           @relation("CreatedActivities")
+  activityParticipants ActivityParticipant[]
+  activityComments    ActivityComment[]
+  activityCostShares  ActivityCostShare[]
+  activityPreferences ActivityPreference[]
+  activityHistory     ActivityHistory[]
+  tripComments        TripComment[]
+  addedPhotos         TripPhoto[]          @relation("AddedPhotos")
+  locationFolders     LocationFolder[]
+  locationFolderMembers LocationFolderMember[] @relation("LocationFolderMembers")
+  createdAt           DateTime             @default(now())
 }
 
 model Trip {
@@ -262,13 +339,19 @@ model Trip {
   owner       User         @relation("OwnerTrips", fields: [ownerId], references: [id])
   title       String
   description String?
+  body        String?
   coverImage  String?
   startDate   DateTime
   endDate     DateTime
   status      String
+  isPublished Boolean      @default(false)
+  publishedAt DateTime?
   members     TripMember[]
   activities  Activity[]
   shareLinks  ShareLink[]
+  events      Event[]
+  tripComments TripComment[]
+  photos      TripPhoto[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -285,20 +368,33 @@ model TripMember {
 }
 
 model Activity {
-  id           Int      @id @default(autoincrement())
-  tripId       Int
-  date         DateTime
-  startTime    DateTime?
-  endTime      DateTime?
-  title        String
-  notes        String?
-  placeId      String?
-  locationName String?
-  address      String?
-  lat          Float?
-  lng          Float?
-  orderIndex   Int
-  trip         Trip @relation(fields: [tripId], references: [id])
+  id              Int                  @id @default(autoincrement())
+  tripId          Int
+  date            DateTime
+  startTime       DateTime?
+  endTime         DateTime?
+  title           String
+  notes           String?
+  body            String?
+  placeId         String?
+  locationName    String?
+  address         String?
+  lat             Float?
+  lng             Float?
+  orderIndex      Int
+  createdByUserId Int?
+  cost            Float?
+  currency        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  trip            Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy       User? @relation("CreatedActivities", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  participants    ActivityParticipant[]
+  comments        ActivityComment[]
+  costShares      ActivityCostShare[]
+  preferences     ActivityPreference[]
+  tags            ActivityTag[]
+  history         ActivityHistory[]
 }
 
 model ShareLink {
@@ -341,9 +437,128 @@ model TripPhoto {
   isFeedCover   Boolean  @default(false)
   addedByUserId Int
   trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  addedBy       User     @relation(fields: [addedByUserId], references: [id], onDelete: Cascade)
+  addedBy       User     @relation("AddedPhotos", fields: [addedByUserId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model ActivityParticipant {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  @@unique([activityId, userId])
+}
+
+model ActivityComment {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  content    String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ActivityCostShare {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  amount     Float
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([activityId, userId])
+}
+
+model ActivityPreference {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  preference String   // "interested" or "not_interested"
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([activityId, userId])
+}
+
+model ActivityHistory {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  action     String   // "created", "updated", "deleted"
+  changes    Json?
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model ActivityTag {
+  id         Int      @id @default(autoincrement())
+  activityId Int
+  tag        String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  @@unique([activityId, tag])
+  @@index([tag])
+}
+
+model LocationFolder {
+  id          Int                      @id @default(autoincrement())
+  userId      Int
+  name        String
+  description String?
+  isPublic    Boolean                  @default(false)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  owner       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations   SavedLocation[]
+  shareLinks  LocationFolderShareLink[]
+  members     LocationFolderMember[]
+  @@index([userId])
+}
+
+model SavedLocation {
+  id        Int            @id @default(autoincrement())
+  folderId  Int
+  name      String
+  address   String
+  lat       Float
+  lng       Float
+  placeId   String
+  notes     String?
+  tags      Json?          // Array of strings
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  folder    LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  @@index([folderId])
+}
+
+model LocationFolderShareLink {
+  id         Int            @id @default(autoincrement())
+  folderId   Int
+  token      String         @unique
+  permission String
+  expiresAt  DateTime?
+  createdAt  DateTime       @default(now())
+  folder     LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  @@index([token])
+}
+
+model LocationFolderMember {
+  id        Int            @id @default(autoincrement())
+  folderId  Int
+  userId    Int
+  role      String
+  createdAt DateTime       @default(now())
+  folder    LocationFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User           @relation("LocationFolderMembers", fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([folderId, userId])
 }
 ```
 
@@ -371,10 +586,10 @@ DELETE /trips/:id
 
 ## **Activities**
 ```
-POST   /trips/:id/activities  
-PUT    /activities/:id  
-DELETE /activities/:id  
-PATCH  /activities/reorder  
+POST   /activities/trips/:tripId/activities  – Create activity (with participantIds, cost, tags)
+PUT    /activities/:id                       – Update activity (with conflict resolution)
+DELETE /activities/:id                      – Delete activity
+PATCH  /activities/reorder                   – Reorder activities
 ```
 
 ## **Members & Sharing**
@@ -388,9 +603,46 @@ POST   /trips/:id/share-links
 GET    /share/:token  
 ```
 
-## **Explore**
+## **Explore & Places**
 ```
-GET /places/search
+GET /places/search          – Search Google Places
+GET /places/directions      – Get route between two coordinates (for transportation segments)
+```
+
+## **Location Folders**
+```
+GET    /location-folders                          – List user's folders
+POST   /location-folders                          – Create folder
+GET    /location-folders/:id                      – Get folder with locations
+PUT    /location-folders/:id                      – Update folder
+DELETE /location-folders/:id                      – Delete folder
+POST   /location-folders/:folderId/locations      – Add saved location
+PUT    /location-folders/:folderId/locations/:id  – Update location
+DELETE /location-folders/:folderId/locations/:id  – Delete location
+POST   /location-folders/:folderId/share-links    – Create share link
+GET    /location-folders/shared/:token            – Access shared folder
+POST   /location-folders/shared/:token/import      – Import shared folder
+```
+
+## **Activity Collaboration**
+```
+GET    /activities/:id/participants       – List participants
+POST   /activities/:id/participants       – Set participants
+DELETE /activities/:id/participants/:userId – Remove participant
+GET    /activities/:id/comments           – List comments
+POST   /activities/:id/comments          – Add comment
+PUT    /activities/comments/:commentId   – Edit comment
+DELETE /activities/comments/:commentId   – Delete comment
+GET    /activities/:id/cost-shares        – List cost shares
+POST   /activities/:id/cost-shares        – Set cost shares
+DELETE /activities/:id/cost-shares        – Clear cost shares
+GET    /activities/:id/preferences        – Get preferences
+POST   /activities/:id/preferences        – Set preference
+DELETE /activities/:id/preferences        – Remove preference
+GET    /activities/:id/tags               – List tags
+POST   /activities/:id/tags               – Add tag
+DELETE /activities/:id/tags/:tag           – Remove tag
+GET    /activities/:id/history            – Get change history
 ```
 
 ## **Events**
@@ -427,14 +679,13 @@ DELETE /photos/trips/:tripId/feed-cover                – Clear feed cover
 
 ```
 /                              – Redirects to /feed  
-/feed                          – Public feed (browse published trips)  
+/feed                          – Public feed (browse published trips with search & filters)  
 /feed/:id                      – Published trip details + comments + public photos
 /auth/login                    – Login (supports ?return= query parameter)  
 /auth/register                 – Register  
 /dashboard                     – User trips  
-/trips/:id                     – Trip planner (Itinerary + Photos tabs)
-/explore                       – Explore attractions & manage location collections  
-/location-folders              – Manage location collections  
+/trips/:id                     – Trip planner (Itinerary + Photos tabs, map view)
+/explore                       – Explore attractions & manage location collections (two tabs: Search, My Collections)
 /share/:token                  – Public trip view  
 /location-folders/shared/:token – Shared collection folder view  
 /admin/analytics               – Admin dashboard  

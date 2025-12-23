@@ -27,6 +27,9 @@ final-project/
     │   │   │   ├── TripCommentsSection.tsx
     │   │   │   ├── TripPhotosTab.tsx
     │   │   │   ├── AddPhotoModal.tsx
+    │   │   │   ├── LocationFolderSelector.tsx
+    │   │   │   ├── ImportLocationModal.tsx
+    │   │   │   ├── LocationSelectorModal.tsx
     │   │   │   ├── LanguageSwitcher.tsx
     │   │   │   ├── ProtectedRoute.tsx
     │   │   │   └── AlertModal.tsx
@@ -58,7 +61,10 @@ final-project/
     │   │   │   ├── useActivityTags.ts
     │   │   │   ├── useActivityHistory.ts
     │   │   │   ├── useTripComments.ts
-    │   │   │   └── useTripPhotos.ts
+    │   │   │   ├── useTripPhotos.ts
+    │   │   │   ├── useLocationFolders.ts
+    │   │   │   ├── useSavedLocations.ts
+    │   │   │   └── useLocationFolderShare.ts
 │   │   ├── context/       # React context
 │   │   │   ├── AuthContext.tsx
 │   │   │   └── LanguageContext.tsx
@@ -81,7 +87,8 @@ final-project/
     │   │   │   ├── photos.ts
     │   │   │   ├── places.ts
     │   │   │   ├── events.ts
-    │   │   │   └── admin.ts
+    │   │   │   ├── admin.ts
+    │   │   │   └── locationFolders.ts
 │   │   ├── middleware/    # Auth middleware
 │   │   ├── constants/     # Tag validation, etc.
 │   │   ├── utils/
@@ -167,12 +174,27 @@ npm start
 ## Features
 
 ### Core Features
-- **User Authentication** - Email/Password + Google OAuth
+- **User Authentication** - Email/Password + Google OAuth with return URL preservation
 - **Trip Management** - Create, edit, delete trips with cover images
 - **Itinerary Planning** - Day-by-day activities with times and locations
+  - 24-hour clock format throughout the application
+  - Google Places Autocomplete for location search
+  - Time overlap detection with custom error alerts
+  - Quick time adjustment buttons (+15m, +30m, -15m, -30m)
 - **Drag-and-Drop** - Reorder activities within each day
 - **Collaboration** - Invite members with Owner/Editor/Viewer roles
 - **Share Links** - Generate permanent links for trip sharing
+- **Transportation Planning** - Automatic route calculation between activities
+  - Google Directions API integration
+  - Distance and duration display
+  - Transportation mode selection (driving, walking, bicycling, transit)
+  - Pace buffer settings (Tight: 10%, Neutral: 15%, Relaxed: 20%)
+  - Visual transportation time blocks
+- **Interactive Maps** - Google Maps integration in itinerary view
+  - Activity markers with info windows
+  - Route visualization with polyline decoding
+  - Auto-zoom to contain all locations
+  - Advanced Markers support
 
 ### Activity Collaboration Features
 - **Activity Participants** - Track who's joining each activity (defaults to all members)
@@ -197,19 +219,32 @@ npm start
 - **Large File Support** - Backend configured to handle base64-encoded images up to 15MB
 
 ### Explore & Discovery
-- **Google Places Integration** - Search and explore attractions
+- **Two-Tab Interface** - Search tab and My Collections tab
+- **Google Places Integration** - Search and explore attractions with map display
 - **Add to Trip** - Add discovered places directly to your itinerary
-- **Location Collections** - Save favorite locations to organized folders
-- **Public/Private Collections** - Mark collections as public (anyone can view) or private (only owner/members)
-- **Folder Sharing** - Share public location folders via share links (private collections cannot be shared)
-- **Shared Collection Viewing** - View and import shared collection folders via share links
+- **Save to Folder** - Save places from search results to location collections
+- **Location Collections** - Organize saved locations into named folders
+  - Create, edit, delete folders
+  - Public/private folder settings
+  - Folder descriptions
+- **Saved Locations** - Store place data with custom notes and tags
+- **Folder Sharing** - Share public folders via share links (view/edit permissions)
+- **Quick Import** - Import multiple locations from folders into trips
+  - Select folder and locations
+  - Choose target date
+  - Bulk create activities
+- **Add from Folder** - Quick location selection in Activity Modal
 
 ### Admin & Analytics
 - **Analytics Dashboard** - View user and trip statistics
 - **Amplitude Integration** - Track user behavior
 
-### Multi-language Support
-- **i18n** - Language switcher for internationalization
+### Multi-language Support (i18n)
+- **Full Internationalization** - English and Traditional Chinese
+- **Language Switcher** - Toggle language in navigation
+- **Comprehensive Translation** - All UI elements translated (buttons, labels, messages, tabs, error messages)
+- **Locale-Aware Formatting** - Date and time display adapts to selected language
+- **Persistent Preference** - Language choice saved in user context
 
 ## Key Concepts
 
@@ -235,8 +270,12 @@ npm start
 ### Activity Collaboration
 - **Participants**: By default, all trip members are added to new activities. Editors can customize who joins each activity.
 - **Cost Splitting**: When you set a cost, it's automatically split equally among participants. Custom splits are also supported.
-- **Preferences**: Members can indicate interest level to help group decision-making.
+- **Preferences**: Members can indicate interest level ("interested" or "not interested") to help group decision-making.
 - **Comments**: Discuss details, suggest alternatives, or coordinate logistics.
+- **Tags**: Categorize activities with custom tags for better organization.
+- **History**: View audit trail of activity changes (who edited what and when).
+- **Creator Tracking**: See who created each activity.
+- **Conflict Resolution**: Optimistic locking prevents simultaneous edit conflicts (last-write-wins strategy).
 
 ### Authentication & User Experience
 - **Return URL Preservation**: After login, users are redirected back to the page they were viewing (shared trips, feed posts, etc.)
@@ -323,8 +362,22 @@ npm start
 - `POST /trips/:tripId/members` - Add member
 - `DELETE /trips/:tripId/members/:userId` - Remove member
 
-### Places
+### Places & Directions
 - `GET /places/search` - Search Google Places
+- `GET /places/directions` - Get route between two coordinates (for transportation segments)
+
+### Location Folders
+- `GET /location-folders` - List user's folders
+- `POST /location-folders` - Create folder
+- `GET /location-folders/:id` - Get folder with locations
+- `PUT /location-folders/:id` - Update folder
+- `DELETE /location-folders/:id` - Delete folder
+- `POST /location-folders/:folderId/locations` - Add saved location
+- `PUT /location-folders/:folderId/locations/:id` - Update location
+- `DELETE /location-folders/:folderId/locations/:id` - Delete location
+- `POST /location-folders/:folderId/share-links` - Create share link
+- `GET /location-folders/shared/:token` - Access shared folder
+- `POST /location-folders/shared/:token/import` - Import shared folder
 
 ### Events & Admin
 - `POST /events` - Log analytics event
@@ -346,9 +399,15 @@ Key models (see `backend/prisma/schema.prisma` for full schema):
 - **ActivityParticipant** - Users joining an activity
 - **ActivityComment** - Discussion comments on activities
 - **ActivityCostShare** - Cost split per user per activity
-- **ActivityPreference** - Interest votes on activities
+- **ActivityPreference** - Interest votes on activities ("interested" or "not_interested")
 - **ActivityTag** - Tags assigned to activities
-- **ActivityHistory** - Audit trail of activity changes
+- **ActivityHistory** - Audit trail of activity changes (who, what, when)
+
+### Location Collection Models
+- **LocationFolder** - User-created folders for organizing saved locations
+- **SavedLocation** - Saved place data with notes and tags
+- **LocationFolderShareLink** - Share tokens for public folders
+- **LocationFolderMember** - Folder membership for collaboration
 
 ### Feed & Social Models
 - **TripComment** - Comments on published trips
@@ -379,7 +438,6 @@ npx prisma migrate dev     # Apply migrations
 | `/trips/new` | Create new trip |
 | `/trips/:id` | Trip planner/editor |
 | `/explore` | Search attractions & manage location collections (two tabs: Search, My Collections) |
-| `/location-folders` | Manage location collections (create, edit, delete folders) |
 | `/share/:token` | View shared trip |
 | `/location-folders/shared/:token` | View shared collection folder |
 | `/admin/analytics` | Admin dashboard |
@@ -413,6 +471,8 @@ npx prisma migrate dev     # Apply migrations
 
 ### Trip Photo Albums (Completed)
 - [x] Add photos to trips via URL with optional caption
+- [x] Upload photos directly from device (file upload with base64 conversion)
+- [x] File validation (image types only, max 10MB)
 - [x] Photos tab in trip detail page (alongside Itinerary)
 - [x] Mark photos as public for feed display
 - [x] Select a public photo as feed cover (separate from trip cover)
@@ -420,35 +480,56 @@ npx prisma migrate dev     # Apply migrations
 - [x] Public photos gallery displayed on feed trip detail page
 - [x] Lightbox for viewing photos
 
+### Enhanced i18n Support (Completed)
+- [x] Full translation for all UI elements (tabs, buttons, labels, messages)
+- [x] Locale-aware date and time formatting in feed
+- [x] Translated error messages and validation feedback
+- [x] Photo upload UI fully translated
+- [x] Language preference persisted in user context
+
+### Location Collections (Completed)
+- [x] Two-tab Explore interface (Search and My Collections)
+- [x] Create, edit, delete location folders
+- [x] Save places from search results to folders
+- [x] Add custom notes and tags to saved locations
+- [x] Import multiple locations from folders into trips
+- [x] Quick "Add from Folder" in Activity Modal
+- [x] Folder sharing via share links (public folders only)
+- [x] Import shared folders to your account
+
+### Transportation & Maps (Completed)
+- [x] Automatic route calculation between activities
+- [x] Transportation mode selection (driving, walking, bicycling, transit)
+- [x] Distance and duration display
+- [x] Pace buffer settings (Tight/Neutral/Relaxed)
+- [x] Visual transportation time blocks
+- [x] Google Maps route visualization with polyline decoding
+- [x] Interactive map in itinerary view with markers and routes
+- [x] Auto-zoom to contain all locations
+
 ## 🚧 TODO - Upcoming Features
 
-> **Team members**: Pick one and start working on it! Update this list when you begin.
-
-### 1. Search & Filter Feed
-- [x] Add search bar to filter published trips by title, destination, etc.
-- [x] Add filters (date range, trip length, trip type etc.)
-
-### 2. Clickable Feed Content → Search/Explore
-- [x] Make locations, tags, or keywords in feed posts clickable
-- [x] Clicking should filter the feed OR jump to Explore page with that search term
-- [x] Example: Click "Tokyo" in a post → see all Tokyo trips or explore Tokyo attractions
-
-### 3. Update Trip Dates (Tricky!)
+### 1. Update Trip Dates (Tricky!)
 - [ ] Allow changing trip start/end dates after creation
 - [ ] **Challenge**: What happens to activities when dates change?
   - If a day is removed, what happens to its activities? (Delete? Move? Warn user?)
   - If dates shift, should activities shift too?
   - Consider a confirmation dialog explaining the impact
 
-### 4. Save/Bookmark Posts
+### 2. Save/Bookmark Posts
 - [ ] Add "Save/Bookmark" button on feed posts
 - [ ] Show saved posts in user's dashboard
 - [ ] Consider: notifications when someone comments on your post?
 
-### 5. Publisher Analytics Dashboard
+### 3. Publisher Analytics Dashboard
 - [ ] Show stats for your published trips: views, imports, saves
 - [ ] Add to existing dashboard or create new "My Posts" section
 - [ ] Track: view count, import count, comments count per post
+
+### 4. Google Calendar Export (Optional)
+- [ ] OAuth with Google Calendar scopes
+- [ ] Export activities as calendar events
+- [ ] Automatically assign event times and day mapping
 
 ## Deployment
 
