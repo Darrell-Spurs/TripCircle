@@ -49,7 +49,7 @@ export function useUpdateTripPhoto() {
   return useMutation({
     mutationFn: async ({
       photoId,
-      tripId,
+      tripId: _tripId,
       caption,
       isPublic,
     }: {

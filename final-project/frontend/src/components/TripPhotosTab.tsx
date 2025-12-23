@@ -94,7 +94,7 @@ export default function TripPhotosTab({ tripId, canEdit }: TripPhotosTabProps) {
   }
 
   const publicPhotos = photos?.filter((p) => p.isPublic) || []
-  const privatePhotos = photos?.filter((p) => !p.isPublic) || []
+  // const privatePhotos = photos?.filter((p) => !p.isPublic) || []
   const feedCover = photos?.find((p) => p.isFeedCover)
 
   return (

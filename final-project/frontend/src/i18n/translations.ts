@@ -330,6 +330,11 @@ export interface Translations {
     noActivitiesInTrip: string
     comments: string
     noComments: string
+    photos: string
+    deleteCommentConfirm: string
+    addCommentPlaceholder: string
+    postComment: string
+    loginToComment: string
   }
 
   // Photos
@@ -719,6 +724,11 @@ export const translations: Record<Language, Translations> = {
       noActivitiesInTrip: '此旅程尚未有活動。',
       comments: '評論',
       noComments: '暫無評論',
+      photos: '照片',
+      deleteCommentConfirm: '您確定要刪除此評論嗎？',
+      addCommentPlaceholder: '分享您對這個旅程的想法...',
+      postComment: '發布評論',
+      loginToComment: '請登入以留言',
     },
     photos: {
       addPhoto: '新增照片',
@@ -1102,6 +1112,11 @@ export const translations: Record<Language, Translations> = {
       noActivitiesInTrip: 'No activities in this trip yet.',
       comments: 'Comments',
       noComments: 'No comments yet',
+      photos: 'photos',
+      deleteCommentConfirm: 'Are you sure you want to delete this comment?',
+      addCommentPlaceholder: 'Share your thoughts about this trip...',
+      postComment: 'Post Comment',
+      loginToComment: 'Please log in to leave a comment.',
     },
     photos: {
       addPhoto: 'Add Photo',

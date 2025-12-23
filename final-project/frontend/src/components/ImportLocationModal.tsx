@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useLanguage } from '../context/LanguageContext'
 import { useLocationFolders } from '../hooks/useLocationFolders'
 import { useCreateActivity } from '../hooks/useActivities'
-import { SavedLocation } from '../types'
 
 interface ImportLocationModalProps {
   isOpen: boolean
@@ -79,7 +78,6 @@ export default function ImportLocationModal({
           lng: locationsToImport[i].lng,
           placeId: locationsToImport[i].placeId,
           notes: locationsToImport[i].notes || undefined,
-          tags: locationsToImport[i].tags || undefined,
           orderIndex: i,
         })
       }

@@ -32,7 +32,7 @@ export function useUpdateTripComment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ commentId, content, tripId }: { commentId: number; content: string; tripId: number }) => {
+    mutationFn: async ({ commentId, content }: { commentId: number; content: string; tripId: number }) => {
       const response = await api.put(`/feed/comments/${commentId}`, { content })
       return response.data as TripComment
     },

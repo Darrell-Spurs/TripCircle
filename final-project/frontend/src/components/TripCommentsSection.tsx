@@ -55,7 +55,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
   }
 
   const handleDelete = async (commentId: number) => {
-    if (confirm(t.feed?.deleteCommentConfirm || 'Are you sure you want to delete this comment?')) {
+    if (confirm(t.feed.deleteCommentConfirm)) {
       try {
         await deleteComment.mutateAsync({ commentId, tripId })
       } catch (error) {
@@ -115,7 +115,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder={t.feed?.addCommentPlaceholder || 'Share your thoughts about this trip...'}
+                placeholder={t.feed.addCommentPlaceholder}
                 rows={3}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
               />
@@ -125,7 +125,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
                   disabled={!newComment.trim() || createComment.isPending}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {createComment.isPending ? (t.common?.loading || 'Posting...') : (t.feed?.postComment || 'Post Comment')}
+                  {createComment.isPending ? t.common.loading : t.feed.postComment}
                 </button>
               </div>
             </div>
@@ -134,7 +134,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
       ) : (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
           <p className="text-gray-600">
-            {t.feed?.loginToComment || 'Please log in to leave a comment.'}
+            {t.feed.loginToComment}
           </p>
         </div>
       )}

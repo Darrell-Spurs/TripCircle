@@ -717,7 +717,7 @@ router.post('/:id/import', authenticate, async (req: Request, res: Response) => 
           lng: loc.lng,
           placeId: loc.placeId,
           notes: loc.notes,
-          tags: loc.tags,
+          tags: loc.tags ?? undefined,
         })),
       });
     }

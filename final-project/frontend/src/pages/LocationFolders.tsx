@@ -9,7 +9,6 @@ import {
 import { useDeleteSavedLocation, useUpdateSavedLocation } from '../hooks/useSavedLocations'
 import { useCreateLocationFolderShareLink } from '../hooks/useLocationFolderShare'
 import { LocationFolder, SavedLocation } from '../types'
-import { Link } from 'react-router-dom'
 
 export default function LocationFolders() {
   const { t } = useLanguage()

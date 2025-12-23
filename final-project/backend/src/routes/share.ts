@@ -198,7 +198,7 @@ router.post('/:token/import', authenticate, async (req: Request, res: Response) 
           lat: a.lat,
           lng: a.lng,
           orderIndex: a.orderIndex,
-          createdByUserId: authReq.user.id, // Set importer as the creator (添加者)
+          createdByUserId: authReq.user!.id, // Set importer as the creator (添加者)
         })),
       });
 
@@ -212,7 +212,7 @@ router.post('/:token/import', authenticate, async (req: Request, res: Response) 
         await prisma.activityParticipant.createMany({
           data: createdActivities.map((activity) => ({
             activityId: activity.id,
-            userId: authReq.user.id,
+            userId: authReq.user!.id,
           })),
         });
       }
