@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import LanguageSwitcher from './LanguageSwitcher'
@@ -7,10 +7,15 @@ export default function Navbar() {
   const { user, isGuest, logout } = useAuth()
   const { t } = useLanguage()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = () => {
     logout()
     navigate('/')
+  }
+
+  const isActive = (path: string) => {
+    return location.pathname.startsWith(path) ? 'text-indigo-600 font-semibold' : 'text-gray-700 hover:text-indigo-600'
   }
 
   return (
@@ -24,20 +29,20 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <Link
               to="/dashboard"
-              className="text-gray-700 hover:text-indigo-600 transition"
+              className={`transition ${isActive('/dashboard')}`}
             >
               {t.nav.dashboard}
             </Link>
             <Link
               to="/explore"
-              className="text-gray-700 hover:text-indigo-600 transition"
+              className={`transition ${isActive('/explore')}`}
             >
               {t.nav.explore}
             </Link>
             {!isGuest && (
               <Link
                 to="/admin/analytics"
-                className="text-gray-700 hover:text-indigo-600 transition"
+                className={`transition ${isActive('/admin/analytics')}`}
               >
                 {t.nav.analytics}
               </Link>
