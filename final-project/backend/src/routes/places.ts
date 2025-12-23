@@ -25,8 +25,40 @@ router.get('/search', async (req: express.Request, res: Response) => {
   try {
     console.log('[Places Search] Starting Google API call...');
     let query = keyword;
-    if (location && typeof location === 'string') {
-      query += ` in ${location}`;
+    let searchLat: number | undefined = lat ? parseFloat(lat as string) : undefined;
+    let searchLng: number | undefined = lng ? parseFloat(lng as string) : undefined;
+
+    // If location string is provided but no coordinates, geocode it first
+    if (location && typeof location === 'string' && location.trim() !== '') {
+      // Check if location is already in keyword to avoid duplication
+      const locationLower = location.toLowerCase();
+      const keywordLower = keyword.toLowerCase();
+      
+      if (!keywordLower.includes(locationLower)) {
+        query += ` in ${location}`;
+      }
+
+      // If no coordinates provided, geocode the location string
+      if (!searchLat || !searchLng) {
+        try {
+          const geocodeResponse = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+            params: {
+              address: location,
+              key: config.googlePlacesApiKey,
+            },
+          });
+
+          if (geocodeResponse.data.status === 'OK' && geocodeResponse.data.results.length > 0) {
+            const locationData = geocodeResponse.data.results[0].geometry.location;
+            searchLat = locationData.lat;
+            searchLng = locationData.lng;
+            console.log(`[Places Search] Geocoded "${location}" to coordinates: ${searchLat}, ${searchLng}`);
+          }
+        } catch (geocodeError) {
+          console.warn(`[Places Search] Failed to geocode location "${location}":`, geocodeError);
+          // Continue without coordinates - will rely on query string only
+        }
+      }
     }
 
     const params: any = {
@@ -40,9 +72,11 @@ router.get('/search', async (req: express.Request, res: Response) => {
       params.language = language;
     }
 
-    if (lat && lng) {
-      params.location = `${lat},${lng}`;
+    // Use coordinates for location biasing (overrides IP-based biasing)
+    if (searchLat && searchLng) {
+      params.location = `${searchLat},${searchLng}`;
       params.radius = 50000; // 50km radius
+      console.log(`[Places Search] Using location bias: ${params.location} with ${params.radius}m radius`);
     }
 
     const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
