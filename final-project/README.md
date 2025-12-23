@@ -244,7 +244,7 @@ npm start
 - **Language Switcher** - Toggle language in navigation
 - **Comprehensive Translation** - All UI elements translated (buttons, labels, messages, tabs, error messages)
 - **Locale-Aware Formatting** - Date and time display adapts to selected language
-- **Persistent Preference** - Language choice saved in user context
+- **Persistent Preference** - Language choice saved to user context
 
 ## Key Concepts
 
