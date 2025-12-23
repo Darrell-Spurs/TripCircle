@@ -399,6 +399,12 @@ npx prisma migrate dev     # Apply migrations
 
 ## ✅ Recently Completed Features
 
+### Feed Search & Click-Through (Completed)
+- [x] Search bar on feed to filter published trips by title/description/places
+- [x] Date range filters on feed (start/end)
+- [x] Clickable activity locations chips filter the feed
+- [x] "Search in Explore" shortcut from feed chips pre-fills Explore search
+
 ### Trip Comments (Completed)
 - [x] Add comment section on published trips
 - [x] Users can add, edit, delete their own comments
@@ -419,13 +425,13 @@ npx prisma migrate dev     # Apply migrations
 > **Team members**: Pick one and start working on it! Update this list when you begin.
 
 ### 1. Search & Filter Feed
-- [ ] Add search bar to filter published trips by title, destination, etc.
-- [ ] Add filters (date range, trip length, trip type etc.)
+- [x] Add search bar to filter published trips by title, destination, etc.
+- [x] Add filters (date range, trip length, trip type etc.)
 
 ### 2. Clickable Feed Content → Search/Explore
-- [ ] Make locations, tags, or keywords in feed posts clickable
-- [ ] Clicking should filter the feed OR jump to Explore page with that search term
-- [ ] Example: Click "Tokyo" in a post → see all Tokyo trips or explore Tokyo attractions
+- [x] Make locations, tags, or keywords in feed posts clickable
+- [x] Clicking should filter the feed OR jump to Explore page with that search term
+- [x] Example: Click "Tokyo" in a post → see all Tokyo trips or explore Tokyo attractions
 
 ### 3. Update Trip Dates (Tricky!)
 - [ ] Allow changing trip start/end dates after creation
