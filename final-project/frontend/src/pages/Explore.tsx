@@ -425,6 +425,30 @@ export default function Explore() {
                   className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition cursor-pointer"
                   onClick={() => setSelectedPlace(place)}
                 >
+                  {place.photoReference ? (
+                    <div className="w-full h-48 mb-4 overflow-hidden rounded-md bg-gray-100">
+                      <img
+                        src={`https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photoReference}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`}
+                        alt={place.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // If image fails to load, hide the image and show fallback
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          // Find parent container and show fallback content
+                          const parent = target.parentElement;
+                          if (parent) {
+                            parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><span class="text-4xl">📍</span></div>';
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-48 mb-4 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                      <span className="text-4xl">📍</span>
+                    </div>
+                  )}
                   <h3 className="font-semibold text-lg mb-2">{place.name}</h3>
                   <p className="text-sm text-gray-600 mb-2">{place.address}</p>
                   {place.rating && (
