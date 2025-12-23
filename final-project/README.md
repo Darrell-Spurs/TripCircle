@@ -45,8 +45,7 @@ TripCircle 是一個旅遊規劃與分享的網頁應用。使用者可建立行
 
 ## 部署連結
 - 線上前端：https://trip-circle.vercel.app/
-- 線上後端 Base：{{TODO: 若與上方不同請填；若同源請註明「Vercel 後端代理同源」}}
-- Demo 影片：{{TODO: URL}}
+- Demo 影片：https://youtu.be/533CHagGErQ
 
 ---
 
