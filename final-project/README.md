@@ -1,545 +1,178 @@
-# TripCircle - Travel Planning & Sharing Web App
+# [114-1] Web Programming Final – TripCircle (第 55 組)
 
-A full-stack travel planning application built with React (Vite + TypeScript) frontend and Express.js (TypeScript) backend. Users can plan trips, collaborate with others, and share their travel experiences with the community.
+**(Group 55) TripCircle - 旅遊規劃與分享平台**
+### Demo 影片
+尚未提供（請於提交前更新 Demo 連結）
 
-Deploy link: https://trip-circle.vercel.app/
+### 服務簡介
+TripCircle 提供旅遊行程的建立、每日活動規劃與拖曳排序，內含時間衝突提示與交通時間估算。使用者可邀請成員協作，並可將行程發布到公開動態牆，讓其他人瀏覽、留言與匯入。亦可透過 Google Places 探索景點、收藏並加入行程。
+### Deployed 連結
+https://trip-circle.vercel.app/
+### 使用／操作方式
+1) 於上方連結註冊或登入（支援 email/password 與 Google OAuth）。  
+2) 在 Dashboard 建立行程，新增／拖曳每日活動並設定時間與地點。  
+3) 邀請成員、設定角色；在活動中調整參與者、留言、費用分攤與偏好。  
+4) 前往 Explore 搜尋景點、存入資料夾或直接加入行程；可分享／匯入資料夾。  
+5) 發布行程至動態牆供瀏覽／匯入；相簿可上傳並選擇公開照片作封面。
+### 其他說明
+- 帳號可自行註冊。
+
+### 使用與參考之框架／模組
+- 前端：React (Vite + TypeScript)、React Router、i18n 套件、Google Maps JS API、Google Places Autocomplete、Amplitude SDK  
+- 後端：Express (TypeScript)、Prisma、PostgreSQL、JWT、bcrypt、multer/base64 處理、Google Maps/Places API、Amplitude SDK  
+- 工具：ESLint/Prettier、npm scripts  
+使用之第三方套件、框架、程式碼：同上（詳見本文「第三方與框架」段落）
+### 專題製作心得
+詹文淵：雖然之前修過不少 web 課，但這門課可能是我大學以來最依賴 AI 的一次。建構網站的流程與以往完全不同：一邊熟悉 AI 工具，一邊也扎實補強了 web 基礎。感謝課程提供的 Cursor credit，讓我能在實作中快速試錯並迭代，也更理解何時該信任模型、何時要回到文件與原始碼。這段經歷讓我真正意識到 AI 是加速器而非替代品：需求分析、模組邏輯、資料流程與錯誤處理仍需要自己判斷；AI 的產出必須被審核、重構，才能融入可維護的架構。此外，與隊友協作時，我們會先討論介面與資料契約，再用 AI 協助生成重複樣板或測試，效率顯著提升。也因 AI 讓迭代成本變低，我更願意嘗試不同的 UI/UX 變化並快速驗證。最後，這門課讓我累積了更完整的「AI 輔助開發 workflow」心智模型：先定義目標與限制，再讓 AI 生成草稿，接著人工審查、微調、補測試，並將學到的模式沉澱成可重用的片段。  
+吳政霖：使用 AI 工具讓效率大幅提高，雖然自己手刻網站很有成就感，但 Cursor 讓我能嘗試更多想做的功能；遇到問題時也能快速參考程式碼與回應。這門課讓我對使用 AI 的 workflow 有更深刻的體驗，也學會在速度與架構可維護性之間取得平衡。更重要的是，我體會到「對 AI 提問的品質決定輸出的品質」：描述清楚需求、上下文、限制與期望格式，能讓生成結果更貼近目標，也減少返工。實作過程中，我常把 AI 當作 pair programmer，一起檢查邏輯缺口、討論資料結構，或是產出初稿再由我親自調整風格與最佳化效能。當 AI 給出的程式碼與實際需求有落差時，我會回到文件、型別定義與既有模組重新對齊，確保可維護性不被犧牲。這次專案也促使我建立一套「AI 使用守則」：先拆解問題、分階段詢問、逐步驗證，再將穩定的解法收斂成共用工具。總結來說，AI 讓我更快完成更多功能，但真正的價值在於它逼我思考如何設計一個讓人與工具都能高效合作的開發流程。  
+游至捷：這次 Final Project 中，我最大的收穫是實際和其他同學共同製作一個 Web App其中要溝通及分工的過程。和個人作業不同的是我們沒辦法再隨意的 git push，要考慮版本控制以及內容的分工，避免程式內容衝突；我們也需要在實作功能前用 cursor plan mode 先計畫，而不是像個人製作一樣想改就改，這樣可以方便有效率地不斷新增我們要的功能，而不易造成衝突。另外，我也學會整合這學期學會的各種工具，全部用在專案裡，我認為這樣的過程很有趣，能看到專案從簡單到複雜不斷的擴充，最終實作組合出一個功能完整且實用的 App。
 
 ---
 
-## Project Structure
+## 專題簡介
+TripCircle 是一個旅遊規劃與分享的網頁應用。使用者可建立行程、依日期規劃每日活動、邀請夥伴並分配角色、將行程發布至公開動態牆、匯入分享行程、管理相簿，以及透過 Google Places 探索與收藏景點。系統支援中英雙語與分析追蹤。
 
-```
-final-project/
-├── frontend/          # Vite + React + TypeScript
-│   ├── src/
-│   │   ├── components/    # Reusable UI components
-    │   │   │   ├── Navbar.tsx
-    │   │   │   ├── ItineraryDay.tsx
-    │   │   │   ├── ActivityCard.tsx
-    │   │   │   ├── ActivityModal.tsx
-    │   │   │   ├── ActivityCommentsPanel.tsx
-    │   │   │   ├── ActivityCostShareEditor.tsx
-    │   │   │   ├── ActivityParticipantSelector.tsx
-    │   │   │   ├── ActivityPreferenceButtons.tsx
-    │   │   │   ├── ActivityTagSelector.tsx
-    │   │   │   ├── MemberList.tsx
-    │   │   │   ├── InviteMemberModal.tsx
-    │   │   │   ├── TripCommentsSection.tsx
-    │   │   │   ├── TripPhotosTab.tsx
-    │   │   │   ├── AddPhotoModal.tsx
-    │   │   │   ├── LocationFolderSelector.tsx
-    │   │   │   ├── ImportLocationModal.tsx
-    │   │   │   ├── LocationSelectorModal.tsx
-    │   │   │   ├── LanguageSwitcher.tsx
-    │   │   │   ├── ProtectedRoute.tsx
-    │   │   │   └── AlertModal.tsx
-│   │   ├── pages/         # Page components (routes)
-│   │   │   ├── Feed.tsx
-│   │   │   ├── FeedTripDetail.tsx
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── TripDetail.tsx
-│   │   │   ├── CreateTrip.tsx
-│   │   │   ├── Explore.tsx
-│   │   │   ├── ShareTrip.tsx
-│   │   │   ├── ShareLocationFolder.tsx
-│   │   │   ├── AdminAnalytics.tsx
-│   │   │   ├── Login.tsx
-│   │   │   ├── Register.tsx
-│   │   │   ├── GoogleCallback.tsx
-│   │   │   └── Landing.tsx
-│   │   ├── hooks/         # Custom React hooks (API calls)
-    │   │   │   ├── useTrips.ts
-    │   │   │   ├── useActivities.ts
-    │   │   │   ├── useFeed.ts
-    │   │   │   ├── useMembers.ts
-    │   │   │   ├── useShare.ts
-    │   │   │   ├── usePlaces.ts
-    │   │   │   ├── useActivityComments.ts
-    │   │   │   ├── useActivityCostShares.ts
-    │   │   │   ├── useActivityParticipants.ts
-    │   │   │   ├── useActivityPreferences.ts
-    │   │   │   ├── useActivityTags.ts
-    │   │   │   ├── useActivityHistory.ts
-    │   │   │   ├── useTripComments.ts
-    │   │   │   ├── useTripPhotos.ts
-    │   │   │   ├── useLocationFolders.ts
-    │   │   │   ├── useSavedLocations.ts
-    │   │   │   └── useLocationFolderShare.ts
-│   │   ├── context/       # React context
-│   │   │   ├── AuthContext.tsx
-│   │   │   └── LanguageContext.tsx
-│   │   ├── lib/           # Utilities (API client, analytics)
-│   │   │   ├── api.ts
-│   │   │   ├── auth.ts
-│   │   │   └── amplitude.ts
-│   │   ├── types/         # TypeScript interfaces
-│   │   └── i18n/          # Internationalization
-│   └── ...
-├── backend/           # Express.js + TypeScript + Prisma
-│   ├── src/
-│   │   ├── routes/        # API route handlers
-    │   │   │   ├── auth.ts
-    │   │   │   ├── trips.ts
-    │   │   │   ├── activities.ts
-    │   │   │   ├── feed.ts
-    │   │   │   ├── share.ts
-    │   │   │   ├── members.ts
-    │   │   │   ├── photos.ts
-    │   │   │   ├── places.ts
-    │   │   │   ├── events.ts
-    │   │   │   ├── admin.ts
-    │   │   │   └── locationFolders.ts
-│   │   ├── middleware/    # Auth middleware
-│   │   ├── constants/     # Tag validation, etc.
-│   │   ├── utils/
-│   │   └── database.ts    # Prisma client
-│   ├── prisma/
-│   │   └── schema.prisma  # Database schema
-│   └── ...
-└── PROJECT_SPEC.md    # Original project specification
-```
+### 主要功能（測試重點）
+- 行程建立／編輯：日期區間行程、每日活動拖曳排序、時間衝突檢查、交通時間估算（Google Directions）。
+- 協作：成員角色（Owner/Editor/Viewer）、活動參與者、留言、費用分攤、偏好、標籤、歷史記錄。
+- 社群：發布行程到動態牆、搜尋／篩選、行程留言、匯入分享行程、分享連結。
+- 媒體：行程相簿、URL/檔案上傳（base64）、公開照片作為動態封面。
+- 探索與收藏：Google Places 搜尋、儲存景點、資料夾管理、資料夾分享／匯入、加入行程。
+- 後台／分析：指標端點與 Amplitude 事件記錄。
+- i18n：完整 UI 翻譯、地區化日期時間格式、語言切換。
 
-## Setup Instructions
+---
 
-### Prerequisites
+## 部署連結
+- 線上前端：https://trip-circle.vercel.app/
+- 線上後端 Base：{{TODO: 若與上方不同請填；若同源請註明「Vercel 後端代理同源」}}
+- Demo 影片：{{TODO: URL}}
+
+---
+
+## 本機安裝與測試
+
+### 0) Prerequisites
 - Node.js 18+
-- PostgreSQL database (or use Supabase/Railway)
+- npm（隨 Node 附帶）
+- PostgreSQL 14+（本機可連線）
+- Google API 金鑰（Maps/Places），Amplitude 金鑰可選
 
-### Frontend Setup
-
-1. Navigate to frontend directory:
+### 1) 取得程式碼與定位目錄
 ```bash
-cd frontend
+git clone git@github.com:Darrell-Spurs/wp1141.git
+cd final-project
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Create `.env` file:
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-VITE_AMPLITUDE_API_KEY=your_amplitude_api_key
-```
-
-4. Run development server:
-```bash
-npm run dev
-```
-
-### Backend Setup
-
-1. Navigate to backend directory:
+### 2) 後端設定
 ```bash
 cd backend
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Create `.env` file:
+建立 `backend/.env`：
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/tripcircle
-JWT_SECRET=your-secret-key-change-this-in-production
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_PLACES_API_KEY=your-google-places-api-key
-AMPLITUDE_API_KEY=your-amplitude-api-key
+DATABASE_URL=postgresql://{{user}}:{{password}}@localhost:5432/tripcircle
+JWT_SECRET={{TODO: strong secret}}
+GOOGLE_CLIENT_ID={{TODO}}
+GOOGLE_CLIENT_SECRET={{TODO}}
+GOOGLE_PLACES_API_KEY={{TODO}}
+AMPLITUDE_API_KEY={{optional}}
 PORT=8000
 ```
+> 若密碼含特殊字元請 URL 編碼（例：`#` -> `%23`）。
 
-> **Note**: If your database password contains special characters (like `#`, `+`, `@`), you must URL-encode them in the connection string. For example, `#` becomes `%23`, `+` becomes `%2B`.
-
-4. Set up database:
+初始化資料庫（產生 Prisma client 並套用 migration）：
 ```bash
 npx prisma generate
 npx prisma migrate dev --name init
 ```
 
-5. Run backend server:
+啟動後端（開發模式）：
 ```bash
 npm run dev
+# 服務執行於 http://localhost:8000
 ```
 
-For production:
+### 3) 前端設定
 ```bash
-npm run build
-npm start
+cd ../frontend
+npm install
 ```
 
-## Features
+建立 `frontend/.env`：
+```env
+VITE_API_BASE_URL=http://localhost:8000
+VITE_GOOGLE_MAPS_API_KEY={{TODO}}
+VITE_AMPLITUDE_API_KEY={{optional}}
+```
 
-### Core Features
-- **User Authentication** - Email/Password + Google OAuth with return URL preservation
-- **Trip Management** - Create, edit, delete trips with cover images
-- **Itinerary Planning** - Day-by-day activities with times and locations
-  - 24-hour clock format throughout the application
-  - Google Places Autocomplete for location search
-  - Time overlap detection with custom error alerts
-  - Quick time adjustment buttons (+15m, +30m, -15m, -30m)
-- **Drag-and-Drop** - Reorder activities within each day
-- **Collaboration** - Invite members with Owner/Editor/Viewer roles
-- **Share Links** - Generate permanent links for trip sharing
-- **Transportation Planning** - Automatic route calculation between activities
-  - Google Directions API integration
-  - Distance and duration display
-  - Transportation mode selection (driving, walking, bicycling, transit)
-  - Pace buffer settings (Tight: 10%, Neutral: 15%, Relaxed: 20%)
-  - Visual transportation time blocks
-- **Interactive Maps** - Google Maps integration in itinerary view
-  - Activity markers with info windows
-  - Route visualization with polyline decoding
-  - Auto-zoom to contain all locations
-  - Advanced Markers support
-
-### Activity Collaboration Features
-- **Activity Participants** - Track who's joining each activity (defaults to all members)
-- **Activity Comments** - Discussion threads on individual activities
-- **Cost Tracking** - Set activity costs with currency support
-- **Cost Shares** - Split expenses among participants (auto-equal or custom amounts)
-- **Activity Preferences** - Vote "interested" or "not interested" on activities
-- **Activity Tags** - Categorize activities with custom tags
-- **Activity History** - View audit trail of changes (who edited what and when)
-- **Activity Creator** - Track who created each activity
-
-### Feed & Social Features
-- **Public Feed** - Browse published trips from the community (home page)
-- **Trip Publishing** - Publish trips to feed with optional "story" text
-- **Activity Stories** - Add rich descriptions to activities for feed display
-- **Trip Import** - Import published trips as templates for your own trips
-- **Allow Imports Toggle** - Publishers control if others can import their trips
-- **Trip Comments** - Comment and discuss on published trips in the feed
-- **Trip Photo Albums** - Add photos to trips via URL or direct file upload (max 10MB)
-- **Public Photos** - Mark photos as public to display in the feed
-- **Feed Cover Image** - Choose a public photo as the feed cover (separate from trip cover)
-- **Large File Support** - Backend configured to handle base64-encoded images up to 15MB
-
-### Explore & Discovery
-- **Two-Tab Interface** - Search tab and My Collections tab
-- **Google Places Integration** - Search and explore attractions with map display
-- **Add to Trip** - Add discovered places directly to your itinerary
-- **Save to Folder** - Save places from search results to location collections
-- **Location Collections** - Organize saved locations into named folders
-  - Create, edit, delete folders
-  - Public/private folder settings
-  - Folder descriptions
-- **Saved Locations** - Store place data with custom notes and tags
-- **Folder Sharing** - Share public folders via share links (view/edit permissions)
-- **Quick Import** - Import multiple locations from folders into trips
-  - Select folder and locations
-  - Choose target date
-  - Bulk create activities
-- **Add from Folder** - Quick location selection in Activity Modal
-
-### Admin & Analytics
-- **Analytics Dashboard** - View user and trip statistics
-- **Amplitude Integration** - Track user behavior
-
-### Multi-language Support (i18n)
-- **Full Internationalization** - English and Traditional Chinese
-- **Language Switcher** - Toggle language in navigation
-- **Comprehensive Translation** - All UI elements translated (buttons, labels, messages, tabs, error messages)
-- **Locale-Aware Formatting** - Date and time display adapts to selected language
-- **Persistent Preference** - Language choice saved to user context
-
-## Key Concepts
-
-### Trip Roles
-| Role | Permissions |
-|------|-------------|
-| **Owner** | Full control, can delete trip, manage members, publish |
-| **Editor** | Can edit trip details and activities |
-| **Viewer** | Read-only access |
-
-### Publishing Flow
-1. Create and plan your trip
-2. Add a "Trip Story" (optional rich description for feed)
-3. Toggle "Allow imports" if you want others to use your trip as a template
-4. Click "Publish to Feed"
-
-### Import Flow
-1. Browse the feed or receive a share link
-2. Click "View & Import" (if publisher allowed it)
-3. Trip is copied to your account with "(Imported)" suffix
-4. Notes are preserved, but stories are cleared for you to write your own
-
-### Activity Collaboration
-- **Participants**: By default, all trip members are added to new activities. Editors can customize who joins each activity.
-- **Cost Splitting**: When you set a cost, it's automatically split equally among participants. Custom splits are also supported.
-- **Preferences**: Members can indicate interest level ("interested" or "not interested") to help group decision-making.
-- **Comments**: Discuss details, suggest alternatives, or coordinate logistics.
-- **Tags**: Categorize activities with custom tags for better organization.
-- **History**: View audit trail of activity changes (who edited what and when).
-- **Creator Tracking**: See who created each activity.
-- **Conflict Resolution**: Optimistic locking prevents simultaneous edit conflicts (last-write-wins strategy).
-
-### Authentication & User Experience
-- **Return URL Preservation**: After login, users are redirected back to the page they were viewing (shared trips, feed posts, etc.)
-- **Login Flow**: Login page accepts `?return=` query parameter to preserve user's original destination
-- **Comment Login**: Users can click login button in comment section and return to the same post after authentication
-
-## API Endpoints
-
-### Auth
-- `POST /auth/register` - Register with email/password
-- `POST /auth/login` - Login
-- `POST /auth/google` - Google OAuth
-- `GET /auth/me` - Get current user
-
-### Trips
-- `GET /trips` - List user's trips
-- `POST /trips` - Create trip
-- `GET /trips/:id` - Get trip details
-- `PUT /trips/:id` - Update trip
-- `DELETE /trips/:id` - Delete trip
-
-### Activities
-- `POST /activities/trips/:tripId/activities` - Create activity
-- `PUT /activities/:id` - Update activity
-- `DELETE /activities/:id` - Delete activity
-- `PATCH /activities/reorder` - Reorder activities
-
-### Activity Participants
-- `GET /activities/:id/participants` - List participants
-- `POST /activities/:id/participants` - Set participants (array of userIds)
-- `DELETE /activities/:id/participants/:userId` - Remove participant
-
-### Activity Comments
-- `GET /activities/:id/comments` - List comments
-- `POST /activities/:id/comments` - Add comment
-- `PUT /activities/comments/:commentId` - Edit comment
-- `DELETE /activities/comments/:commentId` - Delete comment
-
-### Activity Cost Shares
-- `GET /activities/:id/cost-shares` - List cost shares
-- `POST /activities/:id/cost-shares` - Set cost shares
-- `DELETE /activities/:id/cost-shares` - Clear cost shares
-
-### Activity Preferences
-- `GET /activities/:id/preferences` - Get preferences with counts
-- `POST /activities/:id/preferences` - Set preference (interested/not_interested)
-- `DELETE /activities/:id/preferences` - Remove preference
-
-### Activity Tags
-- `GET /activities/:id/tags` - List tags
-- `POST /activities/:id/tags` - Add tags
-- `DELETE /activities/:id/tags/:tag` - Remove tag
-
-### Activity History
-- `GET /activities/:id/history` - Get change history
-
-### Feed (Public)
-- `GET /feed` - List published trips (paginated, includes feedCoverImage)
-- `GET /feed/:id` - Get published trip details with public photos
-- `POST /feed/:id/publish` - Publish trip (with `allowImports` option)
-- `POST /feed/:id/unpublish` - Unpublish trip
-
-### Trip Comments
-- `GET /feed/:id/comments` - List comments on published trip (public)
-- `POST /feed/:id/comments` - Add comment (authenticated)
-- `PUT /feed/comments/:commentId` - Edit own comment
-- `DELETE /feed/comments/:commentId` - Delete own comment (or trip owner can delete)
-
-### Trip Photos
-- `GET /photos/trips/:tripId/photos` - List all photos in album (members only)
-- `POST /photos/trips/:tripId/photos` - Add photo (Owner/Editor)
-- `PUT /photos/:id` - Update photo (caption, isPublic)
-- `DELETE /photos/:id` - Delete photo
-- `POST /photos/trips/:tripId/photos/:id/set-feed-cover` - Set as feed cover
-- `DELETE /photos/trips/:tripId/feed-cover` - Clear feed cover selection
-
-### Share
-- `POST /share` - Create share link
-- `GET /share/:token` - Get shared trip
-- `POST /share/:token/import` - Import shared trip
-
-### Members
-- `GET /trips/:tripId/members` - List members
-- `POST /trips/:tripId/members` - Add member
-- `DELETE /trips/:tripId/members/:userId` - Remove member
-
-### Places & Directions
-- `GET /places/search` - Search Google Places
-- `GET /places/directions` - Get route between two coordinates (for transportation segments)
-
-### Location Folders
-- `GET /location-folders` - List user's folders
-- `POST /location-folders` - Create folder
-- `GET /location-folders/:id` - Get folder with locations
-- `PUT /location-folders/:id` - Update folder
-- `DELETE /location-folders/:id` - Delete folder
-- `POST /location-folders/:folderId/locations` - Add saved location
-- `PUT /location-folders/:folderId/locations/:id` - Update location
-- `DELETE /location-folders/:folderId/locations/:id` - Delete location
-- `POST /location-folders/:folderId/share-links` - Create share link
-- `GET /location-folders/shared/:token` - Access shared folder
-- `POST /location-folders/shared/:token/import` - Import shared folder
-
-### Events & Admin
-- `POST /events` - Log analytics event
-- `GET /admin/metrics` - Get admin metrics
-
-## Database Schema
-
-Key models (see `backend/prisma/schema.prisma` for full schema):
-
-### Core Models
-- **User** - Authentication and profile
-- **Trip** - Trip details, dates, publish status
-- **Activity** - Itinerary items with location, cost, times
-- **TripMember** - User-trip relationships with roles
-- **ShareLink** - Permanent share tokens
-- **Event** - Analytics events
-
-### Activity Collaboration Models
-- **ActivityParticipant** - Users joining an activity
-- **ActivityComment** - Discussion comments on activities
-- **ActivityCostShare** - Cost split per user per activity
-- **ActivityPreference** - Interest votes on activities ("interested" or "not_interested")
-- **ActivityTag** - Tags assigned to activities
-- **ActivityHistory** - Audit trail of activity changes (who, what, when)
-
-### Location Collection Models
-- **LocationFolder** - User-created folders for organizing saved locations
-- **SavedLocation** - Saved place data with notes and tags
-- **LocationFolderShareLink** - Share tokens for public folders
-- **LocationFolderMember** - Folder membership for collaboration
-
-### Feed & Social Models
-- **TripComment** - Comments on published trips
-- **TripPhoto** - Photos in trip album (url, caption, isPublic, isFeedCover)
-
-## Development
-
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:3000 |
-| Backend | http://localhost:8000 |
-
-### After Schema Changes
+啟動前端（Vite）：
 ```bash
-cd backend
-npx prisma generate        # Regenerate client
-npx prisma migrate dev     # Apply migrations
+npm run dev
+# Vite dev server: http://localhost:3000 （需要時代理 API 至 8000）
 ```
 
-## Frontend Pages
+### 4) 帳號與測試資料
+- 支援 email/password (`/auth/register`) 與 Google OAuth。
 
-| Route | Description |
-|-------|-------------|
-| `/` | Redirects to Feed |
-| `/feed` | Public feed - browse published trips |
-| `/feed/:id` | View published trip details |
-| `/dashboard` | My Trips - user's own trips |
-| `/trips/new` | Create new trip |
-| `/trips/:id` | Trip planner/editor |
-| `/explore` | Search attractions & manage location collections (two tabs: Search, My Collections) |
-| `/share/:token` | View shared trip |
-| `/location-folders/shared/:token` | View shared collection folder |
-| `/admin/analytics` | Admin dashboard |
-| `/auth/login` | Login page (supports `?return=` query parameter for redirect after login) |
-| `/auth/register` | Registration page |
+### 5) 建議驗證的主要流程
+- 建立行程、加入活動（含時間／地點）、拖曳排序、檢查時間衝突。
+- 邀請成員、設定角色、調整活動參與者。
+- 新增費用、等額與自訂分攤。
+- 活動留言、偏好、標籤、歷史紀錄檢視。
+- 發布行程到動態牆、查看公開頁面、匯入行程。
+- 上傳行程照片（URL/檔案）、設定公開照片與動態封面。
+- Explore 分頁：Google 搜尋、存入資料夾、分享／匯入資料夾、加入行程。
+- 語言切換（EN/繁中）、在地化時間格式。
 
-## Team Notes
+### 6) 與正式環境一致性
+- 上傳大小：後端接受 base64 圖片最高 15MB。
+- SPA 路由：Vercel `vercel.json` 重寫，巢狀路由重新整理可用。
+- 伺服器端已設定 body parser 限制與 payload 驗證。
 
-- The feed is the main landing page (`/` redirects to `/feed`)
-- "My Trips" shows the user's own trips (`/dashboard`)
-- Share links are permanent unless explicitly deleted
-- When publishing with "Allow imports" unchecked, existing share links are deleted
-- Stories (`body` field) are NOT copied during import - users write their own
-- Notes ARE copied during import - useful for practical trip info
-- Activity participants default to all trip members when creating new activities
-- Cost shares are auto-calculated as equal split when cost is set
+---
 
-## ✅ Recently Completed Features
+## 系統架構（簡述）
+- 前端：Vite + React + TypeScript；以 hooks 為主的 API client；React Router；i18n。
+- 後端：Express + TypeScript；Prisma ORM；PostgreSQL；JWT 驗證；Google Maps/Places；Amplitude。
+- 認證：Email/Password + Google OAuth；登入後保留 return URL。
+- 部署：前端 Vercel；後端設定 15MB payload；SPA 重寫啟用。
 
-### Feed Search & Click-Through (Completed)
-- [x] Search bar on feed to filter published trips by title/description/places
-- [x] Date range filters on feed (start/end)
-- [x] Clickable activity locations chips filter the feed
-- [x] "Search in Explore" shortcut from feed chips pre-fills Explore search
+---
 
-### Trip Comments (Completed)
-- [x] Add comment section on published trips
-- [x] Users can add, edit, delete their own comments
-- [x] Trip owners can delete any comment on their posts
-- [x] Comment count displayed on feed cards
+## 第三方與框架
+- 前端：React、Vite、TypeScript、React Router、i18n 套件、Google Maps JS API、Google Places Autocomplete、Amplitude SDK。
+- 後端：Express、TypeScript、Prisma、PostgreSQL、JWT、bcrypt、multer/base64 處理、Google Maps/Places API、Amplitude SDK。
+- 工具：ESLint/Prettier（專案預設）、npm scripts。
 
-### Trip Photo Albums (Completed)
-- [x] Add photos to trips via URL with optional caption
-- [x] Upload photos directly from device (file upload with base64 conversion)
-- [x] File validation (image types only, max 10MB)
-- [x] Photos tab in trip detail page (alongside Itinerary)
-- [x] Mark photos as public for feed display
-- [x] Select a public photo as feed cover (separate from trip cover)
-- [x] Feed cover priority: explicit cover > random public photo > trip cover > default
-- [x] Public photos gallery displayed on feed trip detail page
-- [x] Lightbox for viewing photos
+---
 
-### Enhanced i18n Support (Completed)
-- [x] Full translation for all UI elements (tabs, buttons, labels, messages)
-- [x] Locale-aware date and time formatting in feed
-- [x] Translated error messages and validation feedback
-- [x] Photo upload UI fully translated
-- [x] Language preference persisted in user context
+## 分工（第 55 組）
+請填入姓名與具體貢獻，並註明是否有外部協助與原因。
 
-### Location Collections (Completed)
-- [x] Two-tab Explore interface (Search and My Collections)
-- [x] Create, edit, delete location folders
-- [x] Save places from search results to folders
-- [x] Add custom notes and tags to saved locations
-- [x] Import multiple locations from folders into trips
-- [x] Quick "Add from Folder" in Activity Modal
-- [x] Folder sharing via share links (public folders only)
-- [x] Import shared folders to your account
+| 成員 | 貢獻職責 | 備註（外部協助如有） |
+|------|----------|----------------------|
+| {{TODO: 成員 A}} | {{TODO: 例：後端認證、Prisma schema、行程/活動路由}} | {{TODO 或 N/A}} |
+| {{TODO: 成員 B}} | {{TODO: 例：前端行程 UI、拖曳、i18n}} | {{TODO 或 N/A}} |
+| {{TODO: 成員 C}} | {{TODO: 例：動態牆/發布、照片、Explore/資料夾、分析}} | {{TODO 或 N/A}} |
 
-### Transportation & Maps (Completed)
-- [x] Automatic route calculation between activities
-- [x] Transportation mode selection (driving, walking, bicycling, transit)
-- [x] Distance and duration display
-- [x] Pace buffer settings (Tight/Neutral/Relaxed)
-- [x] Visual transportation time blocks
-- [x] Google Maps route visualization with polyline decoding
-- [x] Interactive map in itinerary view with markers and routes
-- [x] Auto-zoom to contain all locations
+---
 
-## 🚧 TODO - Upcoming Features
+## 課程回饋
+- AI/LLM 教學與示範很實用，讓我們能建立「先定義需求、再用 AI 生成草稿、最後人工審查與補測試」的 workflow；建議未來課程可提供更多「好提示／壞提示」對照與常見陷阱。  
+- Cursor credit 對快速迭代幫助大，若能在期中前再補充一波 credit 或提供節省 token 的實務技巧說明，能讓同學更敢嘗試。  
+- 希望增加AI 產出程式碼的可維護性檢查案例，例如如何檢查資料流、型別一致性、邊界條件與效能，協助同學在速度與品質之間取得平衡。  
 
-### 1. Update Trip Dates (Tricky!)
-- [ ] Allow changing trip start/end dates after creation
-- [ ] **Challenge**: What happens to activities when dates change?
-  - If a day is removed, what happens to its activities? (Delete? Move? Warn user?)
-  - If dates shift, should activities shift too?
-  - Consider a confirmation dialog explaining the impact
+---
 
-### 2. Save/Bookmark Posts
-- [ ] Add "Save/Bookmark" button on feed posts
-- [ ] Show saved posts in user's dashboard
-- [ ] Consider: notifications when someone comments on your post?
+## 常用指令（參考）
+- Backend：`npm run dev`, `npm run build`, `npm start`, `npx prisma migrate dev`, `npx prisma generate`
+- Frontend：`npm run dev`, `npm run build`, `npm run preview`
 
-### 3. Publisher Analytics Dashboard
-- [ ] Show stats for your published trips: views, imports, saves
-- [ ] Add to existing dashboard or create new "My Posts" section
-- [ ] Track: view count, import count, comments count per post
+---
 
-### 4. Google Calendar Export (Optional)
-- [ ] OAuth with Google Calendar scopes
-- [ ] Export activities as calendar events
-- [ ] Automatically assign event times and day mapping
-
-## Deployment
-
-### Vercel Deployment (Frontend)
-- Frontend is deployed on Vercel at https://trip-circle.vercel.app/
-- `vercel.json` configured with SPA rewrite rules to handle client-side routing
-- All routes are rewritten to `/index.html` to prevent 404 errors on page refresh
-
-### Backend Configuration
-- Express body parser limit increased to 15MB to support base64-encoded image uploads
-- Payload size validation with user-friendly error messages (413 status code)
-
-See deployment instructions in `PROJECT_SPEC.md`.
+## 快速連結
+- 線上服務：https://trip-circle.vercel.app/
+- 本機 API Base：http://localhost:8000
+- 規格文件：`PROJECT_SPEC.md`
