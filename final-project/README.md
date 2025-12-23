@@ -27,9 +27,6 @@ final-project/
     │   │   │   ├── TripCommentsSection.tsx
     │   │   │   ├── TripPhotosTab.tsx
     │   │   │   ├── AddPhotoModal.tsx
-    │   │   │   ├── LocationFolderSelector.tsx
-    │   │   │   ├── ImportLocationModal.tsx
-    │   │   │   ├── LocationSelectorModal.tsx
     │   │   │   ├── LanguageSwitcher.tsx
     │   │   │   ├── ProtectedRoute.tsx
     │   │   │   └── AlertModal.tsx
@@ -41,6 +38,7 @@ final-project/
 │   │   │   ├── CreateTrip.tsx
 │   │   │   ├── Explore.tsx
 │   │   │   ├── ShareTrip.tsx
+│   │   │   ├── ShareLocationFolder.tsx
 │   │   │   ├── AdminAnalytics.tsx
 │   │   │   ├── Login.tsx
 │   │   │   ├── Register.tsx
@@ -60,10 +58,7 @@ final-project/
     │   │   │   ├── useActivityTags.ts
     │   │   │   ├── useActivityHistory.ts
     │   │   │   ├── useTripComments.ts
-    │   │   │   ├── useTripPhotos.ts
-    │   │   │   ├── useLocationFolders.ts
-    │   │   │   ├── useSavedLocations.ts
-    │   │   │   └── useLocationFolderShare.ts
+    │   │   │   └── useTripPhotos.ts
 │   │   ├── context/       # React context
 │   │   │   ├── AuthContext.tsx
 │   │   │   └── LanguageContext.tsx
@@ -85,7 +80,6 @@ final-project/
     │   │   │   ├── members.ts
     │   │   │   ├── photos.ts
     │   │   │   ├── places.ts
-    │   │   │   ├── locationFolders.ts
     │   │   │   ├── events.ts
     │   │   │   └── admin.ts
 │   │   ├── middleware/    # Auth middleware
@@ -197,31 +191,25 @@ npm start
 - **Trip Import** - Import published trips as templates for your own trips
 - **Allow Imports Toggle** - Publishers control if others can import their trips
 - **Trip Comments** - Comment and discuss on published trips in the feed
-- **Trip Photo Albums** - Add photos to trips with captions (via URL or direct file upload from device)
-- **Photo File Upload** - Upload images directly from device with validation (max 10MB, image types only)
+- **Trip Photo Albums** - Add photos to trips via URL or direct file upload (max 10MB)
 - **Public Photos** - Mark photos as public to display in the feed
 - **Feed Cover Image** - Choose a public photo as the feed cover (separate from trip cover)
+- **Large File Support** - Backend configured to handle base64-encoded images up to 15MB
 
 ### Explore & Discovery
 - **Google Places Integration** - Search and explore attractions
 - **Add to Trip** - Add discovered places directly to your itinerary
 - **Location Collections** - Save favorite locations to organized folders
-- **Save to Folder** - Save discovered places to collections for later use
-- **Import from Folder** - Quickly add multiple saved locations to trips
-- **Folder Management** - Create, edit, and delete location folders
-- **Folder Sharing** - Share location folders via share links
-- **Location Notes & Tags** - Add custom notes and tags to saved locations
-- **Quick Location Select** - "Add from Folder" button in activity creation for fast location selection
+- **Public/Private Collections** - Mark collections as public (anyone can view) or private (only owner/members)
+- **Folder Sharing** - Share public location folders via share links (private collections cannot be shared)
+- **Shared Collection Viewing** - View and import shared collection folders via share links
 
 ### Admin & Analytics
 - **Analytics Dashboard** - View user and trip statistics
 - **Amplitude Integration** - Track user behavior
 
 ### Multi-language Support
-- **i18n** - Full internationalization support for Traditional Chinese (zh-TW) and English (en)
-- Language switcher in navigation bar
-- Locale-aware date and time formatting
-- All UI elements translated including tabs, comments, photo upload, and feed content
+- **i18n** - Language switcher for internationalization
 
 ## Key Concepts
 
@@ -249,6 +237,11 @@ npm start
 - **Cost Splitting**: When you set a cost, it's automatically split equally among participants. Custom splits are also supported.
 - **Preferences**: Members can indicate interest level to help group decision-making.
 - **Comments**: Discuss details, suggest alternatives, or coordinate logistics.
+
+### Authentication & User Experience
+- **Return URL Preservation**: After login, users are redirected back to the page they were viewing (shared trips, feed posts, etc.)
+- **Login Flow**: Login page accepts `?return=` query parameter to preserve user's original destination
+- **Comment Login**: Users can click login button in comment section and return to the same post after authentication
 
 ## API Endpoints
 
@@ -333,19 +326,6 @@ npm start
 ### Places
 - `GET /places/search` - Search Google Places
 
-### Location Folders
-- `GET /location-folders` - List user's folders
-- `POST /location-folders` - Create folder
-- `GET /location-folders/:id` - Get folder with locations
-- `PUT /location-folders/:id` - Update folder
-- `DELETE /location-folders/:id` - Delete folder
-- `POST /location-folders/:id/locations` - Save location to folder
-- `PUT /location-folders/:id/locations/:locationId` - Update location (notes/tags)
-- `DELETE /location-folders/:id/locations/:locationId` - Remove location from folder
-- `POST /location-folders/:id/share-links` - Create share link
-- `GET /location-folders/shared/:token` - Access shared folder
-- `POST /location-folders/:id/import` - Import folder to user's account
-
 ### Events & Admin
 - `POST /events` - Log analytics event
 - `GET /admin/metrics` - Get admin metrics
@@ -374,12 +354,6 @@ Key models (see `backend/prisma/schema.prisma` for full schema):
 - **TripComment** - Comments on published trips
 - **TripPhoto** - Photos in trip album (url, caption, isPublic, isFeedCover)
 
-### Location Collection Models
-- **LocationFolder** - User-created folders for organizing saved locations
-- **SavedLocation** - Saved place data (name, address, lat/lng, placeId, notes, tags)
-- **LocationFolderShareLink** - Share tokens for location folders
-- **LocationFolderMember** - Folder collaborators with editor/viewer roles
-
 ## Development
 
 | Service | URL |
@@ -405,9 +379,11 @@ npx prisma migrate dev     # Apply migrations
 | `/trips/new` | Create new trip |
 | `/trips/:id` | Trip planner/editor |
 | `/explore` | Search attractions & manage location collections (two tabs: Search, My Collections) |
+| `/location-folders` | Manage location collections (create, edit, delete folders) |
 | `/share/:token` | View shared trip |
+| `/location-folders/shared/:token` | View shared collection folder |
 | `/admin/analytics` | Admin dashboard |
-| `/auth/login` | Login page |
+| `/auth/login` | Login page (supports `?return=` query parameter for redirect after login) |
 | `/auth/register` | Registration page |
 
 ## Team Notes
@@ -431,32 +407,12 @@ npx prisma migrate dev     # Apply migrations
 
 ### Trip Photo Albums (Completed)
 - [x] Add photos to trips via URL with optional caption
-- [x] Upload photos directly from device (file upload with base64 conversion)
-- [x] File validation (image types only, max 10MB)
 - [x] Photos tab in trip detail page (alongside Itinerary)
 - [x] Mark photos as public for feed display
 - [x] Select a public photo as feed cover (separate from trip cover)
 - [x] Feed cover priority: explicit cover > random public photo > trip cover > default
 - [x] Public photos gallery displayed on feed trip detail page
 - [x] Lightbox for viewing photos
-
-### Enhanced i18n Support (Completed)
-- [x] Full i18n support for all tabs (Itinerary, Photos)
-- [x] i18n support for Comments section in feed
-- [x] Locale-aware date formatting (dates display in user's selected language)
-- [x] Complete photo-related translations (upload methods, file validation messages, etc.)
-- [x] All feed-related text now supports Traditional Chinese and English
-
-### Location Collections (Completed)
-- [x] Save locations from Explore page to organized folders
-- [x] Create, edit, and delete location folders
-- [x] Add notes and tags to saved locations
-- [x] Import multiple locations from folders into trips
-- [x] Share folders via share links with view/edit permissions
-- [x] Import shared folders to your account
-- [x] "Add from Folder" quick select button in activity creation modal
-- [x] Merged collections management into Explore page with tab navigation
-- [x] Full i18n support for all location folder features
 
 ## 🚧 TODO - Upcoming Features
 
@@ -489,5 +445,14 @@ npx prisma migrate dev     # Apply migrations
 - [ ] Track: view count, import count, comments count per post
 
 ## Deployment
+
+### Vercel Deployment (Frontend)
+- Frontend is deployed on Vercel at https://trip-circle.vercel.app/
+- `vercel.json` configured with SPA rewrite rules to handle client-side routing
+- All routes are rewritten to `/index.html` to prevent 404 errors on page refresh
+
+### Backend Configuration
+- Express body parser limit increased to 15MB to support base64-encoded image uploads
+- Payload size validation with user-friendly error messages (413 status code)
 
 See deployment instructions in `PROJECT_SPEC.md`.
