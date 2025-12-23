@@ -132,14 +132,14 @@ export default function Dashboard() {
                   <div className="flex gap-2">
                     <Link
                       to={`/trips/${trip.id}`}
-                      className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded text-center hover:bg-indigo-700 transition"
+                      className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-center hover:bg-indigo-700 transition"
                     >
                       {t.common.view}
                     </Link>
                     {trip.isOwner && (
                       <button
                         onClick={() => handleDelete(trip.id)}
-                        className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
                       >
                         {t.common.delete}
                       </button>

@@ -7,7 +7,7 @@ export default function LanguageSwitcher() {
     <div className="flex items-center gap-2">
       <button
         onClick={() => setLanguage('zh-TW')}
-        className={`px-3 py-1 rounded text-sm transition ${
+        className={`px-3 py-1 rounded-lg text-sm transition ${
           language === 'zh-TW'
             ? 'bg-indigo-600 text-white'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -17,7 +17,7 @@ export default function LanguageSwitcher() {
       </button>
       <button
         onClick={() => setLanguage('en')}
-        className={`px-3 py-1 rounded text-sm transition ${
+        className={`px-3 py-1 rounded-lg text-sm transition ${
           language === 'en'
             ? 'bg-indigo-600 text-white'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

@@ -438,7 +438,7 @@ export default function Explore() {
                           setSelectedPlace(place)
                           setShowAddModal(true)
                         }}
-                        className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 transition"
+                        className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition"
                       >
                         {t.activity.addToTrip}
                       </button>
@@ -448,7 +448,7 @@ export default function Explore() {
                           setSelectedPlace(place)
                           setShowSaveToFolderModal(true)
                         }}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition"
+                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition"
                       >
                         📁 {t.locationFolders.saveToFolder}
                       </button>
