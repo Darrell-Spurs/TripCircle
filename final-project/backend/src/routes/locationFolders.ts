@@ -554,6 +554,12 @@ router.post('/:id/share-links', authenticate, async (req: Request, res: Response
       return;
     }
 
+    // Private collections cannot be shared
+    if (!folder.isPublic) {
+      res.status(400).json({ detail: 'Private collections cannot be shared. Please make the collection public first.' });
+      return;
+    }
+
     const data = createShareLinkSchema.parse(req.body);
     const token = generateShareToken();
 

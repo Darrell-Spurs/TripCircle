@@ -406,9 +406,18 @@ export interface Translations {
     notesPlaceholder: string
     locations: string
     location: string
+    private: string
+    publicDescription: string
+    privateDescription: string
+    folderImportedSuccess: string
+    sharedCollectionReadOnly: string
+    importToMyCollections: string
+    by: string
+    noLocations: string
+    shareLinkCreated: string
+    privateCollectionsCannotBeShared: string
     deleteFolderConfirm: string
     deleteLocationConfirm: string
-    shareLinkCreated: string
     folderImported: string
     selectDate: string
     importSelected: string
@@ -796,9 +805,18 @@ export const translations: Record<Language, Translations> = {
       notesPlaceholder: '新增備註...',
       locations: '個位置',
       location: '位置',
+      private: '私人',
+      publicDescription: '公開：任何人都可以查看此收藏',
+      privateDescription: '私人：只有您和受邀成員可以查看此收藏',
+      folderImportedSuccess: '收藏「{name}」已成功匯入！',
+      sharedCollectionReadOnly: '這是共享的收藏。您可以查看並匯入到您的帳戶。',
+      importToMyCollections: '匯入到我的收藏',
+      by: '由',
+      noLocations: '此收藏中沒有位置',
+      shareLinkCreated: '分享連結已建立',
+      privateCollectionsCannotBeShared: '私人收藏無法分享。請先將收藏設為公開。',
       deleteFolderConfirm: '您確定要刪除此收藏夾嗎？這將刪除所有收藏的位置。',
       deleteLocationConfirm: '您確定要移除此位置嗎？',
-      shareLinkCreated: '分享連結已建立',
       folderImported: '收藏夾匯入成功',
       selectDate: '選擇日期',
       importSelected: '匯入選取的位置',
@@ -1184,9 +1202,18 @@ export const translations: Record<Language, Translations> = {
       notesPlaceholder: 'Add notes...',
       locations: 'locations',
       location: 'Location',
+      private: 'Private',
+      publicDescription: 'Public: Anyone can view this collection',
+      privateDescription: 'Private: Only you and invited members can view this collection',
+      folderImportedSuccess: 'Collection "{name}" imported successfully!',
+      sharedCollectionReadOnly: 'This is a shared collection. You can view it and import it to your account.',
+      importToMyCollections: 'Import to My Collections',
+      by: 'By',
+      noLocations: 'No locations in this collection',
+      shareLinkCreated: 'Share link created',
+      privateCollectionsCannotBeShared: 'Private collections cannot be shared. Make the collection public to share it.',
       deleteFolderConfirm: 'Are you sure you want to delete this folder? This will delete all saved locations.',
       deleteLocationConfirm: 'Are you sure you want to remove this location?',
-      shareLinkCreated: 'Share link created',
       folderImported: 'Folder imported successfully',
       selectDate: 'Select Date',
       importSelected: 'Import Selected',
