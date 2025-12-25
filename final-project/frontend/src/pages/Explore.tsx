@@ -562,7 +562,7 @@ export default function Explore() {
                       {/* Quick Add to Folders - show all if 5 or fewer, show top 5 recent if more than 5 */}
                       {folders && folders.length > 0 && quickAddFolders.length > 0 && (
                         <div className="pt-2 border-t border-gray-200">
-                          <p className="text-xs text-gray-500 mb-1.5">
+                          <p className="text-sm text-gray-500 mb-1.5">
                             {folders.length > 5 ? t.locationFolders.recentFolders : t.locationFolders.quickAdd}
                           </p>
                           <div className="flex flex-wrap gap-1.5">
@@ -576,7 +576,7 @@ export default function Explore() {
                                     handleQuickAddToFolder(folder.id, place)
                                   }}
                                   disabled={saveLocation.isPending || isSaved}
-                                  className={`px-2.5 py-1 text-xs rounded-full transition disabled:cursor-not-allowed ${
+                                  className={`px-3 py-1.5 text-sm rounded-full transition disabled:cursor-not-allowed ${
                                     isSaved
                                       ? 'bg-green-500 text-white'
                                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50'
@@ -590,7 +590,7 @@ export default function Explore() {
                                   {isSaved ? (
                                     <span className="flex items-center gap-1">
                                       <svg
-                                        className="w-3 h-3"
+                                        className="w-4 h-4"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"

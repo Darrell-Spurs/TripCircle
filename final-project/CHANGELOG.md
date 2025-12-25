@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Quick Add to Folder Feature** in Explore page
-  - Quick add buttons for location folders when saving places from search results
+- **Quick Save to Folder Feature** in Explore page
+  - Quick save buttons for location folders when saving places from search results
   - If user has 5 or fewer folders: shows quick add buttons for all folders
   - If user has more than 5 folders: shows quick add buttons for top 5 most recently used folders
   - Tracks recently used folders in localStorage
