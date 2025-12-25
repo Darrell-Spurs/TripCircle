@@ -605,7 +605,7 @@ export default function Explore() {
                                       {t.locationFolders.locationSaved}
                                     </span>
                                   ) : (
-                                    <>⚡ {folder.name}</>
+                                    <>📁 {folder.name}</>
                                   )}
                                 </button>
                               )
