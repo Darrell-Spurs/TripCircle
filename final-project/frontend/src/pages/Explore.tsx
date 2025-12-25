@@ -14,7 +14,7 @@ import {
   useUpdateLocationFolder,
   useDeleteLocationFolder,
 } from '../hooks/useLocationFolders'
-import { useDeleteSavedLocation, useUpdateSavedLocation } from '../hooks/useSavedLocations'
+import { useDeleteSavedLocation, useUpdateSavedLocation, useSaveLocation } from '../hooks/useSavedLocations'
 import { useCreateLocationFolderShareLink } from '../hooks/useLocationFolderShare'
 import { LocationFolder, SavedLocation } from '../types'
 
@@ -64,6 +64,7 @@ export default function Explore() {
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
+  const [savedFolderIds, setSavedFolderIds] = useState<Set<number>>(new Set())
 
   // Collections tab state
   const { data: folders, isLoading: foldersLoading } = useLocationFolders(true)
@@ -72,6 +73,7 @@ export default function Explore() {
   const deleteFolder = useDeleteLocationFolder()
   const deleteLocation = useDeleteSavedLocation()
   const updateLocation = useUpdateSavedLocation()
+  const saveLocation = useSaveLocation()
   const createShareLink = useCreateLocationFolderShareLink()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingFolder, setEditingFolder] = useState<LocationFolder | null>(null)
@@ -120,6 +122,72 @@ export default function Explore() {
       trackEvent('explore_search', { keyword, location, resultCount: places.length })
     }
   }, [keyword, location, places])
+
+  // Track recently used folders in localStorage
+  const getRecentFolderIds = (): number[] => {
+    try {
+      const stored = localStorage.getItem('recentLocationFolders')
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  }
+
+  const updateRecentFolders = (folderId: number) => {
+    try {
+      const recent = getRecentFolderIds()
+      // Remove if already exists, then add to front
+      const filtered = recent.filter((id) => id !== folderId)
+      const updated = [folderId, ...filtered].slice(0, 10) // Keep top 10
+      localStorage.setItem('recentLocationFolders', JSON.stringify(updated))
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+
+  // Get folders for quick add:
+  // - If 5 or fewer folders: show all folders
+  // - If more than 5 folders: show top 5 most recent folders
+  const recentFolderIds = folders ? getRecentFolderIds() : []
+  const quickAddFolders = folders
+    ? folders.length <= 5
+      ? folders // Show all if 5 or fewer
+      : recentFolderIds
+          .map((id) => folders.find((f) => f.id === id))
+          .filter((f): f is LocationFolder => f !== undefined)
+          .slice(0, 5) // Show top 5 most recent if more than 5
+    : []
+
+  // Quick add to folder function
+  const handleQuickAddToFolder = async (folderId: number, place: Place) => {
+    try {
+      await saveLocation.mutateAsync({
+        folderId,
+        data: {
+          name: place.name,
+          address: place.address,
+          lat: place.lat,
+          lng: place.lng,
+          placeId: place.placeId,
+        },
+      })
+      updateRecentFolders(folderId)
+      
+      // Show success animation for this specific folder button
+      setSavedFolderIds((prev) => new Set(prev).add(folderId))
+      
+      // Reset after 2 seconds
+      setTimeout(() => {
+        setSavedFolderIds((prev) => {
+          const next = new Set(prev)
+          next.delete(folderId)
+          return next
+        })
+      }, 2000)
+    } catch (error: any) {
+      alert(error.response?.data?.detail || t.locationFolders.locationSaved)
+    }
+  }
 
   const handleAddToTrip = async () => {
     if (!selectedPlace || !selectedTripId || !selectedDate) return
@@ -468,27 +536,83 @@ export default function Explore() {
                     <p className="text-sm text-gray-500">⭐ {place.rating.toFixed(1)}</p>
                   )}
                   {!isGuest && (
-                    <div className="mt-2 flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedPlace(place)
-                          setShowAddModal(true)
-                        }}
-                        className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition"
-                      >
-                        {t.activity.addToTrip}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedPlace(place)
-                          setShowSaveToFolderModal(true)
-                        }}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition"
-                      >
-                        📁 {t.locationFolders.saveToFolder}
-                      </button>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedPlace(place)
+                            setShowAddModal(true)
+                          }}
+                          className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition"
+                        >
+                          {t.activity.addToTrip}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedPlace(place)
+                            setShowSaveToFolderModal(true)
+                          }}
+                          className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition"
+                        >
+                          📁 {t.locationFolders.saveToFolder}
+                        </button>
+                      </div>
+                      {/* Quick Add to Folders - show all if 5 or fewer, show top 5 recent if more than 5 */}
+                      {folders && folders.length > 0 && quickAddFolders.length > 0 && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <p className="text-xs text-gray-500 mb-1.5">
+                            {folders.length > 5 ? t.locationFolders.recentFolders : t.locationFolders.quickAdd}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {quickAddFolders.map((folder) => {
+                              const isSaved = savedFolderIds.has(folder.id)
+                              return (
+                                <button
+                                  key={folder.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleQuickAddToFolder(folder.id, place)
+                                  }}
+                                  disabled={saveLocation.isPending || isSaved}
+                                  className={`px-2.5 py-1 text-xs rounded-full transition disabled:cursor-not-allowed ${
+                                    isSaved
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50'
+                                  }`}
+                                  title={
+                                    isSaved
+                                      ? t.locationFolders.locationSaved
+                                      : t.locationFolders.quickAddToFolder.replace('{name}', folder.name)
+                                  }
+                                >
+                                  {isSaved ? (
+                                    <span className="flex items-center gap-1">
+                                      <svg
+                                        className="w-3 h-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M5 13l4 4L19 7"
+                                        />
+                                      </svg>
+                                      {t.locationFolders.locationSaved}
+                                    </span>
+                                  ) : (
+                                    <>⚡ {folder.name}</>
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   {isGuest && (

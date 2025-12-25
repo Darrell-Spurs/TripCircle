@@ -433,6 +433,9 @@ export interface Translations {
     noLocationsSelected: string
     importSuccess: string
     importFailed: string
+    quickAdd: string
+    quickAddToFolder: string
+    recentFolders: string
   }
 }
 
@@ -841,6 +844,9 @@ export const translations: Record<Language, Translations> = {
       noLocationsSelected: '請至少選擇一個位置',
       importSuccess: '位置匯入成功',
       importFailed: '匯入失敗',
+      quickAdd: '快速新增',
+      quickAddToFolder: '快速新增到「{name}」',
+      recentFolders: '最近使用的收藏夾',
     },
   },
   en: {
@@ -1247,6 +1253,9 @@ export const translations: Record<Language, Translations> = {
       noLocationsSelected: 'Please select at least one location',
       importSuccess: 'Locations imported successfully',
       importFailed: 'Import failed',
+      quickAdd: 'Quick Add',
+      quickAddToFolder: 'Quick Add to "{name}"',
+      recentFolders: 'Recent Folders',
     },
   },
 }

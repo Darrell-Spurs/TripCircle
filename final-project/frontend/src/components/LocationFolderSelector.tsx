@@ -73,6 +73,17 @@ export default function LocationFolderSelector({
         },
       })
 
+      // Track recently used folder
+      try {
+        const stored = localStorage.getItem('recentLocationFolders')
+        const recent = stored ? JSON.parse(stored) : []
+        const filtered = recent.filter((id: number) => id !== selectedFolderId)
+        const updated = [selectedFolderId, ...filtered].slice(0, 10)
+        localStorage.setItem('recentLocationFolders', JSON.stringify(updated))
+      } catch {
+        // Ignore localStorage errors
+      }
+
       setSelectedFolderId(null)
       setNotes('')
       setTags('')
