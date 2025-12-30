@@ -210,6 +210,10 @@ export interface Translations {
     conflictGeneric: string
     overwrite: string
     reload: string
+    activityType: string
+    gatheringPoint: string
+    regularActivity: string
+    time: string
   }
 
   // Route / transportation between activities
@@ -236,7 +240,16 @@ export interface Translations {
     paceNeutral: string
     paceRelaxed: string
     scheduleConflicts: string
+    conflict: string
+    conflictWarning: string
     buffer: string
+    bicycling: string
+    train: string
+    subway: string
+    bus: string
+    plane: string
+    walk: string
+    hideSteps: string
   }
 
   // Explore
@@ -436,6 +449,14 @@ export interface Translations {
     quickAdd: string
     quickAddToFolder: string
     recentFolders: string
+  }
+
+  // Export
+  export: {
+    exportPlan: string
+    exportToPDF: string
+    generating: string
+    download: string
   }
 }
 
@@ -637,6 +658,12 @@ export const translations: Record<Language, Translations> = {
       conflictGeneric: '活動已被其他用戶修改',
       overwrite: '覆蓋',
       reload: '重新載入',
+      activityType: '活動類型',
+      gatheringPoint: '集合點',
+      regularActivity: '一般活動',
+      time: '時間',
+      createSuccess: '建立成功！',
+      updateSuccess: '更新成功！',
     },
     route: {
       title: '交通',
@@ -661,7 +688,24 @@ export const translations: Record<Language, Translations> = {
       paceNeutral: '一般',
       paceRelaxed: '悠閒',
       scheduleConflicts: '行程衝突',
+      conflict: '衝突',
+      conflictWarning: '行程衝突警告',
       buffer: '緩衝',
+      bicycling: '自行車',
+      train: '火車',
+      subway: '地鐵',
+      bus: '公車',
+      plane: '飛機',
+      walk: '步行',
+      hideSteps: '隱藏詳情',
+      editTransportationTime: '編輯交通時間',
+      manualOverrideActive: '已啟用手動覆蓋',
+      resetToAuto: '重置為自動',
+      editTime: '編輯時間',
+      manual: '手動',
+      endTimeAfterStart: '結束時間必須在開始時間之後',
+      saveFailed: '儲存交通時間失敗',
+      resetFailed: '重置交通時間失敗',
     },
     explore: {
       title: '探索地點',
@@ -847,6 +891,15 @@ export const translations: Record<Language, Translations> = {
       quickAdd: '快速儲存',
       quickAddToFolder: '快速儲存到「{name}」',
       recentFolders: '最近使用的收藏夾',
+    },
+    export: {
+      exportPlan: '匯出行程',
+      exportToPDF: '匯出為 PDF',
+      generating: '正在產生 PDF...',
+      download: '下載',
+      exportDescription: '將您的行程匯出為 PDF 文件。',
+      activitiesCount: '活動數量',
+      exportFailed: '匯出 PDF 失敗',
     },
   },
   en: {
@@ -1046,7 +1099,13 @@ export const translations: Record<Language, Translations> = {
       conflictGeneric: 'Activity was modified by another user',
       overwrite: 'Overwrite',
       reload: 'Reload',
-    },
+      activityType: 'Activity Type',
+      gatheringPoint: 'Gathering Point',
+    regularActivity: 'Regular Activity',
+    time: 'Time',
+    createSuccess: 'Created successfully!',
+    updateSuccess: 'Updated successfully!',
+  },
     route: {
       title: 'Transportation',
       between: 'Route from',
@@ -1071,6 +1130,21 @@ export const translations: Record<Language, Translations> = {
       paceRelaxed: 'Relaxed',
       scheduleConflicts: 'Schedule conflicts',
       buffer: 'buffer',
+      bicycling: 'Bicycling',
+      train: 'Train',
+      subway: 'Subway',
+      bus: 'Bus',
+      plane: 'Plane',
+      walk: 'Walk',
+      hideSteps: 'Hide details',
+      editTransportationTime: 'Edit Transportation Time',
+      manualOverrideActive: 'Manual override is active',
+      resetToAuto: 'Reset to Auto',
+      editTime: 'Edit time',
+      manual: 'Manual',
+      endTimeAfterStart: 'End time must be after start time',
+      saveFailed: 'Failed to save transportation time',
+      resetFailed: 'Failed to reset transportation time',
     },
     explore: {
       title: 'Explore Places',
@@ -1256,6 +1330,15 @@ export const translations: Record<Language, Translations> = {
       quickAdd: 'Quick Save',
       quickAddToFolder: 'Quick Save to "{name}"',
       recentFolders: 'Recent Folders',
+    },
+    export: {
+      exportPlan: 'Export Plan',
+      exportToPDF: 'Export to PDF',
+      generating: 'Generating PDF...',
+      download: 'Download',
+      exportDescription: 'Export your trip itinerary as a PDF document.',
+      activitiesCount: 'Activities',
+      exportFailed: 'Failed to export PDF',
     },
   },
 }

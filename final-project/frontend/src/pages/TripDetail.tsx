@@ -20,6 +20,7 @@ import MemberList from '../components/MemberList'
 import InviteMemberModal from '../components/InviteMemberModal'
 import TripPhotosTab from '../components/TripPhotosTab'
 import ImportLocationModal from '../components/ImportLocationModal'
+import ExportPlanModal from '../components/ExportPlanModal'
 import { Activity } from '../types'
 
 export default function TripDetail() {
@@ -49,6 +50,7 @@ export default function TripDetail() {
   const [tripBody, setTripBody] = useState('')
   const [isEditingBody, setIsEditingBody] = useState(false)
   const [allowImports, setAllowImports] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
   
   // Trip details editing state
   const [isEditingDetails, setIsEditingDetails] = useState(false)
@@ -228,6 +230,13 @@ export default function TripDetail() {
     }
   }
 
+  const handleUpdateActivity = async (activityId: number, data: { startTime?: string; endTime?: string }) => {
+    await updateActivity.mutateAsync({
+      activityId,
+      data: data as UpdateActivityData,
+    })
+  }
+
   const handleReorder = async (activityIds: number[]) => {
     await reorderActivities.mutateAsync({ activityIds, tripId })
   }
@@ -372,19 +381,49 @@ export default function TripDetail() {
             <>
               <div className="flex justify-between items-start mb-2">
                 <h1 className="text-3xl font-bold">{trip.title}</h1>
-                {canEdit && (
-                  <button
-                    onClick={() => setIsEditingDetails(true)}
-                    className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-                  >
-                    {t.trip.editDetails}
-                  </button>
-                )}
+                <div className="flex flex-col items-end gap-2">
+                  {canEdit && (
+                    <button
+                      onClick={() => setIsEditingDetails(true)}
+                      className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                    >
+                      {t.trip.editDetails}
+                    </button>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowExportModal(true)}
+                      className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                    >
+                      📄 {t.export.exportPlan}
+                    </button>
+                    {isOwner && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const shareLink = await createShareLink.mutateAsync({
+                              tripId,
+                              data: { permission: 'view' },
+                            })
+                            const fullUrl = `${window.location.origin}/share/${shareLink.token}`
+                            navigator.clipboard.writeText(fullUrl)
+                            alert(t.share.linkCopied)
+                          } catch (error: any) {
+                            alert(error.response?.data?.detail || t.share.createShareLink + ' ' + t.common.error)
+                          }
+                        }}
+                        className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                      >
+                        🔗 {t.share.createShareLink}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
               {trip.description && (
                 <p className="text-gray-600 mb-4">{trip.description}</p>
               )}
-              <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+              <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
                 <p>
                   <span className="font-semibold">{t.trip.dates}:</span>{' '}
                   {new Date(trip.startDate).toLocaleDateString()} -{' '}
@@ -422,29 +461,6 @@ export default function TripDetail() {
           </div>
         )}
 
-        {isOwner && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4">{t.share.shareTrip}</h2>
-            <button
-              onClick={async () => {
-                try {
-                  const shareLink = await createShareLink.mutateAsync({
-                    tripId,
-                    data: { permission: 'view' },
-                  })
-                  const fullUrl = `${window.location.origin}/share/${shareLink.token}`
-                  navigator.clipboard.writeText(fullUrl)
-                  alert(t.share.linkCopied)
-                } catch (error: any) {
-                  alert(error.response?.data?.detail || t.share.createShareLink + ' ' + t.common.error)
-                }
-              }}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-            >
-              {t.share.createShareLink}
-            </button>
-          </div>
-        )}
 
         {/* Publish to Feed Section */}
         {isOwner && (
@@ -710,6 +726,7 @@ export default function TripDetail() {
                     onDelete={handleDeleteActivity}
                     onReorder={handleReorder}
                     onAddActivity={() => handleAddActivity(date)}
+                    onUpdateActivity={canEdit ? handleUpdateActivity : undefined}
                     canEdit={canEdit}
                     paceBuffer={paceBuffer}
                   />
@@ -733,6 +750,7 @@ export default function TripDetail() {
             }}
             tripId={tripId}
             defaultDate={importDate}
+            existingActivities={trip?.activities || []}
             onSuccess={() => {
               // Activities will be refreshed automatically via React Query
             }}
@@ -751,6 +769,15 @@ export default function TripDetail() {
           date={selectedDate}
           defaultOrderIndex={activitiesByDate[selectedDate]?.length || 0}
           existingActivities={activitiesByDate[selectedDate] || []}
+          defaultStartTime={
+            !selectedActivity && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0
+              ? (() => {
+                  // Get the last activity's end time
+                  const lastActivity = activitiesByDate[selectedDate][activitiesByDate[selectedDate].length - 1]
+                  return lastActivity.endTime || lastActivity.startTime || undefined
+                })()
+              : undefined
+          }
           members={
             trip && trip.owner
               ? (() => {
@@ -782,6 +809,13 @@ export default function TripDetail() {
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
           tripId={tripId}
+        />
+
+        <ExportPlanModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          trip={trip}
+          activitiesByDate={activitiesByDate}
         />
       </div>
     </div>

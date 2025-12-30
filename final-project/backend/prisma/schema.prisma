@@ -82,6 +82,7 @@ model Activity {
   createdByUserId Int?
   cost            Float?
   currency        String?
+  activityType    String               @default("regular") // "regular" or "gathering_point"
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   trip            Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
@@ -92,6 +93,8 @@ model Activity {
   preferences     ActivityPreference[]
   tags            ActivityTag[]
   history         ActivityHistory[]
+  fromTransportSegments TransportationSegment[] @relation("FromActivity")
+  toTransportSegments   TransportationSegment[] @relation("ToActivity")
 }
 
 model ShareLink {
@@ -260,5 +263,22 @@ model LocationFolderMember {
   user      User           @relation("LocationFolderMembers", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([folderId, userId])
+}
+
+model TransportationSegment {
+  id                Int       @id @default(autoincrement())
+  fromActivityId    Int
+  toActivityId      Int
+  manualStartTime   DateTime?
+  manualEndTime     DateTime?
+  isManualOverride  Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  fromActivity      Activity  @relation("FromActivity", fields: [fromActivityId], references: [id], onDelete: Cascade)
+  toActivity        Activity  @relation("ToActivity", fields: [toActivityId], references: [id], onDelete: Cascade)
+
+  @@unique([fromActivityId, toActivityId])
+  @@index([fromActivityId])
+  @@index([toActivityId])
 }
 

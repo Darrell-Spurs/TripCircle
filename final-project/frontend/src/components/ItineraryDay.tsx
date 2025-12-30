@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Activity } from '../types'
 import ActivityCard from './ActivityCard'
 import { useLanguage } from '../context/LanguageContext'
 import api from '../lib/api'
+import TransportationTimeEditor from './TransportationTimeEditor'
+import { useTransportationSegment, useUpdateTransportationSegment, useDeleteTransportationSegment } from '../hooks/useTransportationSegment'
 import { GoogleMap, LoadScript, Polyline, InfoWindow, Marker } from '@react-google-maps/api'
 import {
   DndContext,
@@ -31,6 +33,7 @@ interface ItineraryDayProps {
   onDelete: (activityId: number) => void
   onReorder: (activityIds: number[]) => void
   onAddActivity?: () => void
+  onUpdateActivity?: (activityId: number, data: { startTime?: string; endTime?: string }) => Promise<void>
   canEdit: boolean
   paceBuffer?: {
     prePct: number
@@ -38,7 +41,7 @@ interface ItineraryDayProps {
   }
 }
 
-type TravelMode = 'driving' | 'walking' | 'transit'
+type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit' | 'train' | 'subway' | 'bus' | 'plane'
 
 type DirectionsData = {
   distanceText: string | null
@@ -46,6 +49,7 @@ type DirectionsData = {
   durationText: string | null
   durationValue: number | null
   polyline: string | null
+  steps?: import('../types').RouteStep[]
 }
 
 type SegmentRouteState = DirectionsData & { mode: TravelMode }
@@ -64,9 +68,11 @@ function buildDirectionsCacheKey(params: {
   destLat: number
   destLng: number
   mode: TravelMode
+  departureTime?: number
 }) {
-  const { originLat, originLng, destLat, destLng, mode } = params
-  return `${originLat},${originLng}->${destLat},${destLng}::${mode}`
+  const { originLat, originLng, destLat, destLng, mode, departureTime } = params
+  const timeKey = departureTime ? `::${departureTime}` : ''
+  return `${originLat},${originLng}->${destLat},${destLng}::${mode}${timeKey}`
 }
 
 async function fetchDirections(params: {
@@ -75,6 +81,7 @@ async function fetchDirections(params: {
   destLat: number
   destLng: number
   mode: TravelMode
+  departureTime?: number
 }): Promise<DirectionsData> {
   const key = buildDirectionsCacheKey(params)
 
@@ -85,14 +92,41 @@ async function fetchDirections(params: {
   if (inflight) return inflight
 
   const promise = (async () => {
-    const response = await api.get('/places/directions', { params })
+    const apiParams: any = {
+      originLat: params.originLat,
+      originLng: params.originLng,
+      destLat: params.destLat,
+      destLng: params.destLng,
+      mode: params.mode,
+    }
+    if (params.departureTime) {
+      apiParams.departureTime = params.departureTime.toString()
+    }
+    const response = await api.get('/places/directions', { params: apiParams })
+    
+    // Validate response structure
+    if (!response.data) {
+      console.error('[fetchDirections] No data in response:', response)
+      throw new Error('Invalid response from directions API')
+    }
+    
     const data: DirectionsData = {
       distanceText: response.data.distanceText || null,
       distanceValue: typeof response.data.distanceValue === 'number' ? response.data.distanceValue : null,
       durationText: response.data.durationText || null,
       durationValue: typeof response.data.durationValue === 'number' ? response.data.durationValue : null,
       polyline: typeof response.data.polyline === 'string' ? response.data.polyline : null,
+      steps: Array.isArray(response.data.steps) ? response.data.steps : undefined,
     }
+    
+    console.log('[fetchDirections] Parsed data:', {
+      hasDistance: !!data.distanceText,
+      hasDuration: !!data.durationText,
+      durationValue: data.durationValue,
+      hasPolyline: !!data.polyline,
+      stepsCount: data.steps?.length || 0,
+    })
+    
     directionsCache.set(key, data)
     return data
   })()
@@ -118,9 +152,10 @@ interface RouteSegmentProps {
     postPct: number
   }
   onRouteData: (segmentId: string, data: SegmentRouteState) => void
+  canEdit?: boolean
 }
 
-function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData }: RouteSegmentProps) {
+function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData, canEdit = false }: RouteSegmentProps) {
   const { t, language } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -128,6 +163,18 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   const [durationText, setDurationText] = useState<string | null>(null)
   const [durationValue, setDurationValue] = useState<number | null>(null)
   const [_distanceValue, setDistanceValue] = useState<number | null>(null)
+  const [steps, setSteps] = useState<import('../types').RouteStep[]>([])
+  const [showSteps, setShowSteps] = useState(false)
+  const [showTimeEditor, setShowTimeEditor] = useState(false)
+  
+  // Load transportation segment from backend
+  const { data: segment } = useTransportationSegment(from.id, to.id)
+  const updateSegment = useUpdateTransportationSegment()
+  const deleteSegment = useDeleteTransportationSegment()
+  
+  const manualStartTime = segment?.manualStartTime || null
+  const manualEndTime = segment?.manualEndTime || null
+  const hasManualOverride = segment?.isManualOverride || false
 
   const hasCoordinates =
     typeof from.lat === 'number' &&
@@ -154,12 +201,21 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
         setIsLoading(true)
         setError(null)
 
+        // Calculate departure time from previous activity's end time (or start time if no end time)
+        let departureTime: number | undefined
+        const transportStart = (from.endTime || from.startTime) ? new Date((from.endTime || from.startTime) as string) : null
+        if (transportStart && !isNaN(transportStart.getTime())) {
+          // Convert to Unix timestamp in seconds
+          departureTime = Math.floor(transportStart.getTime() / 1000)
+        }
+
         const data = await fetchDirections({
           originLat: from.lat as number,
           originLng: from.lng as number,
           destLat: to.lat as number,
           destLng: to.lng as number,
           mode,
+          departureTime,
         })
 
         if (cancelled) return
@@ -168,6 +224,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
         setDistanceValue(data.distanceValue)
         setDurationText(data.durationText)
         setDurationValue(data.durationValue)
+        setSteps(data.steps || [])
 
         onRouteData(segmentId, { mode, ...data })
       } catch (err: any) {
@@ -189,7 +246,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
     return () => {
       cancelled = true
     }
-  }, [from.lat, from.lng, to.lat, to.lng, mode, t.route.error, hasCoordinates])
+  }, [from.lat, from.lng, to.lat, to.lng, mode, from.endTime, from.startTime, t.route.error, hasCoordinates])
 
   const fromLabel = from.locationName || from.title
   const toLabel = to.locationName || to.title
@@ -221,7 +278,17 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
         ? `${to.lat},${to.lng}`
         : encodeURIComponent(to.address || to.locationName || to.title)
 
-    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${mode}`
+    // Include departure time if available
+    const transportStart = (from.endTime || from.startTime) ? new Date((from.endTime || from.startTime) as string) : null
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${mode}`
+    
+    if (transportStart && !isNaN(transportStart.getTime())) {
+      // Format as ISO 8601 for Google Maps
+      const isoTime = transportStart.toISOString()
+      url += `&departure_time=${isoTime}`
+    }
+
+    return url
   }
 
   const handleOpenInMaps = () => {
@@ -251,17 +318,35 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
 
       <div className="flex-1 flex gap-4 items-center">
         {/* Transportation Time Block */}
-        <div className="flex-shrink-0 w-24 bg-gradient-to-b from-violet-50/80 to-white border border-violet-200/55 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm">
-          {transportStart && transportEnd ? (
+        <div className="flex-shrink-0 w-24 bg-gradient-to-b from-violet-50/80 to-white border border-violet-200/55 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm relative">
+          {(manualStartTime && manualEndTime) || (transportStart && transportEnd) ? (
             <div className="text-sm text-slate-800 font-semibold text-center leading-tight flex flex-col items-center justify-center">
-              <span className="whitespace-nowrap tabular-nums">{formatTime(transportStart)}</span>
+              <span className="whitespace-nowrap tabular-nums">
+                {manualStartTime ? formatTime(new Date(manualStartTime)) : formatTime(transportStart!)}
+              </span>
               <span className="text-slate-300 text-xs my-0.5 rotate-90 leading-none">~</span>
-              <span className="whitespace-nowrap tabular-nums">{formatTime(transportEnd)}</span>
+              <span className="whitespace-nowrap tabular-nums">
+                {manualEndTime ? formatTime(new Date(manualEndTime)) : formatTime(transportEnd!)}
+              </span>
+              {hasManualOverride && (
+                <span className="text-xs text-violet-600 mt-1">({t.route.manual || 'Manual'})</span>
+              )}
             </div>
           ) : (
             <span className="text-xs text-slate-700 font-semibold text-center">
               {durationText || (isLoading ? t.route.loading : '—')}
             </span>
+          )}
+          {/* Edit button */}
+          {canEdit && (transportStart || transportEnd) && (
+            <button
+              type="button"
+              onClick={() => setShowTimeEditor(true)}
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-100 hover:bg-violet-200 text-violet-600 flex items-center justify-center text-xs"
+              title={t.route.editTime || 'Edit time'}
+            >
+              ✎
+            </button>
           )}
         </div>
 
@@ -299,6 +384,76 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                   <span>{t.route.noRouteData}</span>
                 )}
               </div>
+              {/* Step-by-step transportation indicator */}
+              {steps.length > 0 && (
+                <div className="mt-2 text-xs text-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => setShowSteps(!showSteps)}
+                    className="text-left hover:text-slate-800 transition"
+                  >
+                    {!showSteps ? (
+                      <span className="italic">
+                        {(() => {
+                          // Build summary: e.g., "metro station A - B -> walk 3 min"
+                          const transitSteps = steps.filter(s => s.transitDetails?.lineName)
+                          const walkSteps = steps.filter(s => s.travelMode === 'WALK')
+                          
+                          if (transitSteps.length > 0) {
+                            const firstTransit = transitSteps[0]
+                            const lastTransit = transitSteps[transitSteps.length - 1]
+                            let summary = ''
+                            
+                            if (firstTransit.transitDetails?.fromStation && firstTransit.transitDetails?.toStation) {
+                              summary = `${firstTransit.transitDetails.fromStation} - ${firstTransit.transitDetails.toStation}`
+                            } else if (firstTransit.transitDetails?.lineName) {
+                              summary = firstTransit.transitDetails.lineName
+                            }
+                            
+                            if (walkSteps.length > 0) {
+                              const walkDuration = walkSteps.reduce((sum, s) => sum + (parseInt(s.duration || '0', 10) || 0), 0)
+                              const walkMinutes = Math.round(walkDuration / 60)
+                              summary += ` -> ${t.route.walk || 'walk'} ${walkMinutes}${language === 'zh-TW' ? '分' : ' min'}`
+                            }
+                            
+                            return summary || steps[0].instruction
+                          } else if (walkSteps.length > 0) {
+                            const walkDuration = walkSteps.reduce((sum, s) => sum + (parseInt(s.duration || '0', 10) || 0), 0)
+                            const walkMinutes = Math.round(walkDuration / 60)
+                            return `${t.route.walk || 'walk'} ${walkMinutes}${language === 'zh-TW' ? '分' : ' min'}`
+                          }
+                          
+                          return steps[0].instruction || ''
+                        })()}
+                      </span>
+                    ) : (
+                      <span className="font-semibold">{t.route.hideSteps || 'Hide details'}</span>
+                    )}
+                  </button>
+                  {showSteps && (
+                    <div className="mt-2 pl-2 border-l-2 border-violet-200 space-y-1">
+                      {steps.map((step, idx) => (
+                        <div key={idx} className="text-xs">
+                          {step.transitDetails?.lineName ? (
+                            <span>
+                              {step.transitDetails.fromStation && step.transitDetails.toStation
+                                ? `${step.transitDetails.fromStation} → ${step.transitDetails.toStation} (${step.transitDetails.lineName})`
+                                : step.transitDetails.lineName}
+                            </span>
+                          ) : step.travelMode === 'WALK' ? (
+                            <span>
+                              {t.route.walk || 'Walk'} {step.distanceMeters ? (step.distanceMeters < 1000 ? `${step.distanceMeters}m` : `${(step.distanceMeters / 1000).toFixed(1)}km`) : ''}
+                              {step.duration && ` (${Math.round(parseInt(step.duration, 10) / 60)}${language === 'zh-TW' ? '分' : ' min'})`}
+                            </span>
+                          ) : (
+                            <span>{step.instruction || step.travelMode}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 text-xs text-slate-600">
@@ -310,7 +465,12 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                 >
                   <option value="driving">{t.route.driving}</option>
                   <option value="walking">{t.route.walking}</option>
+                  <option value="bicycling">{t.route.bicycling || 'Bicycling'}</option>
                   <option value="transit">{t.route.transit}</option>
+                  <option value="train">{t.route.train || 'Train'}</option>
+                  <option value="subway">{t.route.subway || 'Subway'}</option>
+                  <option value="bus">{t.route.bus || 'Bus'}</option>
+                  <option value="plane">{t.route.plane || 'Plane'}</option>
                 </select>
               </div>
               <button
@@ -324,15 +484,59 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
           </div>
         </div>
       </div>
+      
+      {/* Transportation Time Editor Modal */}
+      <TransportationTimeEditor
+        isOpen={showTimeEditor}
+        onClose={() => setShowTimeEditor(false)}
+        onSave={async (start, end) => {
+          // Combine with current date to create full datetime strings
+          const dateStr = from.date.split('T')[0]
+          const startDateTime = new Date(`${dateStr}T${start}:00`).toISOString()
+          const endDateTime = new Date(`${dateStr}T${end}:00`).toISOString()
+          
+          try {
+            await updateSegment.mutateAsync({
+              fromActivityId: from.id,
+              toActivityId: to.id,
+              data: {
+                manualStartTime: startDateTime,
+                manualEndTime: endDateTime,
+                isManualOverride: true,
+              },
+            })
+            setShowTimeEditor(false)
+          } catch (error) {
+            console.error('Failed to save transportation time:', error)
+            alert(t.route.saveFailed || 'Failed to save transportation time')
+          }
+        }}
+        onReset={async () => {
+          try {
+            await deleteSegment.mutateAsync({
+              fromActivityId: from.id,
+              toActivityId: to.id,
+            })
+            setShowTimeEditor(false)
+          } catch (error) {
+            console.error('Failed to reset transportation time:', error)
+            alert(t.route.resetFailed || 'Failed to reset transportation time')
+          }
+        }}
+        currentStartTime={transportStart ? transportStart.toISOString() : undefined}
+        currentEndTime={transportEnd ? transportEnd.toISOString() : undefined}
+        hasManualOverride={hasManualOverride}
+      />
     </div>
   )
 }
 
-function SortableActivityItem({ activity, onEdit, onDelete, canEdit }: {
+function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict }: {
   activity: Activity
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
   canEdit: boolean
+  hasConflict?: boolean
 }) {
   const {
     attributes,
@@ -375,6 +579,7 @@ function SortableActivityItem({ activity, onEdit, onDelete, canEdit }: {
           onEdit={onEdit}
           onDelete={onDelete}
           canEdit={canEdit}
+          hasConflict={hasConflict}
         />
       </div>
     </div>
@@ -388,6 +593,7 @@ export default function ItineraryDay({
   onDelete,
   onReorder,
   onAddActivity,
+  onUpdateActivity,
   canEdit,
   paceBuffer = { prePct: 0.075, postPct: 0.075 },
 }: ItineraryDayProps) {
@@ -550,7 +756,8 @@ export default function ItineraryDay({
   })()
 
   const scheduleConflicts = (() => {
-    let conflicts = 0
+    const conflictMap = new Map<number, boolean>() // activityId -> hasConflict
+    let totalConflicts = 0
 
     for (let i = 0; i < activities.length - 1; i++) {
       const from = activities[i]
@@ -571,12 +778,77 @@ export default function ItineraryDay({
 
       const arrive = new Date(depart.getTime() + applyBufferedDurationSec(route.durationValue) * 1000)
       if (arrive.getTime() > target.getTime()) {
-        conflicts++
+        totalConflicts++
+        conflictMap.set(to.id, true) // Mark the destination activity as having a conflict
       }
     }
 
-    return conflicts
+    return { count: totalConflicts, map: conflictMap }
   })()
+
+  // Auto-update subsequent activities' start times when transportation time changes
+  const previousRoutesRef = useRef<Record<string, SegmentRouteState>>({})
+  useEffect(() => {
+    if (!onUpdateActivity || !canEdit) return
+
+    // Compare current routes with previous routes to detect changes
+    const hasChanged = Object.keys(segmentRoutes).some((segmentId) => {
+      const current = segmentRoutes[segmentId]
+      const previous = previousRoutesRef.current[segmentId]
+      if (!current || !previous) return false
+      // Check if duration changed significantly (more than 1 minute difference)
+      if (current.durationValue !== null && previous.durationValue !== null) {
+        const diff = Math.abs(current.durationValue - previous.durationValue)
+        return diff > 60 // More than 1 minute difference
+      }
+      return current.durationValue !== previous.durationValue
+    })
+
+    if (!hasChanged) {
+      previousRoutesRef.current = { ...segmentRoutes }
+      return
+    }
+
+    // Update subsequent activities' start times based on new transportation times
+    const updateSubsequentActivities = async () => {
+      for (let i = 0; i < activities.length - 1; i++) {
+        const from = activities[i]
+        const to = activities[i + 1]
+        const segmentId = `${from.id}-${to.id}`
+        const route = segmentRoutes[segmentId]
+
+        if (!route || route.durationValue === null) continue
+
+        const departStr = (from.endTime || from.startTime) as string | undefined
+        if (!departStr) continue
+
+        const depart = new Date(departStr)
+        if (Number.isNaN(depart.getTime())) continue
+
+        // Calculate new arrival time (departure + transportation time + 1 minute buffer)
+        const transportTimeMs = (route.durationValue + 60) * 1000
+        const newStartTime = new Date(depart.getTime() + transportTimeMs)
+
+        // Only update if the new time is different from current time (more than 1 minute difference)
+        if (to.startTime) {
+          const currentStartTime = new Date(to.startTime)
+          const timeDiff = Math.abs(newStartTime.getTime() - currentStartTime.getTime())
+          if (timeDiff < 60000) continue // Less than 1 minute difference, skip update
+        }
+
+        try {
+          await onUpdateActivity(to.id, {
+            startTime: newStartTime.toISOString(),
+          })
+        } catch (error) {
+          console.error('Failed to update activity start time:', error)
+        }
+      }
+    }
+
+    updateSubsequentActivities()
+    previousRoutesRef.current = { ...segmentRoutes }
+  }, [segmentRoutes, activities, onUpdateActivity, canEdit])
 
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID
   const useAdvancedMarkers = !!mapId
@@ -842,7 +1114,21 @@ export default function ItineraryDay({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     canEdit={canEdit}
+                    hasConflict={scheduleConflicts.map.get(activity.id)}
                   />
+                  {/* Quick Add Button */}
+                  {canEdit && onAddActivity && (
+                    <div className="flex justify-center my-2">
+                      <button
+                        type="button"
+                        onClick={() => onAddActivity?.()}
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-lg font-light"
+                        title={t.activity.addActivity}
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                   {index < activities.length - 1 && (
                     (() => {
                       const segmentId = `${activity.id}-${activities[index + 1].id}`
@@ -852,6 +1138,7 @@ export default function ItineraryDay({
                       from={activity}
                       to={activities[index + 1]}
                       showDragPlaceholder={canEdit}
+                      canEdit={canEdit}
                       segmentId={segmentId}
                       mode={mode}
                       onModeChange={(nextMode) =>

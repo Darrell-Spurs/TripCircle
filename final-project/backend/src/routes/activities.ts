@@ -30,7 +30,17 @@ const activityCreateSchema = z.object({
   cost: z.number().optional(),
   currency: z.string().optional(),
   tags: z.array(z.string()).optional(),
-});
+  activityType: z.enum(['regular', 'gathering_point']).optional().default('regular'),
+}).refine(
+  (data) => {
+    // Gathering points don't require endTime
+    if (data.activityType === 'gathering_point') {
+      return true; // endTime is optional for gathering points
+    }
+    return true; // regular activities can also have optional endTime
+  },
+  { message: 'Gathering points only require startTime' }
+);
 
 const activityUpdateSchema = z.object({
   date: dateStringSchema.optional(),
@@ -51,6 +61,7 @@ const activityUpdateSchema = z.object({
   tags: z.array(z.string()).optional(),
   lastModifiedAt: dateStringSchema.optional(),
   costShares: z.array(z.object({ userId: z.number(), amount: z.number() })).optional(),
+  activityType: z.enum(['regular', 'gathering_point']).optional(),
 });
 
 router.post('/trips/:tripId/activities', authenticate, async (req: Request, res: Response) => {
@@ -121,12 +132,18 @@ router.post('/trips/:tripId/activities', authenticate, async (req: Request, res:
       }
     }
 
+    // For gathering points, if endTime is not provided, set it to startTime
+    let endTimeValue = data.endTime ? new Date(data.endTime) : null;
+    if (data.activityType === 'gathering_point' && data.startTime && !data.endTime) {
+      endTimeValue = new Date(data.startTime); // Set endTime = startTime for gathering points
+    }
+
     const activity = await prisma.activity.create({
       data: {
         tripId,
         date,
         startTime: data.startTime ? new Date(data.startTime) : null,
-        endTime: data.endTime ? new Date(data.endTime) : null,
+        endTime: endTimeValue,
         title: data.title,
         notes: data.notes || null,
         body: data.body || null,
@@ -139,6 +156,7 @@ router.post('/trips/:tripId/activities', authenticate, async (req: Request, res:
         createdByUserId: authReq.user.id,
         cost: data.cost || null,
         currency: data.currency || null,
+        activityType: data.activityType || 'regular',
         participants: {
           create: participantIds.map((userId) => ({ userId })),
         },
@@ -255,6 +273,7 @@ router.post('/trips/:tripId/activities', authenticate, async (req: Request, res:
       createdBy: activityWithCostShares!.createdBy,
       cost: activityWithCostShares!.cost,
       currency: activityWithCostShares!.currency,
+      activityType: activityWithCostShares!.activityType || 'regular',
       participants: activityWithCostShares!.participants.map((p) => ({
         id: p.id,
         activityId: p.activityId,
@@ -477,6 +496,24 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
       updateData.currency = data.currency;
       changes.currency = data.currency;
     }
+    if (data.activityType !== undefined) {
+      updateData.activityType = data.activityType;
+      changes.activityType = data.activityType;
+      // If changing to gathering point and endTime is not explicitly set, set endTime = startTime
+      if (data.activityType === 'gathering_point' && updateData.endTime === undefined && updateData.startTime) {
+        updateData.endTime = updateData.startTime;
+        if (data.startTime) {
+          changes.endTime = data.startTime;
+        }
+      }
+    }
+    // For gathering points, if endTime is not provided but startTime is, set endTime = startTime
+    if ((updateData.activityType === 'gathering_point' || activity.activityType === 'gathering_point') && updateData.startTime && (!updateData.endTime || updateData.endTime === null)) {
+      updateData.endTime = updateData.startTime;
+      if (data.startTime) {
+        changes.endTime = data.startTime;
+      }
+    }
 
     // Handle participants update
     if (data.participantIds !== undefined) {
@@ -638,6 +675,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
       createdBy: updatedActivity.createdBy,
       cost: updatedActivity.cost,
       currency: updatedActivity.currency,
+      activityType: updatedActivity.activityType || 'regular',
       participants: updatedActivity.participants.map((p) => ({
         id: p.id,
         activityId: p.activityId,
@@ -1795,6 +1833,228 @@ router.patch('/reorder', authenticate, async (req: Request, res: Response) => {
     res.json({ message: 'Activities reordered successfully' });
   } catch (error) {
     res.status(500).json({ detail: 'Failed to reorder activities' });
+  }
+});
+
+// Get transportation segment
+router.get('/transportation/:fromActivityId/:toActivityId', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const fromActivityId = parseInt(req.params.fromActivityId, 10);
+  const toActivityId = parseInt(req.params.toActivityId, 10);
+  
+  if (isNaN(fromActivityId) || isNaN(toActivityId)) {
+    res.status(400).json({ detail: 'Invalid activity IDs' });
+    return;
+  }
+
+  try {
+    const segment = await prisma.transportationSegment.findUnique({
+      where: {
+        fromActivityId_toActivityId: {
+          fromActivityId,
+          toActivityId,
+        },
+      },
+    });
+
+    if (!segment) {
+      res.status(404).json({ detail: 'Transportation segment not found' });
+      return;
+    }
+
+    // Verify user has permission to view the trip
+    const fromActivity = await prisma.activity.findUnique({
+      where: { id: fromActivityId },
+      include: { trip: true },
+    });
+
+    if (!fromActivity) {
+      res.status(404).json({ detail: 'Activity not found' });
+      return;
+    }
+
+    const isOwner = fromActivity.trip.ownerId === authReq.user.id;
+    const member = await prisma.tripMember.findFirst({
+      where: { tripId: fromActivity.tripId, userId: authReq.user.id },
+    });
+    const canView = isOwner || member !== null;
+
+    if (!canView) {
+      res.status(403).json({ detail: "You don't have permission to view this transportation segment" });
+      return;
+    }
+
+    res.json({
+      id: segment.id,
+      fromActivityId: segment.fromActivityId,
+      toActivityId: segment.toActivityId,
+      manualStartTime: segment.manualStartTime?.toISOString() || null,
+      manualEndTime: segment.manualEndTime?.toISOString() || null,
+      isManualOverride: segment.isManualOverride,
+    });
+  } catch (error) {
+    console.error('Error fetching transportation segment:', error);
+    res.status(500).json({ detail: 'Failed to fetch transportation segment' });
+  }
+});
+
+// Transportation segment time override endpoint
+router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const fromActivityId = parseInt(req.params.fromActivityId, 10);
+  const toActivityId = parseInt(req.params.toActivityId, 10);
+  
+  if (isNaN(fromActivityId) || isNaN(toActivityId)) {
+    res.status(400).json({ detail: 'Invalid activity IDs' });
+    return;
+  }
+
+  try {
+    // Verify both activities exist and user has permission
+    const fromActivity = await prisma.activity.findUnique({
+      where: { id: fromActivityId },
+      include: { trip: true },
+    });
+    const toActivity = await prisma.activity.findUnique({
+      where: { id: toActivityId },
+      include: { trip: true },
+    });
+
+    if (!fromActivity || !toActivity) {
+      res.status(404).json({ detail: 'Activity not found' });
+      return;
+    }
+
+    if (fromActivity.tripId !== toActivity.tripId) {
+      res.status(400).json({ detail: 'Activities must be in the same trip' });
+      return;
+    }
+
+    const isOwner = fromActivity.trip.ownerId === authReq.user.id;
+    const member = await prisma.tripMember.findFirst({
+      where: { tripId: fromActivity.tripId, userId: authReq.user.id },
+    });
+    const isEditor = member?.role === 'owner' || member?.role === 'editor';
+
+    if (!isOwner && !isEditor) {
+      res.status(403).json({ detail: "You don't have permission to edit transportation times" });
+      return;
+    }
+
+    const { manualStartTime, manualEndTime, isManualOverride } = req.body;
+
+    // Upsert transportation segment
+    const segment = await prisma.transportationSegment.upsert({
+      where: {
+        fromActivityId_toActivityId: {
+          fromActivityId,
+          toActivityId,
+        },
+      },
+      update: {
+        manualStartTime: manualStartTime ? new Date(manualStartTime) : null,
+        manualEndTime: manualEndTime ? new Date(manualEndTime) : null,
+        isManualOverride: isManualOverride !== undefined ? isManualOverride : false,
+      },
+      create: {
+        fromActivityId,
+        toActivityId,
+        manualStartTime: manualStartTime ? new Date(manualStartTime) : null,
+        manualEndTime: manualEndTime ? new Date(manualEndTime) : null,
+        isManualOverride: isManualOverride !== undefined ? isManualOverride : false,
+      },
+    });
+
+    res.json({
+      id: segment.id,
+      fromActivityId: segment.fromActivityId,
+      toActivityId: segment.toActivityId,
+      manualStartTime: segment.manualStartTime?.toISOString() || null,
+      manualEndTime: segment.manualEndTime?.toISOString() || null,
+      isManualOverride: segment.isManualOverride,
+    });
+  } catch (error) {
+    console.error('Error updating transportation segment:', error);
+    res.status(500).json({ detail: 'Failed to update transportation segment' });
+  }
+});
+
+// Delete transportation segment (reset to auto)
+router.delete('/transportation/:fromActivityId/:toActivityId', authenticate, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest;
+  if (!authReq.user) {
+    res.status(401).json({ detail: 'Not authenticated' });
+    return;
+  }
+
+  const fromActivityId = parseInt(req.params.fromActivityId, 10);
+  const toActivityId = parseInt(req.params.toActivityId, 10);
+  
+  if (isNaN(fromActivityId) || isNaN(toActivityId)) {
+    res.status(400).json({ detail: 'Invalid activity IDs' });
+    return;
+  }
+
+  try {
+    // Verify both activities exist and user has permission
+    const fromActivity = await prisma.activity.findUnique({
+      where: { id: fromActivityId },
+      include: { trip: true },
+    });
+    const toActivity = await prisma.activity.findUnique({
+      where: { id: toActivityId },
+      include: { trip: true },
+    });
+
+    if (!fromActivity || !toActivity) {
+      res.status(404).json({ detail: 'Activity not found' });
+      return;
+    }
+
+    if (fromActivity.tripId !== toActivity.tripId) {
+      res.status(400).json({ detail: 'Activities must be in the same trip' });
+      return;
+    }
+
+    const isOwner = fromActivity.trip.ownerId === authReq.user.id;
+    const member = await prisma.tripMember.findFirst({
+      where: { tripId: fromActivity.tripId, userId: authReq.user.id },
+    });
+    const isEditor = member?.role === 'owner' || member?.role === 'editor';
+
+    if (!isOwner && !isEditor) {
+      res.status(403).json({ detail: "You don't have permission to delete transportation segments" });
+      return;
+    }
+
+    await prisma.transportationSegment.delete({
+      where: {
+        fromActivityId_toActivityId: {
+          fromActivityId,
+          toActivityId,
+        },
+      },
+    });
+
+    res.json({ message: 'Transportation segment deleted successfully' });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      // Record not found
+      res.status(404).json({ detail: 'Transportation segment not found' });
+      return;
+    }
+    console.error('Error deleting transportation segment:', error);
+    res.status(500).json({ detail: 'Failed to delete transportation segment' });
   }
 });
 

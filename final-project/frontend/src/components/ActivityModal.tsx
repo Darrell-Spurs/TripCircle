@@ -20,6 +20,7 @@ interface ActivityModalProps {
   defaultOrderIndex: number
   existingActivities?: Activity[] // Activities for the same date to check overlaps
   members?: TripMember[] // Trip members for participant selection
+  defaultStartTime?: string // Default start time for new activities (end time of previous activity)
 }
 
 export default function ActivityModal({
@@ -32,6 +33,7 @@ export default function ActivityModal({
   defaultOrderIndex,
   existingActivities = [],
   members = [],
+  defaultStartTime,
 }: ActivityModalProps) {
   const { t, language } = useLanguage()
   const updateActivity = useUpdateActivity()
@@ -47,6 +49,7 @@ export default function ActivityModal({
     placeId: undefined as string | undefined,
     noTime: false,
   })
+  const [activityType, setActivityType] = useState<'regular' | 'gathering_point'>('regular')
   const [participantIds, setParticipantIds] = useState<number[]>([])
   const [cost, setCost] = useState<number | undefined>(undefined)
   const [currency, setCurrency] = useState<string | undefined>(undefined)
@@ -121,6 +124,7 @@ export default function ActivityModal({
         placeId: activity.placeId,
         noTime: hasNoTime,
       })
+      setActivityType(activity.activityType || 'regular')
       setSearchQuery(activity.locationName || '')
       setSelectedPlace(
         activity.locationName && activity.lat && activity.lng
@@ -148,10 +152,17 @@ export default function ActivityModal({
         setSplitMode('equal')
       }
     } else {
+      // For new activities, set default start time from previous activity's end time
+      let defaultStart = ''
+      if (defaultStartTime) {
+        const dateObj = new Date(defaultStartTime)
+        const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+        defaultStart = dateObj.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
+      }
       setFormData({
         notes: '',
         body: '',
-        startTime: '',
+        startTime: defaultStart,
         endTime: '',
         locationName: '',
         address: '',
@@ -162,6 +173,7 @@ export default function ActivityModal({
       })
       setSearchQuery('')
       setSelectedPlace(null)
+      setActivityType('regular')
       // Default to all members
       setParticipantIds(members.map((m) => m.userId))
       setCost(undefined)
@@ -325,7 +337,10 @@ export default function ActivityModal({
       notes: formData.notes || (isUpdate ? null : undefined),
       body: formData.body || (isUpdate ? null : undefined),
       startTime: combineDateTime(date, formData.startTime),
-      endTime: combineDateTime(date, formData.endTime),
+      endTime: activityType === 'gathering_point' 
+        ? (combineDateTime(date, formData.startTime) || undefined) // For gathering point, endTime = startTime
+        : combineDateTime(date, formData.endTime),
+      activityType: activityType,
       locationName: formData.locationName || (isUpdate ? null : undefined),
       address: formData.address || (isUpdate ? null : undefined),
       lat: formData.lat ?? (isUpdate ? null : undefined),
@@ -372,6 +387,13 @@ export default function ActivityModal({
           setShowConflictAlert(true)
           return
         }
+        setSubmitSuccess(true)
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setSubmitSuccess(false)
+          onClose()
+        }, 2000)
+        return
       } catch (error: any) {
         if (error.response?.status === 409) {
           setConflictData({
@@ -390,6 +412,13 @@ export default function ActivityModal({
     } else {
       try {
         await onSave(data)
+        setSubmitSuccess(true)
+        // Close modal after 1.5 seconds
+        setTimeout(() => {
+          setSubmitSuccess(false)
+          onClose()
+        }, 1500)
+        return
       } catch (error: any) {
         const errorMessage = error.response?.data?.detail || error.message || 'Failed to create activity'
         setSubmitError(errorMessage)
@@ -409,7 +438,10 @@ export default function ActivityModal({
       notes: formData.notes || undefined,
       body: formData.body || undefined,
       startTime: combineDateTime(date, formData.startTime),
-      endTime: combineDateTime(date, formData.endTime),
+      endTime: activityType === 'gathering_point' 
+        ? (combineDateTime(date, formData.startTime) || undefined) // For gathering point, endTime = startTime
+        : combineDateTime(date, formData.endTime),
+      activityType: activityType,
       locationName: formData.locationName || undefined,
       address: formData.address || undefined,
       lat: formData.lat,
@@ -456,6 +488,45 @@ export default function ActivityModal({
         {/* Scrollable form content */}
         <div className="flex-1 overflow-y-auto p-6 pt-4">
           <form id="activity-form" onSubmit={handleSubmit} className="space-y-4">
+            {/* Activity Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t.activity.activityType || 'Activity Type'}
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="regular"
+                    checked={activityType === 'regular'}
+                    onChange={(e) => {
+                      setActivityType(e.target.value as 'regular' | 'gathering_point')
+                      if (e.target.value === 'gathering_point') {
+                        setFormData((prev) => ({ ...prev, endTime: '' }))
+                      }
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">{t.activity.regularActivity || 'Regular Activity'}</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="gathering_point"
+                    checked={activityType === 'gathering_point'}
+                    onChange={(e) => {
+                      setActivityType(e.target.value as 'regular' | 'gathering_point')
+                      if (e.target.value === 'gathering_point') {
+                        setFormData((prev) => ({ ...prev, endTime: '' }))
+                      }
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">{t.activity.gatheringPoint || 'Gathering Point'}</span>
+                </label>
+              </div>
+            </div>
+
             {/* Location Name with Autocomplete - Moved to top */}
             <div className="relative">
               <div className="flex items-center justify-between mb-1">
@@ -524,10 +595,10 @@ export default function ActivityModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${activityType === 'gathering_point' ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.activity.startTime}
+                  {activityType === 'gathering_point' ? (t.activity.time || 'Time') : t.activity.startTime}
                 </label>
                 <input
                   type="time"
@@ -573,53 +644,55 @@ export default function ActivityModal({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.activity.endTime}
-                </label>
-                <input
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  step="60"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  style={{ fontVariantNumeric: 'tabular-nums' }}
-                />
-                <div className="mt-2 grid grid-cols-4 gap-2">
-                  <button
-                    type="button"
-                    disabled={!formData.startTime && !formData.endTime}
-                    onClick={() => adjustEndTime(15)}
-                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    {t.activity.add15m}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!formData.startTime && !formData.endTime}
-                    onClick={() => adjustEndTime(30)}
-                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    {t.activity.add30m}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!formData.endTime}
-                    onClick={() => adjustEndTime(-15)}
-                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    {t.activity.minus15m}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!formData.endTime}
-                    onClick={() => adjustEndTime(-30)}
-                    className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    {t.activity.minus30m}
-                  </button>
+              {activityType !== 'gathering_point' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.activity.endTime}
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    step="60"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    style={{ fontVariantNumeric: 'tabular-nums' }}
+                  />
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      disabled={!formData.startTime && !formData.endTime}
+                      onClick={() => adjustEndTime(15)}
+                      className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      {t.activity.add15m}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!formData.startTime && !formData.endTime}
+                      onClick={() => adjustEndTime(30)}
+                      className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      {t.activity.add30m}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!formData.endTime}
+                      onClick={() => adjustEndTime(-15)}
+                      className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      {t.activity.minus15m}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!formData.endTime}
+                      onClick={() => adjustEndTime(-30)}
+                      className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      {t.activity.minus30m}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div>
@@ -687,9 +760,23 @@ export default function ActivityModal({
             <button
               type="submit"
               form="activity-form"
-              className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+              disabled={submitSuccess}
+              className={`flex-1 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 ${
+                submitSuccess
+                  ? 'bg-green-600 text-white cursor-not-allowed'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              }`}
             >
-              {activity ? t.common.update : t.common.create}
+              {submitSuccess ? (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {activity ? (t.activity.updateSuccess || 'Updated successfully!') : (t.activity.createSuccess || 'Created successfully!')}
+                </>
+              ) : (
+                activity ? t.common.update : t.common.create
+              )}
             </button>
             <button
               type="button"

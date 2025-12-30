@@ -11,9 +11,10 @@ interface ActivityCardProps {
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
   canEdit: boolean
+  hasConflict?: boolean
 }
 
-export default function ActivityCard({ activity, onEdit, onDelete, canEdit }: ActivityCardProps) {
+export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasConflict = false }: ActivityCardProps) {
   const { t, language } = useLanguage()
   const { user } = useAuth()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -31,14 +32,36 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit }: Ac
 
   const start = activity.startTime ? formatTime(activity.startTime) : ''
   const end = activity.endTime ? formatTime(activity.endTime) : ''
+  const isGatheringPoint = activity.activityType === 'gathering_point'
 
   const currentUserPreference = preferencesData?.preferences.find((p) => p.userId === user?.id)?.preference || null
 
   return (
     <div className="flex gap-4 items-center">
       {/* Visiting Time - Separate Box/Rectangle */}
-      <div className="flex-shrink-0 w-24 bg-gradient-to-b from-sky-50/80 to-white border border-sky-200/50 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm">
-        {start && end ? (
+      <div className={`flex-shrink-0 w-24 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm ${
+        isGatheringPoint 
+          ? 'bg-gradient-to-b from-green-50/80 to-white border border-green-200/50' 
+          : 'bg-gradient-to-b from-sky-50/80 to-white border border-sky-200/50'
+      }`}>
+        {isGatheringPoint ? (
+          // Gathering point: single time only
+          start ? (
+            <span className="text-sm text-slate-800 font-semibold whitespace-nowrap text-center tabular-nums">{start}</span>
+          ) : canEdit ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(activity)
+              }}
+              className="text-sm text-indigo-500 hover:text-indigo-700 underline text-center"
+            >
+              {t.activity.addVisitingTime}
+            </button>
+          ) : (
+            <span className="text-sm text-gray-400 text-center">{t.activity.noAssignedTime}</span>
+          )
+        ) : start && end ? (
           <div className="text-sm text-slate-800 font-semibold text-center leading-tight flex flex-col items-center justify-center">
             <span className="whitespace-nowrap tabular-nums">{start}</span>
             <span className="text-slate-300 text-xs my-0.5 rotate-90 leading-none">~</span>
@@ -62,12 +85,30 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit }: Ac
       </div>
       
       {/* Activity Content - Separate Box/Rectangle */}
-      <div className="flex-1 bg-gradient-to-b from-white to-sky-50/35 border border-sky-200/45 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-sky-300/45 transition">
+      <div className={`flex-1 rounded-xl p-4 shadow-sm hover:shadow-md transition ${
+        hasConflict
+          ? 'bg-gradient-to-b from-white to-yellow-50/35 border-2 border-yellow-400/60 hover:border-yellow-500/60'
+          : isGatheringPoint
+            ? 'bg-gradient-to-b from-white to-green-50/35 border border-green-200/45 hover:border-green-300/45'
+            : 'bg-gradient-to-b from-white to-sky-50/35 border border-sky-200/45 hover:border-sky-300/45'
+      }`}>
         <div className="flex gap-4 items-start">
           <div className="flex-1 flex flex-col">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
-                <h4 className="font-semibold text-lg">{activity.title}</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold text-lg">{activity.title}</h4>
+                  {hasConflict && (
+                    <span className="inline-flex items-center px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium" title={t.route.scheduleConflictWarning || 'Schedule conflict detected'}>
+                      ⚠️ {t.route.conflict || 'Conflict'}
+                    </span>
+                  )}
+                  {isGatheringPoint && (
+                    <span className="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                      {t.activity.gatheringPoint || 'Gathering Point'}
+                    </span>
+                  )}
+                </div>
                 {activity.createdBy && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-gray-500">

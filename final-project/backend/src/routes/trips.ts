@@ -364,6 +364,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
           : null,
         cost: a.cost,
         currency: a.currency,
+        activityType: a.activityType || 'regular',
         participants: a.participants.map((p) => ({
           id: p.id,
           activityId: p.activityId,

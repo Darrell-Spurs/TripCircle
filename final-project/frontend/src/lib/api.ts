@@ -31,6 +31,28 @@ api.interceptors.response.use(
         window.location.href = '/auth/login'
       }
     }
+    // Don't reject 404 for transportation segments - it's expected when no manual override exists
+    // Check both the URL path (relative) and full URL (absolute)
+    const url = error.config?.url || ''
+    const fullUrl = error.config?.baseURL ? `${error.config.baseURL}${url}` : url
+    const isTransportationSegment = 
+      url.includes('/activities/transportation/') || 
+      fullUrl.includes('/activities/transportation/')
+    
+    if (isTransportationSegment && error.response?.status === 404) {
+      // Return a response with null data instead of rejecting
+      // This prevents the error from being logged and makes React Query treat it as success
+      // Create a proper axios response object
+      const response = {
+        data: null,
+        status: 200,
+        statusText: 'OK',
+        headers: error.response?.headers || {},
+        config: error.config || {},
+        request: error.request,
+      }
+      return Promise.resolve(response)
+    }
     return Promise.reject(error)
   }
 )

@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react'
 import { useLanguage } from '../context/LanguageContext'
 import { useLocationFolders } from '../hooks/useLocationFolders'
 import { useCreateActivity } from '../hooks/useActivities'
+import { Activity } from '../types'
+import api from '../lib/api'
 
 interface ImportLocationModalProps {
   isOpen: boolean
   onClose: () => void
   tripId: number
   defaultDate?: string
+  existingActivities?: Activity[]
   onSuccess?: () => void
 }
 
@@ -16,6 +19,7 @@ export default function ImportLocationModal({
   onClose,
   tripId,
   defaultDate,
+  existingActivities = [],
   onSuccess,
 }: ImportLocationModalProps) {
   const { t } = useLanguage()
@@ -66,19 +70,135 @@ export default function ImportLocationModal({
       const locationsToImport = locations.filter((loc) => selectedLocations.has(loc.id))
       const dateObj = new Date(selectedDate + 'T00:00:00.000')
 
+      // Get existing activities for this date, sorted by orderIndex
+      const existingForDate = existingActivities
+        .filter((a) => {
+          const activityDate = new Date(a.date).toISOString().split('T')[0]
+          return activityDate === selectedDate
+        })
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+
+      // Calculate start times for each imported location
+      // Start time = previous activity's end time + transportation time + 1 minute
+      let currentStartTime: Date | null = null
+      
+      // If there are existing activities, use the last one's end time
+      if (existingForDate.length > 0) {
+        const lastActivity = existingForDate[existingForDate.length - 1]
+        if (lastActivity.endTime) {
+          currentStartTime = new Date(lastActivity.endTime)
+        } else if (lastActivity.startTime) {
+          // If no end time, estimate 1 hour duration
+          currentStartTime = new Date(new Date(lastActivity.startTime).getTime() + 60 * 60 * 1000)
+        }
+      }
+
       // Create activities for each selected location
       for (let i = 0; i < locationsToImport.length; i++) {
+        const location = locationsToImport[i]
+        let startTime: string | undefined = undefined
+
+        // Calculate start time if we have a previous activity
+        if (currentStartTime && i === 0 && existingForDate.length > 0) {
+          // First imported location: calculate transportation time from last existing activity
+          const lastActivity = existingForDate[existingForDate.length - 1]
+          if (
+            lastActivity.lat &&
+            lastActivity.lng &&
+            location.lat &&
+            location.lng
+          ) {
+            try {
+              // Fetch directions to get transportation time
+              const response = await api.get('/places/directions', {
+                params: {
+                  originLat: lastActivity.lat,
+                  originLng: lastActivity.lng,
+                  destLat: location.lat,
+                  destLng: location.lng,
+                  mode: 'driving',
+                  departureTime: Math.floor(currentStartTime.getTime() / 1000).toString(),
+                },
+              })
+
+              const durationValue = response.data.durationValue
+              if (durationValue && typeof durationValue === 'number') {
+                // Add transportation time + 1 minute buffer
+                const transportTimeMs = (durationValue + 60) * 1000
+                currentStartTime = new Date(currentStartTime.getTime() + transportTimeMs)
+                startTime = currentStartTime.toISOString()
+              } else {
+                // Fallback: add 30 minutes if no duration
+                currentStartTime = new Date(currentStartTime.getTime() + 30 * 60 * 1000)
+                startTime = currentStartTime.toISOString()
+              }
+            } catch (error) {
+              // Fallback: add 30 minutes if API call fails
+              currentStartTime = new Date(currentStartTime.getTime() + 30 * 60 * 1000)
+              startTime = currentStartTime.toISOString()
+            }
+          } else {
+            // No coordinates, just add 1 minute
+            currentStartTime = new Date(currentStartTime.getTime() + 60 * 1000)
+            startTime = currentStartTime.toISOString()
+          }
+        } else if (currentStartTime && i > 0) {
+          // Subsequent imported locations: calculate from previous imported location
+          const prevLocation = locationsToImport[i - 1]
+          if (
+            prevLocation.lat &&
+            prevLocation.lng &&
+            location.lat &&
+            location.lng
+          ) {
+            try {
+              // Fetch directions to get transportation time
+              const response = await api.get('/places/directions', {
+                params: {
+                  originLat: prevLocation.lat,
+                  originLng: prevLocation.lng,
+                  destLat: location.lat,
+                  destLng: location.lng,
+                  mode: 'driving',
+                  departureTime: Math.floor(currentStartTime.getTime() / 1000).toString(),
+                },
+              })
+
+              const durationValue = response.data.durationValue
+              if (durationValue && typeof durationValue === 'number') {
+                // Add transportation time + 1 minute buffer
+                const transportTimeMs = (durationValue + 60) * 1000
+                currentStartTime = new Date(currentStartTime.getTime() + transportTimeMs)
+                startTime = currentStartTime.toISOString()
+              } else {
+                // Fallback: add 30 minutes if no duration
+                currentStartTime = new Date(currentStartTime.getTime() + 30 * 60 * 1000)
+                startTime = currentStartTime.toISOString()
+              }
+            } catch (error) {
+              // Fallback: add 30 minutes if API call fails
+              currentStartTime = new Date(currentStartTime.getTime() + 30 * 60 * 1000)
+              startTime = currentStartTime.toISOString()
+            }
+          } else {
+            // No coordinates, just add 1 minute
+            currentStartTime = new Date(currentStartTime.getTime() + 60 * 1000)
+            startTime = currentStartTime.toISOString()
+          }
+        }
+
         await createActivity.mutateAsync({
           tripId,
           date: dateObj.toISOString(),
-          title: locationsToImport[i].name,
-          locationName: locationsToImport[i].name,
-          address: locationsToImport[i].address,
-          lat: locationsToImport[i].lat,
-          lng: locationsToImport[i].lng,
-          placeId: locationsToImport[i].placeId,
-          notes: locationsToImport[i].notes || undefined,
-          orderIndex: i,
+          title: location.name,
+          locationName: location.name,
+          address: location.address,
+          lat: location.lat,
+          lng: location.lng,
+          placeId: location.placeId,
+          notes: location.notes || undefined,
+          startTime,
+          orderIndex: existingForDate.length + i,
         })
       }
 
