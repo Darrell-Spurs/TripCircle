@@ -9,6 +9,9 @@ import ActivityCostShareEditor from './ActivityCostShareEditor'
 import LocationSelectorModal from './LocationSelectorModal'
 import { useUpdateActivity } from '../hooks/useActivities'
 import { SavedLocation } from '../types'
+import api from '../lib/api'
+
+type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit' | 'train' | 'subway' | 'bus' | 'plane'
 
 interface ActivityModalProps {
   isOpen: boolean
@@ -21,6 +24,8 @@ interface ActivityModalProps {
   existingActivities?: Activity[] // Activities for the same date to check overlaps
   members?: TripMember[] // Trip members for participant selection
   defaultStartTime?: string // Default start time for new activities (end time of previous activity)
+  paceBuffer?: { prePct: number; postPct: number } // Buffer percentages for transportation time
+  onTransportModeChange?: (mode: TravelMode) => void // Callback when transportation mode changes
 }
 
 export default function ActivityModal({
@@ -34,6 +39,8 @@ export default function ActivityModal({
   existingActivities = [],
   members = [],
   defaultStartTime,
+  paceBuffer = { prePct: 0.15, postPct: 0.15 },
+  onTransportModeChange,
 }: ActivityModalProps) {
   const { t, language } = useLanguage()
   const updateActivity = useUpdateActivity()
@@ -64,7 +71,12 @@ export default function ActivityModal({
   const [showConflictAlert, setShowConflictAlert] = useState(false)
   const [conflictData, setConflictData] = useState<{ currentVersion: Activity; error: string } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [transportMode, setTransportMode] = useState<TravelMode>('driving')
+  const [transportDuration, setTransportDuration] = useState<number | null>(null)
+  const [isCalculatingTransport, setIsCalculatingTransport] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -186,7 +198,61 @@ export default function ActivityModal({
     setSubmitError(null)
   }, [activity, isOpen, members])
 
-  const handlePlaceSelect = (place: Place) => {
+  const calculateTransportTime = async (fromLat: number, fromLng: number, toLat: number, toLng: number, mode: TravelMode) => {
+    try {
+      setIsCalculatingTransport(true)
+      
+      // Calculate departure time (use defaultStartTime if available, or current time)
+      let departureTime: number | undefined
+      if (defaultStartTime) {
+        const defaultStart = new Date(defaultStartTime)
+        const now = new Date()
+        let departureDate = new Date(defaultStart)
+        
+        // If the departure time is in the past, move it to the same time in the nearest future
+        if (departureDate < now) {
+          const hours = departureDate.getHours()
+          const minutes = departureDate.getMinutes()
+          const seconds = departureDate.getSeconds()
+          
+          departureDate = new Date(now)
+          departureDate.setHours(hours, minutes, seconds, 0)
+          
+          if (departureDate < now) {
+            departureDate.setDate(departureDate.getDate() + 1)
+          }
+        }
+        
+        departureTime = Math.floor(departureDate.getTime() / 1000)
+      }
+      
+      const response = await api.get('/places/directions', {
+        params: {
+          originLat: fromLat,
+          originLng: fromLng,
+          destLat: toLat,
+          destLng: toLng,
+          mode: mode,
+          ...(departureTime ? { departureTime: departureTime.toString() } : {}),
+        },
+      })
+      
+      const durationValue = response.data.durationValue
+      if (durationValue && typeof durationValue === 'number') {
+        setTransportDuration(durationValue)
+        return durationValue
+      }
+      return null
+    } catch (error) {
+      console.error('Failed to calculate transport time:', error)
+      setTransportDuration(null)
+      return null
+    } finally {
+      setIsCalculatingTransport(false)
+    }
+  }
+
+  const handlePlaceSelect = async (place: Place) => {
     setFormData((prev) => ({
       ...prev,
       locationName: place.name,
@@ -198,6 +264,46 @@ export default function ActivityModal({
     setSearchQuery(place.name)
     setSelectedPlace(place)
     setShowSuggestions(false)
+
+    // If this is a new activity and we have a previous activity, calculate transport time
+    if (!activity && defaultStartTime && place.lat && place.lng) {
+      const lastActivity = existingActivities[existingActivities.length - 1]
+      if (lastActivity?.lat && lastActivity?.lng) {
+        const duration = await calculateTransportTime(
+          lastActivity.lat,
+          lastActivity.lng,
+          place.lat,
+          place.lng,
+          transportMode
+        )
+        
+        if (duration) {
+          // Apply buffer time to match transportation box
+          const pre = Math.round(duration * paceBuffer.prePct)
+          const post = Math.round(duration * paceBuffer.postPct)
+          const bufferedDuration = duration + pre + post
+          
+          // Calculate new start time: previous activity end time + transport time (with buffer) + 1 minute buffer
+          const defaultStart = new Date(defaultStartTime)
+          const transportTimeMs = (bufferedDuration + 60) * 1000 // Add 1 minute buffer
+          const newStartTime = new Date(defaultStart.getTime() + transportTimeMs)
+          
+          const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+          const newStartTimeStr = newStartTime.toLocaleTimeString(locale, {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })
+          
+          setFormData((prev) => ({
+            ...prev,
+            startTime: newStartTimeStr,
+            // Auto-set endTime to the same as new startTime
+            endTime: prev.endTime || newStartTimeStr,
+          }))
+        }
+      }
+    }
   }
 
   const handleLocationNameChange = (value: string) => {
@@ -254,12 +360,31 @@ export default function ActivityModal({
 
   const adjustEndTime = (minutes: number) => {
     if (formData.endTime) {
-      setFormData((prev) => ({ ...prev, endTime: adjustTime(prev.endTime, minutes) }))
+      const newEndTime = adjustTime(formData.endTime, minutes)
+      // Ensure endTime is not before startTime
+      if (formData.startTime) {
+        const startDate = new Date(`2000-01-01T${formData.startTime}`)
+        const endDate = new Date(`2000-01-01T${newEndTime}`)
+        if (endDate < startDate) {
+          // If endTime would be before startTime, set it to the same as startTime
+          setFormData((prev) => ({ ...prev, endTime: prev.startTime }))
+          return
+        }
+      }
+      setFormData((prev) => ({ ...prev, endTime: newEndTime }))
       return
     }
     // If endTime is empty but startTime exists, set endTime relative to startTime.
     if (formData.startTime) {
-      setFormData((prev) => ({ ...prev, endTime: adjustTime(prev.startTime, minutes) }))
+      const newEndTime = adjustTime(formData.startTime, minutes)
+      // Ensure it's not before startTime
+      const startDate = new Date(`2000-01-01T${formData.startTime}`)
+      const endDate = new Date(`2000-01-01T${newEndTime}`)
+      if (endDate < startDate) {
+        setFormData((prev) => ({ ...prev, endTime: prev.startTime }))
+      } else {
+        setFormData((prev) => ({ ...prev, endTime: newEndTime }))
+      }
     }
   }
 
@@ -369,6 +494,7 @@ export default function ActivityModal({
 
     // Clear any previous error
     setSubmitError(null)
+    setIsSubmitting(true)
 
     // Handle conflict resolution for updates
     if (activity) {
@@ -388,6 +514,7 @@ export default function ActivityModal({
           return
         }
         setSubmitSuccess(true)
+        setIsSubmitting(false)
         // Close modal after 2 seconds
         setTimeout(() => {
           setSubmitSuccess(false)
@@ -395,6 +522,7 @@ export default function ActivityModal({
         }, 2000)
         return
       } catch (error: any) {
+        setIsSubmitting(false)
         if (error.response?.status === 409) {
           setConflictData({
             currentVersion: error.response.data.currentVersion,
@@ -412,6 +540,7 @@ export default function ActivityModal({
     } else {
       try {
         await onSave(data)
+        setIsSubmitting(false)
         setSubmitSuccess(true)
         // Close modal after 1.5 seconds
         setTimeout(() => {
@@ -420,6 +549,7 @@ export default function ActivityModal({
         }, 1500)
         return
       } catch (error: any) {
+        setIsSubmitting(false)
         const errorMessage = error.response?.data?.detail || error.message || 'Failed to create activity'
         setSubmitError(errorMessage)
         console.error('Activity create error:', error)
@@ -595,6 +725,103 @@ export default function ActivityModal({
               />
             </div>
 
+            {/* Transportation Mode Selector - Only show for new activities with previous activity */}
+            {!activity && defaultStartTime && existingActivities.length > 0 && formData.lat && formData.lng && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.route.modeLabel || 'Transportation Mode'}
+                </label>
+                <select
+                  value={transportMode}
+                  onChange={async (e) => {
+                    const newMode = e.target.value as TravelMode
+                    setTransportMode(newMode)
+                    
+                    // Notify parent component about mode change
+                    if (onTransportModeChange) {
+                      onTransportModeChange(newMode)
+                    }
+                    
+                    // Recalculate transport time with new mode
+                    const lastActivity = existingActivities[existingActivities.length - 1]
+                    if (lastActivity?.lat && lastActivity?.lng && formData.lat && formData.lng) {
+                      const duration = await calculateTransportTime(
+                        lastActivity.lat,
+                        lastActivity.lng,
+                        formData.lat,
+                        formData.lng,
+                        newMode
+                      )
+                      
+                      if (duration && defaultStartTime) {
+                        // Apply buffer time to match transportation box
+                        const pre = Math.round(duration * paceBuffer.prePct)
+                        const post = Math.round(duration * paceBuffer.postPct)
+                        const bufferedDuration = duration + pre + post
+                        
+                        // Update start time based on new transport duration (with buffer)
+                        const defaultStart = new Date(defaultStartTime)
+                        const transportTimeMs = (bufferedDuration + 60) * 1000 // Add 1 minute buffer
+                        const newStartTime = new Date(defaultStart.getTime() + transportTimeMs)
+                        
+                        const locale = language === 'zh-TW' ? 'zh-TW' : 'en-US'
+                        const newStartTimeStr = newStartTime.toLocaleTimeString(locale, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })
+                        
+                        setFormData((prev) => ({
+                          ...prev,
+                          startTime: newStartTimeStr,
+                          // Auto-set endTime to the same as new startTime
+                          endTime: prev.endTime || newStartTimeStr,
+                        }))
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  disabled={isCalculatingTransport}
+                >
+                  <option value="driving">{t.route.driving}</option>
+                  <option value="walking">{t.route.walking}</option>
+                  <option value="bicycling">{t.route.bicycling}</option>
+                  <option value="transit">{t.route.transit}</option>
+                  <option value="train">{t.route.train}</option>
+                  <option value="subway">{t.route.subway}</option>
+                  <option value="bus">{t.route.bus}</option>
+                  <option value="plane">{t.route.plane}</option>
+                </select>
+                {isCalculatingTransport && (
+                  <p className="text-xs text-gray-500 mt-1">{t.route.loading}</p>
+                )}
+                {transportDuration !== null && !isCalculatingTransport && (() => {
+                  // Apply buffer time to match transportation box display
+                  const baseSec = transportDuration
+                  const pre = Math.round(baseSec * paceBuffer.prePct)
+                  const post = Math.round(baseSec * paceBuffer.postPct)
+                  const bufferedSec = baseSec + pre + post
+                  const bufferedMinutes = Math.round(bufferedSec / 60)
+                  const baseMinutes = Math.round(baseSec / 60)
+                  const bufferMinutes = Math.round((pre + post) / 60)
+                  
+                  return (
+                    <p className="text-xs text-gray-600 mt-1">
+                      {t.route.travelTime}: {baseMinutes} {t.route.minutes}
+                      {bufferMinutes > 0 && (
+                        <>
+                          {' '}
+                          (+{bufferMinutes} {language === 'zh-TW' ? '分 ' : 'm '}
+                          {t.route.buffer || 'buffer'})
+                        </>
+                      )}
+                      {' '}({t.common.total || 'Total'}: {bufferedMinutes} {t.route.minutes})
+                    </p>
+                  )
+                })()}
+              </div>
+            )}
+
             <div className={`grid gap-4 ${activityType === 'gathering_point' ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -603,7 +830,15 @@ export default function ActivityModal({
                 <input
                   type="time"
                   value={formData.startTime}
-                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  onChange={(e) => {
+                    const newStartTime = e.target.value
+                    setFormData((prev) => ({
+                      ...prev,
+                      startTime: newStartTime,
+                      // Auto-set endTime to the same as startTime when startTime is set
+                      endTime: newStartTime ? (prev.endTime || newStartTime) : prev.endTime,
+                    }))
+                  }}
                   step="60"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   style={{ fontVariantNumeric: 'tabular-nums' }}
@@ -652,7 +887,20 @@ export default function ActivityModal({
                   <input
                     type="time"
                     value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    onChange={(e) => {
+                      const newEndTime = e.target.value
+                      // Ensure endTime is not before startTime
+                      if (formData.startTime && newEndTime) {
+                        const startDate = new Date(`2000-01-01T${formData.startTime}`)
+                        const endDate = new Date(`2000-01-01T${newEndTime}`)
+                        if (endDate < startDate) {
+                          // If endTime is before startTime, set it to the same as startTime
+                          setFormData((prev) => ({ ...prev, endTime: prev.startTime }))
+                          return
+                        }
+                      }
+                      setFormData((prev) => ({ ...prev, endTime: newEndTime }))
+                    }}
                     step="60"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     style={{ fontVariantNumeric: 'tabular-nums' }}
@@ -760,11 +1008,13 @@ export default function ActivityModal({
             <button
               type="submit"
               form="activity-form"
-              disabled={submitSuccess}
+              disabled={submitSuccess || isSubmitting}
               className={`flex-1 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 ${
                 submitSuccess
                   ? 'bg-green-600 text-white cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : isSubmitting
+                    ? 'bg-indigo-500 text-white cursor-wait'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
               }`}
             >
               {submitSuccess ? (
@@ -773,6 +1023,14 @@ export default function ActivityModal({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   {activity ? (t.activity.updateSuccess || 'Updated successfully!') : (t.activity.createSuccess || 'Created successfully!')}
+                </>
+              ) : isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 8 4 12zm8 0a8 8 0 018 8v-4a8 8 0 00-8-8v4zm8 0H4v4h16v-4z"></path>
+                  </svg>
+                  {activity ? (t.common.updating || 'Updating...') : (t.common.creating || 'Creating...')}
                 </>
               ) : (
                 activity ? t.common.update : t.common.create

@@ -247,17 +247,23 @@ router.get('/directions', async (req: express.Request, res: Response) => {
         const departureDate = new Date(timestamp * 1000);
         
         if (travelMode === 'TRANSIT') {
-          // For transit, always use the provided timestamp
-          requestBody.departureTime = departureDate.toISOString();
+          // For transit, always use the provided timestamp (if in future)
+          if (timestamp > currentTime) {
+            requestBody.departureTime = departureDate.toISOString();
+          }
         } else if (travelMode === 'DRIVE') {
           // For driving, only use if it's in the future (at least 1 minute from now)
           if (timestamp > currentTime + 60) {
             requestBody.departureTime = departureDate.toISOString();
           }
           // Otherwise, don't set departureTime to use current traffic
-        } else {
-          // For walking/bicycling, use the timestamp if it's valid
-          requestBody.departureTime = departureDate.toISOString();
+        } else if (travelMode === 'WALK' || travelMode === 'BICYCLE') {
+          // For walking/bicycling, only use if it's in the future (at least 1 minute from now)
+          // These modes don't accept past timestamps
+          if (timestamp > currentTime + 60) {
+            requestBody.departureTime = departureDate.toISOString();
+          }
+          // Otherwise, don't set departureTime (will use current time)
         }
       }
     }

@@ -12,9 +12,10 @@ interface ActivityCardProps {
   onDelete: (activityId: number) => void
   canEdit: boolean
   hasConflict?: boolean
+  onUpdateScheduleTime?: (activityId: number) => Promise<void>
 }
 
-export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasConflict = false }: ActivityCardProps) {
+export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasConflict = false, onUpdateScheduleTime }: ActivityCardProps) {
   const { t, language } = useLanguage()
   const { user } = useAuth()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -223,6 +224,20 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
             {/* Action Buttons */}
             {canEdit && (
               <>
+                {onUpdateScheduleTime && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      await onUpdateScheduleTime(activity.id)
+                    }}
+                    className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition"
+                    title={t.activity.updateScheduleTime || 'Update Schedule Time'}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+                )}
                 <button
                 onClick={(e) => {
                   e.stopPropagation()

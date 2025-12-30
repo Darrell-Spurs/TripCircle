@@ -22,6 +22,7 @@ import TripPhotosTab from '../components/TripPhotosTab'
 import ImportLocationModal from '../components/ImportLocationModal'
 import ExportPlanModal from '../components/ExportPlanModal'
 import { Activity } from '../types'
+import api from '../lib/api'
 
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>()
@@ -51,6 +52,7 @@ export default function TripDetail() {
   const [isEditingBody, setIsEditingBody] = useState(false)
   const [allowImports, setAllowImports] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [pendingTransportMode, setPendingTransportMode] = useState<{ fromActivityId: number; mode: string } | null>(null)
   
   // Trip details editing state
   const [isEditingDetails, setIsEditingDetails] = useState(false)
@@ -227,6 +229,11 @@ export default function TripDetail() {
       })
     } else {
       await createActivity.mutateAsync(data as CreateActivityData)
+      // The pending transport mode will be applied via initialSegmentModes prop
+      // Clear it after a short delay to allow the segment to be created
+      if (pendingTransportMode) {
+        setTimeout(() => setPendingTransportMode(null), 1000)
+      }
     }
   }
 
@@ -239,6 +246,171 @@ export default function TripDetail() {
 
   const handleReorder = async (activityIds: number[]) => {
     await reorderActivities.mutateAsync({ activityIds, tripId })
+  }
+
+  // Calculate transport end time from previous activity
+  const calculateTransportEndTime = async (
+    fromActivity: Activity,
+    toActivity: Activity,
+    mode: string = 'driving'
+  ): Promise<Date | null> => {
+    if (!fromActivity.lat || !fromActivity.lng || !toActivity.lat || !toActivity.lng) {
+      return null
+    }
+
+    try {
+      // Get previous activity's end time (or start time if no end time)
+      const transportStart = fromActivity.endTime || fromActivity.startTime
+      if (!transportStart) return null
+
+      const transportStartDate = new Date(transportStart)
+      if (Number.isNaN(transportStartDate.getTime())) return null
+
+      // Calculate departure time (adjust if in past)
+      const now = new Date()
+      let departureDate = new Date(transportStartDate)
+      if (departureDate < now) {
+        const hours = departureDate.getHours()
+        const minutes = departureDate.getMinutes()
+        const seconds = departureDate.getSeconds()
+        departureDate = new Date(now)
+        departureDate.setHours(hours, minutes, seconds, 0)
+        if (departureDate < now) {
+          departureDate.setDate(departureDate.getDate() + 1)
+        }
+      }
+      const departureTime = Math.floor(departureDate.getTime() / 1000)
+
+      // Get transport duration
+      const response = await api.get('/places/directions', {
+        params: {
+          originLat: fromActivity.lat,
+          originLng: fromActivity.lng,
+          destLat: toActivity.lat,
+          destLng: toActivity.lng,
+          mode: mode,
+          departureTime: departureTime.toString(),
+        },
+      })
+
+      const durationValue = response.data.durationValue
+      if (!durationValue || typeof durationValue !== 'number') return null
+
+      // Apply buffer time
+      const pre = Math.round(durationValue * paceBuffer.prePct)
+      const post = Math.round(durationValue * paceBuffer.postPct)
+      const bufferedDuration = durationValue + pre + post
+
+      // Calculate transport end time
+      const transportEndTime = new Date(transportStartDate.getTime() + (bufferedDuration + 60) * 1000) // +1 minute buffer
+      return transportEndTime
+    } catch (error) {
+      console.error('Failed to calculate transport end time:', error)
+      return null
+    }
+  }
+
+  // Update schedule time for a single activity
+  const handleUpdateScheduleTime = async (activityId: number) => {
+    if (!trip?.activities) return
+
+    const activity = trip.activities.find((a) => a.id === activityId)
+    if (!activity) return
+
+    const date = getLocalDateString(activity.date)
+    const activitiesForDate = activitiesByDate[date] || []
+    const activityIndex = activitiesForDate.findIndex((a) => a.id === activityId)
+    if (activityIndex < 0) return
+
+    const previousActivity = activityIndex > 0 ? activitiesForDate[activityIndex - 1] : null
+    let newStartTime: Date | null = null
+    let newEndTime: Date | null = null
+
+    // Check 1: Starting time should be after previous transportation end time
+    if (previousActivity) {
+      const transportEndTime = await calculateTransportEndTime(previousActivity, activity)
+      if (transportEndTime) {
+        const currentStartTime = activity.startTime ? new Date(activity.startTime) : null
+        if (!currentStartTime || currentStartTime < transportEndTime) {
+          newStartTime = transportEndTime
+        }
+      }
+    }
+
+    // Check 2: Ending time should be after starting time
+    const finalStartTime = newStartTime || (activity.startTime ? new Date(activity.startTime) : null)
+    if (finalStartTime) {
+      const currentEndTime = activity.endTime ? new Date(activity.endTime) : null
+      if (!currentEndTime || currentEndTime <= finalStartTime) {
+        newEndTime = finalStartTime
+      }
+    }
+
+    // Update activity if needed
+    if (newStartTime || newEndTime) {
+      const updateData: UpdateActivityData = {}
+      if (newStartTime) {
+        updateData.startTime = newStartTime.toISOString()
+      }
+      if (newEndTime) {
+        updateData.endTime = newEndTime.toISOString()
+      }
+      await updateActivity.mutateAsync({
+        activityId,
+        data: updateData,
+      })
+    }
+  }
+
+  // Update schedule times for all activities in a day
+  const handleUpdateAllScheduleTimes = async (date: string) => {
+    if (!date || !activitiesByDate[date]) return
+
+    const activities = activitiesByDate[date]
+    if (activities.length === 0) return
+
+    // Process activities in order
+    for (let i = 0; i < activities.length; i++) {
+      const activity = activities[i]
+      const previousActivity = i > 0 ? activities[i - 1] : null
+      let newStartTime: Date | null = null
+      let newEndTime: Date | null = null
+
+      // Check 1: Starting time should be after previous transportation end time
+      if (previousActivity) {
+        const transportEndTime = await calculateTransportEndTime(previousActivity, activity)
+        if (transportEndTime) {
+          const currentStartTime = activity.startTime ? new Date(activity.startTime) : null
+          if (!currentStartTime || currentStartTime < transportEndTime) {
+            newStartTime = transportEndTime
+          }
+        }
+      }
+
+      // Check 2: Ending time should be after starting time
+      const finalStartTime = newStartTime || (activity.startTime ? new Date(activity.startTime) : null)
+      if (finalStartTime) {
+        const currentEndTime = activity.endTime ? new Date(activity.endTime) : null
+        if (!currentEndTime || currentEndTime <= finalStartTime) {
+          newEndTime = finalStartTime
+        }
+      }
+
+      // Update activity if needed
+      if (newStartTime || newEndTime) {
+        const updateData: UpdateActivityData = {}
+        if (newStartTime) {
+          updateData.startTime = newStartTime.toISOString()
+        }
+        if (newEndTime) {
+          updateData.endTime = newEndTime.toISOString()
+        }
+        await updateActivity.mutateAsync({
+          activityId: activity.id,
+          data: updateData,
+        })
+      }
+    }
   }
 
   if (isLoading) {
@@ -729,6 +901,8 @@ export default function TripDetail() {
                     onUpdateActivity={canEdit ? handleUpdateActivity : undefined}
                     canEdit={canEdit}
                     paceBuffer={paceBuffer}
+                    onUpdateScheduleTime={canEdit ? handleUpdateScheduleTime : undefined}
+                    onUpdateAllScheduleTimes={canEdit ? handleUpdateAllScheduleTimes : undefined}
                   />
                 )
               })}
@@ -778,6 +952,14 @@ export default function TripDetail() {
                 })()
               : undefined
           }
+          paceBuffer={paceBuffer}
+          onTransportModeChange={(mode) => {
+            // Store the transport mode for the new activity being created
+            if (!selectedActivity && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0) {
+              const lastActivity = activitiesByDate[selectedDate][activitiesByDate[selectedDate].length - 1]
+              setPendingTransportMode({ fromActivityId: lastActivity.id, mode })
+            }
+          }}
           members={
             trip && trip.owner
               ? (() => {

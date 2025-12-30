@@ -39,6 +39,9 @@ interface ItineraryDayProps {
     prePct: number
     postPct: number
   }
+  initialSegmentModes?: Record<string, TravelMode> // Initial segment modes (e.g., from ActivityModal)
+  onUpdateScheduleTime?: (activityId: number) => Promise<void> // Update schedule time for a single activity
+  onUpdateAllScheduleTimes?: (date: string) => Promise<void> // Update schedule times for all activities in the day
 }
 
 type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit' | 'train' | 'subway' | 'bus' | 'plane'
@@ -202,11 +205,32 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
         setError(null)
 
         // Calculate departure time from previous activity's end time (or start time if no end time)
+        // If the time is in the past, move it to the same time in the nearest future
         let departureTime: number | undefined
         const transportStart = (from.endTime || from.startTime) ? new Date((from.endTime || from.startTime) as string) : null
         if (transportStart && !isNaN(transportStart.getTime())) {
+          const now = new Date()
+          let departureDate = new Date(transportStart)
+          
+          // If the departure time is in the past, move it to the same time in the nearest future
+          if (departureDate < now) {
+            // Get the time components (hours, minutes, seconds)
+            const hours = departureDate.getHours()
+            const minutes = departureDate.getMinutes()
+            const seconds = departureDate.getSeconds()
+            
+            // Create a new date with today's date but the same time
+            departureDate = new Date(now)
+            departureDate.setHours(hours, minutes, seconds, 0)
+            
+            // If it's still in the past (e.g., it's 10pm now but we set it to 5pm today), move to tomorrow
+            if (departureDate < now) {
+              departureDate.setDate(departureDate.getDate() + 1)
+            }
+          }
+          
           // Convert to Unix timestamp in seconds
-          departureTime = Math.floor(transportStart.getTime() / 1000)
+          departureTime = Math.floor(departureDate.getTime() / 1000)
         }
 
         const data = await fetchDirections({
@@ -531,12 +555,13 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   )
 }
 
-function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict }: {
+function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict, onUpdateScheduleTime }: {
   activity: Activity
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
   canEdit: boolean
   hasConflict?: boolean
+  onUpdateScheduleTime?: (activityId: number) => Promise<void>
 }) {
   const {
     attributes,
@@ -580,6 +605,7 @@ function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict
           onDelete={onDelete}
           canEdit={canEdit}
           hasConflict={hasConflict}
+          onUpdateScheduleTime={onUpdateScheduleTime}
         />
       </div>
     </div>
@@ -596,6 +622,9 @@ export default function ItineraryDay({
   onUpdateActivity,
   canEdit,
   paceBuffer = { prePct: 0.075, postPct: 0.075 },
+  initialSegmentModes = {},
+  onUpdateScheduleTime,
+  onUpdateAllScheduleTimes,
 }: ItineraryDayProps) {
   const { t, language } = useLanguage()
   const applyBufferedDurationSec = (baseSec: number) => {
@@ -604,7 +633,14 @@ export default function ItineraryDay({
     return baseSec + pre + post
   }
 
-  const [segmentModes, setSegmentModes] = useState<Record<string, TravelMode>>({})
+  const [segmentModes, setSegmentModes] = useState<Record<string, TravelMode>>(initialSegmentModes)
+  
+  // Update segment modes when initialSegmentModes changes (e.g., when a new activity is created with a transport mode)
+  useEffect(() => {
+    if (Object.keys(initialSegmentModes).length > 0) {
+      setSegmentModes((prev) => ({ ...prev, ...initialSegmentModes }))
+    }
+  }, [initialSegmentModes])
   const [segmentRoutes, setSegmentRoutes] = useState<Record<string, SegmentRouteState>>({})
   const [showMap, setShowMap] = useState(false)
   const [selectedMarkerId, setSelectedMarkerId] = useState<number | null>(null)
@@ -997,14 +1033,28 @@ export default function ItineraryDay({
             </div>
           )}
         </div>
-        {canEdit && onAddActivity && (
-          <button
-            onClick={onAddActivity}
-            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-          >
-            + {t.activity.addActivity}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {canEdit && onUpdateAllScheduleTimes && activities.length > 0 && (
+            <button
+              onClick={() => onUpdateAllScheduleTimes(date)}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+              title={t.activity.updateAllScheduleTimes || 'Update All Schedule Times'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {t.activity.updateAllScheduleTimes || 'Update All Times'}
+            </button>
+          )}
+          {canEdit && onAddActivity && (
+            <button
+              onClick={onAddActivity}
+              className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+            >
+              + {t.activity.addActivity}
+            </button>
+          )}
+        </div>
       </div>
 
       {dayPlaces.length > 0 && (
@@ -1115,14 +1165,20 @@ export default function ItineraryDay({
                     onDelete={onDelete}
                     canEdit={canEdit}
                     hasConflict={scheduleConflicts.map.get(activity.id)}
+                    onUpdateScheduleTime={onUpdateScheduleTime}
                   />
-                  {/* Quick Add Button */}
+                  {/* Quick Add Button - Below activity card with margin, centered */}
                   {canEdit && onAddActivity && (
-                    <div className="flex justify-center my-2">
+                    <div 
+                      className="flex justify-center mt-2"
+                      style={{ 
+                        marginLeft: 'calc(6rem + 1rem)',
+                      }}
+                    >
                       <button
                         type="button"
                         onClick={() => onAddActivity?.()}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-lg font-light"
+                        className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm"
                         title={t.activity.addActivity}
                       >
                         +

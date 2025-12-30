@@ -13,6 +13,8 @@ export interface Translations {
     view: string
     create: string
     update: string
+    creating: string
+    updating: string
     confirm: string
     back: string
     next: string
@@ -250,6 +252,7 @@ export interface Translations {
     plane: string
     walk: string
     hideSteps: string
+    minutes: string
   }
 
   // Explore
@@ -473,6 +476,8 @@ export const translations: Record<Language, Translations> = {
       view: '查看',
       create: '建立',
       update: '更新',
+      creating: '建立中...',
+      updating: '更新中...',
       confirm: '確認',
       back: '返回',
       next: '下一步',
@@ -662,6 +667,8 @@ export const translations: Record<Language, Translations> = {
       gatheringPoint: '集合點',
       regularActivity: '一般活動',
       time: '時間',
+      updateScheduleTime: '更新排程時間',
+      updateAllScheduleTimes: '更新所有排程時間',
       createSuccess: '建立成功！',
       updateSuccess: '更新成功！',
     },
@@ -698,6 +705,7 @@ export const translations: Record<Language, Translations> = {
       plane: '飛機',
       walk: '步行',
       hideSteps: '隱藏詳情',
+      minutes: '分鐘',
       editTransportationTime: '編輯交通時間',
       manualOverrideActive: '已啟用手動覆蓋',
       resetToAuto: '重置為自動',
@@ -914,6 +922,8 @@ export const translations: Record<Language, Translations> = {
       view: 'View',
       create: 'Create',
       update: 'Update',
+      creating: 'Creating...',
+      updating: 'Updating...',
       confirm: 'Confirm',
       back: 'Back',
       next: 'Next',
@@ -1103,6 +1113,8 @@ export const translations: Record<Language, Translations> = {
       gatheringPoint: 'Gathering Point',
     regularActivity: 'Regular Activity',
     time: 'Time',
+    updateScheduleTime: 'Update Schedule Time',
+    updateAllScheduleTimes: 'Update All Schedule Times',
     createSuccess: 'Created successfully!',
     updateSuccess: 'Updated successfully!',
   },
@@ -1137,6 +1149,7 @@ export const translations: Record<Language, Translations> = {
       plane: 'Plane',
       walk: 'Walk',
       hideSteps: 'Hide details',
+      minutes: 'minutes',
       editTransportationTime: 'Edit Transportation Time',
       manualOverrideActive: 'Manual override is active',
       resetToAuto: 'Reset to Auto',
