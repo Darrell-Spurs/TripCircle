@@ -168,6 +168,10 @@ export interface Translations {
     add30m: string
     minus15m: string
     minus30m: string
+    add1m: string
+    add10m: string
+    minus1m: string
+    minus10m: string
     storyForFeed: string
     storyPlaceholder: string
     storyDescription: string
@@ -216,6 +220,11 @@ export interface Translations {
     gatheringPoint: string
     regularActivity: string
     time: string
+    updateScheduleTime: string
+    updateAllScheduleTimes: string
+    updateScheduleTimeError: string
+    createSuccess: string
+    updateSuccess: string
   }
 
   // Route / transportation between activities
@@ -619,6 +628,10 @@ export const translations: Record<Language, Translations> = {
       add30m: '+30分',
       minus15m: '-15分',
       minus30m: '-30分',
+      add1m: '+1分',
+      add10m: '+10分',
+      minus1m: '-1分',
+      minus10m: '-10分',
       storyForFeed: '故事（用於動態）',
       storyPlaceholder: '分享您在此地點的體驗，當發布到動態時...',
       storyDescription: '這將在旅程發布時顯示',
@@ -669,6 +682,7 @@ export const translations: Record<Language, Translations> = {
       time: '時間',
       updateScheduleTime: '更新排程時間',
       updateAllScheduleTimes: '更新所有排程時間',
+      updateScheduleTimeError: '更新排程時間失敗',
       createSuccess: '建立成功！',
       updateSuccess: '更新成功！',
     },
@@ -1065,6 +1079,10 @@ export const translations: Record<Language, Translations> = {
       add30m: '+30m',
       minus15m: '-15m',
       minus30m: '-30m',
+      add1m: '+1m',
+      add10m: '+10m',
+      minus1m: '-1m',
+      minus10m: '-10m',
       storyForFeed: 'Story (for feed)',
       storyPlaceholder: 'Share your experience at this place when publishing to feed...',
       storyDescription: 'This will be shown when the trip is published',
@@ -1115,6 +1133,7 @@ export const translations: Record<Language, Translations> = {
     time: 'Time',
     updateScheduleTime: 'Update Schedule Time',
     updateAllScheduleTimes: 'Update All Schedule Times',
+    updateScheduleTimeError: 'Failed to update schedule time',
     createSuccess: 'Created successfully!',
     updateSuccess: 'Updated successfully!',
   },

@@ -312,15 +312,21 @@ export default function TripDetail() {
 
   // Update schedule time for a single activity
   const handleUpdateScheduleTime = async (activityId: number) => {
-    if (!trip?.activities) return
+    if (!trip?.activities) {
+      throw new Error('Trip activities not available')
+    }
 
     const activity = trip.activities.find((a) => a.id === activityId)
-    if (!activity) return
+    if (!activity) {
+      throw new Error('Activity not found')
+    }
 
     const date = getLocalDateString(activity.date)
     const activitiesForDate = activitiesByDate[date] || []
     const activityIndex = activitiesForDate.findIndex((a) => a.id === activityId)
-    if (activityIndex < 0) return
+    if (activityIndex < 0) {
+      throw new Error('Activity not found in date group')
+    }
 
     const previousActivity = activityIndex > 0 ? activitiesForDate[activityIndex - 1] : null
     let newStartTime: Date | null = null
@@ -328,12 +334,17 @@ export default function TripDetail() {
 
     // Check 1: Starting time should be after previous transportation end time
     if (previousActivity) {
-      const transportEndTime = await calculateTransportEndTime(previousActivity, activity)
-      if (transportEndTime) {
-        const currentStartTime = activity.startTime ? new Date(activity.startTime) : null
-        if (!currentStartTime || currentStartTime < transportEndTime) {
-          newStartTime = transportEndTime
+      try {
+        const transportEndTime = await calculateTransportEndTime(previousActivity, activity)
+        if (transportEndTime) {
+          const currentStartTime = activity.startTime ? new Date(activity.startTime) : null
+          if (!currentStartTime || currentStartTime < transportEndTime) {
+            newStartTime = transportEndTime
+          }
         }
+      } catch (error) {
+        console.error('Failed to calculate transport end time:', error)
+        // Continue with other checks even if transport calculation fails
       }
     }
 

@@ -827,54 +827,71 @@ export default function ActivityModal({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {activityType === 'gathering_point' ? (t.activity.time || 'Time') : t.activity.startTime}
                 </label>
-                <input
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) => {
-                    const newStartTime = e.target.value
-                    setFormData((prev) => ({
-                      ...prev,
-                      startTime: newStartTime,
-                      // Auto-set endTime to the same as startTime when startTime is set
-                      endTime: newStartTime ? (prev.endTime || newStartTime) : prev.endTime,
-                    }))
-                  }}
-                  step="60"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  style={{ fontVariantNumeric: 'tabular-nums' }}
-                />
+                  <input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => {
+                      const newStartTime = e.target.value
+                      setFormData((prev) => {
+                        // If endTime is empty or ahead of (or equal to) new startTime, set it to the same as startTime
+                        let newEndTime = prev.endTime
+                        if (newStartTime) {
+                          if (!prev.endTime) {
+                            // EndTime is empty, set it to startTime
+                            newEndTime = newStartTime
+                          } else {
+                            // Check if endTime is ahead of (or equal to) startTime
+                            const startDate = new Date(`2000-01-01T${newStartTime}`)
+                            const endDate = new Date(`2000-01-01T${prev.endTime}`)
+                            if (endDate <= startDate) {
+                              // EndTime is before or equal to startTime, set it to startTime
+                              newEndTime = newStartTime
+                            }
+                          }
+                        }
+                        return {
+                          ...prev,
+                          startTime: newStartTime,
+                          endTime: newEndTime,
+                        }
+                      })
+                    }}
+                    step="60"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    style={{ fontVariantNumeric: 'tabular-nums' }}
+                  />
                 <div className="mt-2 grid grid-cols-4 gap-2">
                   <button
                     type="button"
                     disabled={!formData.startTime}
-                    onClick={() => adjustStartTime(15)}
+                    onClick={() => adjustStartTime(1)}
                     className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                   >
-                    {t.activity.add15m}
+                    {t.activity.add1m}
                   </button>
                   <button
                     type="button"
                     disabled={!formData.startTime}
-                    onClick={() => adjustStartTime(30)}
+                    onClick={() => adjustStartTime(10)}
                     className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                   >
-                    {t.activity.add30m}
+                    {t.activity.add10m}
                   </button>
                   <button
                     type="button"
                     disabled={!formData.startTime}
-                    onClick={() => adjustStartTime(-15)}
+                    onClick={() => adjustStartTime(-1)}
                     className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                   >
-                    {t.activity.minus15m}
+                    {t.activity.minus1m}
                   </button>
                   <button
                     type="button"
                     disabled={!formData.startTime}
-                    onClick={() => adjustStartTime(-30)}
+                    onClick={() => adjustStartTime(-10)}
                     className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                   >
-                    {t.activity.minus30m}
+                    {t.activity.minus10m}
                   </button>
                 </div>
               </div>
@@ -909,34 +926,34 @@ export default function ActivityModal({
                     <button
                       type="button"
                       disabled={!formData.startTime && !formData.endTime}
-                      onClick={() => adjustEndTime(15)}
+                      onClick={() => adjustEndTime(1)}
                       className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     >
-                      {t.activity.add15m}
+                      {t.activity.add1m}
                     </button>
                     <button
                       type="button"
                       disabled={!formData.startTime && !formData.endTime}
-                      onClick={() => adjustEndTime(30)}
+                      onClick={() => adjustEndTime(10)}
                       className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     >
-                      {t.activity.add30m}
+                      {t.activity.add10m}
                     </button>
                     <button
                       type="button"
                       disabled={!formData.endTime}
-                      onClick={() => adjustEndTime(-15)}
+                      onClick={() => adjustEndTime(-1)}
                       className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     >
-                      {t.activity.minus15m}
+                      {t.activity.minus1m}
                     </button>
                     <button
                       type="button"
                       disabled={!formData.endTime}
-                      onClick={() => adjustEndTime(-30)}
+                      onClick={() => adjustEndTime(-10)}
                       className="px-2 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     >
-                      {t.activity.minus30m}
+                      {t.activity.minus10m}
                     </button>
                   </div>
                 </div>
