@@ -11,7 +11,7 @@ import { useUpdateActivity } from '../hooks/useActivities'
 import { SavedLocation } from '../types'
 import api from '../lib/api'
 
-type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit' | 'train' | 'subway' | 'bus' | 'plane'
+type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit'
 
 interface ActivityModalProps {
   isOpen: boolean
@@ -787,10 +787,6 @@ export default function ActivityModal({
                   <option value="walking">{t.route.walking}</option>
                   <option value="bicycling">{t.route.bicycling}</option>
                   <option value="transit">{t.route.transit}</option>
-                  <option value="train">{t.route.train}</option>
-                  <option value="subway">{t.route.subway}</option>
-                  <option value="bus">{t.route.bus}</option>
-                  <option value="plane">{t.route.plane}</option>
                 </select>
                 {isCalculatingTransport && (
                   <p className="text-xs text-gray-500 mt-1">{t.route.loading}</p>

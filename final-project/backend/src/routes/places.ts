@@ -173,9 +173,9 @@ router.get('/search', async (req: express.Request, res: Response) => {
 
 // Directions between two places using Routes API v2 (used for trip transportation segments)
 router.get('/directions', async (req: express.Request, res: Response) => {
-  const { originLat, originLng, destLat, destLng, mode, departureTime } = req.query;
+  const { originLat, originLng, destLat, destLng, mode, departureTime, language } = req.query;
 
-  console.log('[Directions] Request received:', { originLat, originLng, destLat, destLng, mode, departureTime });
+  console.log('[Directions] Request received:', { originLat, originLng, destLat, destLng, mode, departureTime, language });
 
   if (!originLat || !originLng || !destLat || !destLng) {
     res.status(400).json({ detail: 'originLat, originLng, destLat, and destLng are required' });
@@ -194,13 +194,9 @@ router.get('/directions', async (req: express.Request, res: Response) => {
       'walking': 'WALK',
       'bicycling': 'BICYCLE',
       'transit': 'TRANSIT',
-      'train': 'TRANSIT',
-      'subway': 'TRANSIT',
-      'bus': 'TRANSIT',
-      'plane': 'TRANSIT',
     };
 
-    const allowedModes = ['driving', 'walking', 'bicycling', 'transit', 'train', 'subway', 'bus', 'plane'];
+    const allowedModes = ['driving', 'walking', 'bicycling', 'transit'];
     let travelMode = 'driving';
     let frontendMode = 'driving';
 
@@ -276,17 +272,33 @@ router.get('/directions', async (req: express.Request, res: Response) => {
       };
     }
 
+    // Add languageCode to request body for localized responses
+    // Determine language code from query parameter or default to zh-TW
+    let languageCode = 'zh-TW' // Default to Traditional Chinese
+    if (language && typeof language === 'string') {
+      languageCode = language
+    }
+    // Google Routes API v2 uses languageCode in the request body for localization
+    requestBody.languageCode = languageCode
+    
+    console.log('[Directions] Language code set:', languageCode)
+
+    // Prepare headers
+    const headers: any = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': config.googlePlacesApiKey,
+      'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps,routes.legs.duration,routes.legs.distanceMeters,routes.legs.steps.travelMode,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.transitDetails,routes.legs.steps.transitDetails.transitLine,routes.legs.steps.transitDetails.transitLine.vehicle,routes.legs.steps.transitDetails.transitLine.vehicle.type,routes.legs.steps.transitDetails.transitLine.name,routes.legs.steps.transitDetails.transitLine.nameShort,routes.legs.steps.transitDetails.stopDetails,routes.legs.steps.transitDetails.stopDetails.arrivalStop,routes.legs.steps.transitDetails.stopDetails.departureStop,routes.legs.steps.transitDetails.stopDetails.arrivalStop.name,routes.legs.steps.transitDetails.stopDetails.departureStop.name,routes.legs.steps.localizedValues',
+      'Accept-Language': languageCode, // Also set Accept-Language header
+    };
+
     console.log('[Directions] Calling Routes API v2 with requestBody:', JSON.stringify(requestBody, null, 2));
+    console.log('[Directions] Language code in request:', requestBody.languageCode);
     
     const response = await axios.post(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
       requestBody,
       {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': config.googlePlacesApiKey,
-          'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs.steps,routes.legs.duration,routes.legs.distanceMeters,routes.legs.steps.travelMode,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.transitDetails,routes.legs.steps.localizedValues',
-        },
+        headers: headers,
       }
     );
 
@@ -395,17 +407,54 @@ router.get('/directions', async (req: express.Request, res: Response) => {
         // Extract transit details if available
         if (step.transitDetails) {
           const transit = step.transitDetails;
+          const vehicleType = transit.transitLine?.vehicle?.type || '';
+          
+          // 提取站點名稱 - 嘗試多種可能的路徑
+          const departureStopName = transit.stopDetails?.departureStop?.name?.text 
+            || transit.stopDetails?.departureStop?.name
+            || ''
+          const arrivalStopName = transit.stopDetails?.arrivalStop?.name?.text
+            || transit.stopDetails?.arrivalStop?.name
+            || ''
+          
+          // 提取路線名稱 - 優先使用本地化的文本
+          // Google Routes API v2 當設置了 languageCode 後，name.text 和 nameShort.text 應該返回本地化文本
+          // 對於公車，優先使用 nameShort.text（通常是班次代號如"202"）
+          // 對於地鐵，優先使用 name.text（通常是路線名稱如"板南線"）
+          // 注意：name.text 和 nameShort.text 是 LocalizedString 對象，已經根據 languageCode 本地化
+          const lineName = (transit.transitLine?.nameShort?.text && transit.transitLine.nameShort.text.trim() !== '')
+            ? transit.transitLine.nameShort.text.trim()
+            : (transit.transitLine?.name?.text && transit.transitLine.name.text.trim() !== '')
+            ? transit.transitLine.name.text.trim()
+            : (transit.transitLine?.nameShort && typeof transit.transitLine.nameShort === 'string')
+            ? transit.transitLine.nameShort.trim()
+            : (transit.transitLine?.name && typeof transit.transitLine.name === 'string')
+            ? transit.transitLine.name.trim()
+            : ''
+          
           stepData.transitDetails = {
-            lineName: transit.transitLine?.name?.text || transit.transitLine?.nameShort?.text || '',
-            fromStation: transit.stopDetails?.arrivalStop?.name?.text || '',
-            toStation: transit.stopDetails?.departureStop?.name?.text || '',
+            lineName: lineName,
+            fromStation: departureStopName,  // 出發站
+            toStation: arrivalStopName,      // 到達站
+            vehicleType: vehicleType, // BUS, SUBWAY, TRAIN, TRAM, etc.
           };
 
+          // 詳細調試日誌 - 檢查本地化情況
+          console.log('[Transit Details] Language code:', languageCode);
+          console.log('[Transit Details] Transit line structure:', {
+            name: transit.transitLine?.name,
+            nameText: transit.transitLine?.name?.text,
+            nameShort: transit.transitLine?.nameShort,
+            nameShortText: transit.transitLine?.nameShort?.text,
+            fullTransitLine: JSON.stringify(transit.transitLine, null, 2),
+          });
+          console.log('[Transit Details] Extracted lineName:', lineName);
+
           // Build instruction text
-          if (transit.transitLine?.name?.text) {
-            stepData.instruction = `Take ${transit.transitLine.name.text}`;
-            if (transit.stopDetails?.arrivalStop?.name?.text && transit.stopDetails?.departureStop?.name?.text) {
-              stepData.instruction += ` from ${transit.stopDetails.arrivalStop.name.text} to ${transit.stopDetails.departureStop.name.text}`;
+          if (lineName) {
+            stepData.instruction = `Take ${lineName}`;
+            if (departureStopName && arrivalStopName) {
+              stepData.instruction += ` from ${departureStopName} to ${arrivalStopName}`;
             }
           }
         } else if (step.travelMode === 'WALK') {

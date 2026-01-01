@@ -76,6 +76,7 @@ export interface RouteStep {
     lineName?: string
     fromStation?: string
     toStation?: string
+    vehicleType?: string // BUS, SUBWAY, TRAIN, TRAM, etc.
   }
 }
 

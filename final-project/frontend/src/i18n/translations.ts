@@ -261,7 +261,31 @@ export interface Translations {
     plane: string
     walk: string
     hideSteps: string
+    showSteps: string
     minutes: string
+    showDetails: string
+    hideDetails: string
+    vehicleType: string
+    fromStation: string
+    toStation: string
+    vehicleTypeBus: string
+    vehicleTypeSubway: string
+    vehicleTypeTrain: string
+    vehicleTypeTram: string
+    vehicleTypeHighSpeedTrain: string
+    vehicleTypeFerry: string
+    vehicleTypeHeavyRail: string
+    vehicleTypeLightRail: string
+    vehicleTypeMonorail: string
+    vehicleTypeCableCar: string
+    editTransportationTime: string
+    manualOverrideActive: string
+    resetToAuto: string
+    editTime: string
+    manual: string
+    endTimeAfterStart: string
+    saveFailed: string
+    resetFailed: string
   }
 
   // Explore
@@ -719,7 +743,23 @@ export const translations: Record<Language, Translations> = {
       plane: '飛機',
       walk: '步行',
       hideSteps: '隱藏詳情',
+      showSteps: '顯示詳情',
       minutes: '分鐘',
+      showDetails: '顯示詳細資訊',
+      hideDetails: '隱藏詳細資訊',
+      vehicleType: '交通工具類型',
+      fromStation: '起點站',
+      toStation: '終點站',
+      vehicleTypeBus: '公車',
+      vehicleTypeSubway: '地鐵',
+      vehicleTypeTrain: '火車',
+      vehicleTypeTram: '輕軌',
+      vehicleTypeHighSpeedTrain: '高鐵',
+      vehicleTypeFerry: '渡輪',
+      vehicleTypeHeavyRail: '重軌',
+      vehicleTypeLightRail: '輕軌',
+      vehicleTypeMonorail: '單軌',
+      vehicleTypeCableCar: '纜車',
       editTransportationTime: '編輯交通時間',
       manualOverrideActive: '已啟用手動覆蓋',
       resetToAuto: '重置為自動',
@@ -1168,7 +1208,23 @@ export const translations: Record<Language, Translations> = {
       plane: 'Plane',
       walk: 'Walk',
       hideSteps: 'Hide details',
+      showSteps: 'Show details',
       minutes: 'minutes',
+      showDetails: 'Show details',
+      hideDetails: 'Hide details',
+      vehicleType: 'Vehicle type',
+      fromStation: 'From station',
+      toStation: 'To station',
+      vehicleTypeBus: 'Bus',
+      vehicleTypeSubway: 'Subway',
+      vehicleTypeTrain: 'Train',
+      vehicleTypeTram: 'Tram',
+      vehicleTypeHighSpeedTrain: 'High-Speed Rail',
+      vehicleTypeFerry: 'Ferry',
+      vehicleTypeHeavyRail: 'Heavy Rail',
+      vehicleTypeLightRail: 'Light Rail',
+      vehicleTypeMonorail: 'Monorail',
+      vehicleTypeCableCar: 'Cable Car',
       editTransportationTime: 'Edit Transportation Time',
       manualOverrideActive: 'Manual override is active',
       resetToAuto: 'Reset to Auto',

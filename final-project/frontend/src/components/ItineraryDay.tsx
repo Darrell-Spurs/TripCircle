@@ -44,7 +44,7 @@ interface ItineraryDayProps {
   onUpdateAllScheduleTimes?: (date: string) => Promise<void> // Update schedule times for all activities in the day
 }
 
-type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit' | 'train' | 'subway' | 'bus' | 'plane'
+type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit'
 
 type DirectionsData = {
   distanceText: string | null
@@ -85,6 +85,7 @@ async function fetchDirections(params: {
   destLng: number
   mode: TravelMode
   departureTime?: number
+  language?: string
 }): Promise<DirectionsData> {
   const key = buildDirectionsCacheKey(params)
 
@@ -104,6 +105,9 @@ async function fetchDirections(params: {
     }
     if (params.departureTime) {
       apiParams.departureTime = params.departureTime.toString()
+    }
+    if (params.language) {
+      apiParams.language = params.language
     }
     const response = await api.get('/places/directions', { params: apiParams })
     
@@ -158,6 +162,40 @@ interface RouteSegmentProps {
   canEdit?: boolean
 }
 
+// 通用的路線名稱本地化映射表（處理 API 返回英文的情況）
+function localizeRouteName(lineName: string, language: string): string {
+  if (!lineName || language !== 'zh-TW') {
+    return lineName
+  }
+  
+  // 常見的台灣捷運/地鐵路線名稱映射
+  const routeNameMap: Record<string, string> = {
+    'Bannan Line': '板南線',
+    'Wenhu Line': '文湖線',
+    'Songshan-Xindian Line': '松山新店線',
+    'Zhonghe-Xinlu Line': '中和新蘆線',
+    'Tamsui-Xinyi Line': '淡水信義線',
+    'Circular Line': '環狀線',
+    'Airport Line': '機場線',
+    'Taoyuan Airport MRT': '桃園機場捷運',
+    // 可以繼續添加更多映射
+  }
+  
+  // 檢查是否有映射
+  const mapped = routeNameMap[lineName]
+  if (mapped) {
+    return mapped
+  }
+  
+  // 如果包含 "Line"，嘗試提取並轉換
+  if (lineName.includes(' Line')) {
+    const baseName = lineName.replace(' Line', '')
+    // 可以添加更多智能轉換邏輯
+  }
+  
+  return lineName
+}
+
 function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData, canEdit = false }: RouteSegmentProps) {
   const { t, language } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
@@ -178,6 +216,16 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   const manualStartTime = segment?.manualStartTime || null
   const manualEndTime = segment?.manualEndTime || null
   const hasManualOverride = segment?.isManualOverride || false
+  
+  // Use saved transportation mode from database, or fall back to prop mode, or default to 'driving'
+  const savedMode = segment?.transportationMode || mode || 'driving'
+  
+  // Sync saved mode with parent component when segment loads
+  useEffect(() => {
+    if (segment?.transportationMode && segment.transportationMode !== mode) {
+      onModeChange(segment.transportationMode as TravelMode)
+    }
+  }, [segment?.transportationMode, mode, onModeChange])
 
   const hasCoordinates =
     typeof from.lat === 'number' &&
@@ -240,6 +288,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
           destLng: to.lng as number,
           mode,
           departureTime,
+          language: language, // 傳遞語言參數以獲取本地化的路線名稱
         })
 
         if (cancelled) return
@@ -408,74 +457,250 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                   <span>{t.route.noRouteData}</span>
                 )}
               </div>
-              {/* Step-by-step transportation indicator */}
-              {steps.length > 0 && (
+              {/* Step-by-step transportation indicator - Only show for transit mode */}
+              {mode === 'transit' && steps.length > 0 && (
                 <div className="mt-2 text-xs text-slate-600">
-                  <button
-                    type="button"
-                    onClick={() => setShowSteps(!showSteps)}
-                    className="text-left hover:text-slate-800 transition"
-                  >
-                    {!showSteps ? (
-                      <span className="italic">
-                        {(() => {
-                          // Build summary: e.g., "metro station A - B -> walk 3 min"
-                          const transitSteps = steps.filter(s => s.transitDetails?.lineName)
-                          const walkSteps = steps.filter(s => s.travelMode === 'WALK')
+                  {(() => {
+                    // 合併連續的步行步驟用於摘要顯示
+                    const summarySteps: Array<{ type: 'walk' | 'transit', duration: number, label: string }> = []
+                    let walkGroup: import('../types').RouteStep[] = []
+                    
+                    for (let i = 0; i < steps.length; i++) {
+                      const step = steps[i]
+                      
+                      if (step.travelMode === 'WALK') {
+                        walkGroup.push(step)
+                      } else {
+                        // 遇到非步行步驟，先處理累積的步行步驟
+                        if (walkGroup.length > 0) {
+                          const totalDuration = walkGroup.reduce((sum, s) => {
+                            return sum + (parseInt(s.duration || '0', 10) || 0)
+                          }, 0)
+                          const durationMinutes = Math.round(totalDuration / 60)
+                          if (durationMinutes > 0) {
+                            summarySteps.push({
+                              type: 'walk',
+                              duration: durationMinutes,
+                              label: `${t.route.walk || 'Walk'} ${durationMinutes}${language === 'zh-TW' ? '分' : ' min'}`,
+                            })
+                          }
+                          walkGroup = []
+                        }
+                        
+                        // 處理 transit 步驟
+                        if (step.transitDetails || step.travelMode === 'TRANSIT') {
+                          const vehicleTypeMap: Record<string, string> = {
+                            'BUS': t.route.vehicleTypeBus,
+                            'SUBWAY': t.route.vehicleTypeSubway,
+                            'TRAIN': t.route.vehicleTypeTrain,
+                            'TRAM': t.route.vehicleTypeTram,
+                            'HIGH_SPEED_TRAIN': t.route.vehicleTypeHighSpeedTrain,
+                            'FERRY': t.route.vehicleTypeFerry,
+                            'HEAVY_RAIL': t.route.vehicleTypeHeavyRail,
+                            'LIGHT_RAIL': t.route.vehicleTypeLightRail,
+                            'MONORAIL': t.route.vehicleTypeMonorail,
+                            'CABLE_CAR': t.route.vehicleTypeCableCar,
+                          }
+                          const vehicleTypeText = step.transitDetails?.vehicleType 
+                            ? (vehicleTypeMap[step.transitDetails.vehicleType] || step.transitDetails.vehicleType)
+                            : t.route.transit
                           
-                          if (transitSteps.length > 0) {
-                            const firstTransit = transitSteps[0]
-                            const lastTransit = transitSteps[transitSteps.length - 1]
-                            let summary = ''
-                            
-                            if (firstTransit.transitDetails?.fromStation && firstTransit.transitDetails?.toStation) {
-                              summary = `${firstTransit.transitDetails.fromStation} - ${firstTransit.transitDetails.toStation}`
-                            } else if (firstTransit.transitDetails?.lineName) {
-                              summary = firstTransit.transitDetails.lineName
-                            }
-                            
-                            if (walkSteps.length > 0) {
-                              const walkDuration = walkSteps.reduce((sum, s) => sum + (parseInt(s.duration || '0', 10) || 0), 0)
-                              const walkMinutes = Math.round(walkDuration / 60)
-                              summary += ` -> ${t.route.walk || 'walk'} ${walkMinutes}${language === 'zh-TW' ? '分' : ' min'}`
-                            }
-                            
-                            return summary || steps[0].instruction
-                          } else if (walkSteps.length > 0) {
-                            const walkDuration = walkSteps.reduce((sum, s) => sum + (parseInt(s.duration || '0', 10) || 0), 0)
-                            const walkMinutes = Math.round(walkDuration / 60)
-                            return `${t.route.walk || 'walk'} ${walkMinutes}${language === 'zh-TW' ? '分' : ' min'}`
+                          const durationMinutes = step.duration ? Math.round(parseInt(step.duration, 10) / 60) : 0
+                          
+                          // 優先顯示路線名稱（班號），如果沒有才顯示起點站→終點站
+                          // 確保 lineName 不是空字符串
+                          let routeInfo = ''
+                          if (step.transitDetails?.lineName && step.transitDetails.lineName.trim() !== '') {
+                            routeInfo = step.transitDetails.lineName.trim()
+                          } else if (step.transitDetails?.fromStation && step.transitDetails?.toStation) {
+                            routeInfo = `${step.transitDetails.fromStation} → ${step.transitDetails.toStation}`
                           }
                           
-                          return steps[0].instruction || ''
-                        })()}
-                      </span>
-                    ) : (
-                      <span className="font-semibold">{t.route.hideSteps || 'Hide details'}</span>
-                    )}
-                  </button>
-                  {showSteps && (
-                    <div className="mt-2 pl-2 border-l-2 border-violet-200 space-y-1">
-                      {steps.map((step, idx) => (
-                        <div key={idx} className="text-xs">
-                          {step.transitDetails?.lineName ? (
-                            <span>
-                              {step.transitDetails.fromStation && step.transitDetails.toStation
-                                ? `${step.transitDetails.fromStation} → ${step.transitDetails.toStation} (${step.transitDetails.lineName})`
-                                : step.transitDetails.lineName}
+                          // 顯示格式：交通方式 路線名稱 時間（如：公車 202 5分 或 地鐵 板南線 10分）
+                          let label = vehicleTypeText
+                          if (routeInfo) {
+                            label += ` ${routeInfo}`
+                          }
+                          if (durationMinutes > 0) {
+                            label += ` ${durationMinutes}${language === 'zh-TW' ? '分' : ' min'}`
+                          }
+                          
+                          summarySteps.push({
+                            type: 'transit',
+                            duration: durationMinutes,
+                            label: label,
+                          })
+                        }
+                      }
+                    }
+                    
+                    // 處理最後的步行步驟組
+                    if (walkGroup.length > 0) {
+                      const totalDuration = walkGroup.reduce((sum, s) => {
+                        return sum + (parseInt(s.duration || '0', 10) || 0)
+                      }, 0)
+                      const durationMinutes = Math.round(totalDuration / 60)
+                      if (durationMinutes > 0) {
+                        summarySteps.push({
+                          type: 'walk',
+                          duration: durationMinutes,
+                          label: `${t.route.walk || 'Walk'} ${durationMinutes}${language === 'zh-TW' ? '分' : ' min'}`,
+                        })
+                      }
+                    }
+                    
+                    return (
+                      <>
+                        {/* 簡化摘要顯示 */}
+                        <div className="italic">
+                          {summarySteps.map((step, idx) => (
+                            <span key={idx}>
+                              {step.label}
+                              {idx < summarySteps.length - 1 && ' → '}
                             </span>
-                          ) : step.travelMode === 'WALK' ? (
-                            <span>
-                              {t.route.walk || 'Walk'} {step.distanceMeters ? (step.distanceMeters < 1000 ? `${step.distanceMeters}m` : `${(step.distanceMeters / 1000).toFixed(1)}km`) : ''}
-                              {step.duration && ` (${Math.round(parseInt(step.duration, 10) / 60)}${language === 'zh-TW' ? '分' : ' min'})`}
-                            </span>
-                          ) : (
-                            <span>{step.instruction || step.travelMode}</span>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        {/* 顯示詳情按鈕 */}
+                        <button
+                          type="button"
+                          onClick={() => setShowSteps(!showSteps)}
+                          className="mt-1 text-violet-600 hover:text-violet-700 hover:underline transition flex items-center gap-1 text-xs"
+                        >
+                          {showSteps ? (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                              <span>{t.route.hideSteps || 'Hide details'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                              <span>{t.route.showSteps || 'Show details'}</span>
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )
+                  })()}
+                  {showSteps && (() => {
+                    // 合併連續的步行步驟
+                    const processedSteps: (import('../types').RouteStep & { isMergedWalk?: boolean })[] = []
+                    let walkGroup: import('../types').RouteStep[] = []
+                    
+                    for (let i = 0; i < steps.length; i++) {
+                      const step = steps[i]
+                      
+                      if (step.travelMode === 'WALK') {
+                        walkGroup.push(step)
+                      } else {
+                        // 遇到非步行步驟，先處理累積的步行步驟
+                        if (walkGroup.length > 0) {
+                          const totalDistance = walkGroup.reduce((sum, s) => sum + (s.distanceMeters || 0), 0)
+                          const totalDuration = walkGroup.reduce((sum, s) => {
+                            return sum + (parseInt(s.duration || '0', 10) || 0)
+                          }, 0)
+                          
+                          processedSteps.push({
+                            ...walkGroup[0],
+                            distanceMeters: totalDistance,
+                            duration: totalDuration.toString(),
+                            isMergedWalk: true,
+                          })
+                          walkGroup = []
+                        }
+                        processedSteps.push(step)
+                      }
+                    }
+                    
+                    // 處理最後的步行步驟組
+                    if (walkGroup.length > 0) {
+                      const totalDistance = walkGroup.reduce((sum, s) => sum + (s.distanceMeters || 0), 0)
+                      const totalDuration = walkGroup.reduce((sum, s) => {
+                        return sum + (parseInt(s.duration || '0', 10) || 0)
+                      }, 0)
+                      
+                      processedSteps.push({
+                        ...walkGroup[0],
+                        distanceMeters: totalDistance,
+                        duration: totalDuration.toString(),
+                        isMergedWalk: true,
+                      })
+                    }
+                    
+                    return (
+                      <div className="mt-2 pl-2 border-l-2 border-violet-200 space-y-2">
+                        {processedSteps.map((step, idx) => {
+                          // Transit 步驟
+                          if (step.travelMode === 'TRANSIT' || step.transitDetails) {
+                            const vehicleTypeMap: Record<string, string> = {
+                              'BUS': t.route.vehicleTypeBus,
+                              'SUBWAY': t.route.vehicleTypeSubway,
+                              'TRAIN': t.route.vehicleTypeTrain,
+                              'TRAM': t.route.vehicleTypeTram,
+                              'HIGH_SPEED_TRAIN': t.route.vehicleTypeHighSpeedTrain,
+                              'FERRY': t.route.vehicleTypeFerry,
+                              'HEAVY_RAIL': t.route.vehicleTypeHeavyRail,
+                              'LIGHT_RAIL': t.route.vehicleTypeLightRail,
+                              'MONORAIL': t.route.vehicleTypeMonorail,
+                              'CABLE_CAR': t.route.vehicleTypeCableCar,
+                            }
+                            const vehicleTypeText = step.transitDetails?.vehicleType 
+                              ? (vehicleTypeMap[step.transitDetails.vehicleType] || step.transitDetails.vehicleType)
+                              : ''
+                            
+                            return (
+                              <div key={idx} className="text-xs">
+                                <div className="flex flex-col gap-1">
+                                  {/* 主要資訊：起點站 → 終點站 */}
+                                  <span className="font-medium text-slate-800">
+                                    {step.transitDetails?.fromStation && step.transitDetails?.toStation
+                                      ? `${step.transitDetails.fromStation} → ${step.transitDetails.toStation}`
+                                      : step.transitDetails?.lineName || t.route.transit}
+                                  </span>
+                                  {/* 詳細資訊：交通工具類型、路線名稱、時間 */}
+                                  <div className="flex flex-wrap gap-2 text-slate-600">
+                                    {vehicleTypeText && (
+                                      <span className="font-medium">{vehicleTypeText}</span>
+                                    )}
+                                    {step.transitDetails?.lineName && (
+                                      <span className="font-medium text-violet-600">{step.transitDetails.lineName}</span>
+                                    )}
+                                    {step.duration && (
+                                      <span>
+                                        {Math.round(parseInt(step.duration, 10) / 60)}{language === 'zh-TW' ? '分' : ' min'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          }
+                          
+                          // 步行步驟（已合併）
+                          if (step.travelMode === 'WALK') {
+                            return (
+                              <div key={idx} className="text-xs">
+                                <span>
+                                  {t.route.walk || 'Walk'} {step.distanceMeters ? (step.distanceMeters < 1000 ? `${step.distanceMeters}m` : `${(step.distanceMeters / 1000).toFixed(1)}km`) : ''}
+                                  {step.duration && ` (${Math.round(parseInt(step.duration, 10) / 60)}${language === 'zh-TW' ? '分' : ' min'})`}
+                                </span>
+                              </div>
+                            )
+                          }
+                          
+                          // 其他步驟
+                          return (
+                            <div key={idx} className="text-xs">
+                              <span>{step.instruction || step.travelMode}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
             </div>
@@ -483,18 +708,29 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
               <div className="flex items-center gap-1 text-xs text-slate-600">
                 <span>{t.route.modeLabel}:</span>
                 <select
-                  value={mode}
-                  onChange={(e) => onModeChange(e.target.value as TravelMode)}
+                  value={savedMode}
+                  onChange={async (e) => {
+                    const newMode = e.target.value as TravelMode
+                    onModeChange(newMode)
+                    // Save mode to backend
+                    try {
+                      await updateSegment.mutateAsync({
+                        fromActivityId: from.id,
+                        toActivityId: to.id,
+                        data: { transportationMode: newMode },
+                      })
+                    } catch (error) {
+                      console.error('Failed to save transportation mode:', error)
+                      // Revert on error
+                      onModeChange(savedMode as TravelMode)
+                    }
+                  }}
                   className="border border-violet-200/55 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
                 >
                   <option value="driving">{t.route.driving}</option>
                   <option value="walking">{t.route.walking}</option>
                   <option value="bicycling">{t.route.bicycling || 'Bicycling'}</option>
                   <option value="transit">{t.route.transit}</option>
-                  <option value="train">{t.route.train || 'Train'}</option>
-                  <option value="subway">{t.route.subway || 'Subway'}</option>
-                  <option value="bus">{t.route.bus || 'Bus'}</option>
-                  <option value="plane">{t.route.plane || 'Plane'}</option>
                 </select>
               </div>
               <button
@@ -635,6 +871,37 @@ export default function ItineraryDay({
 
   const [segmentModes, setSegmentModes] = useState<Record<string, TravelMode>>(initialSegmentModes)
   const [isUpdatingAllScheduleTimes, setIsUpdatingAllScheduleTimes] = useState(false)
+  const updateSegment = useUpdateTransportationSegment()
+  
+  // Load saved transportation modes from backend for all segments
+  useEffect(() => {
+    const loadSavedModes = async () => {
+      const savedModes: Record<string, TravelMode> = {}
+      for (let i = 0; i < activities.length - 1; i++) {
+        const from = activities[i]
+        const to = activities[i + 1]
+        const segmentId = `${from.id}-${to.id}`
+        try {
+          const response = await api.get(`/activities/transportation/${from.id}/${to.id}`)
+          if (response.data?.transportationMode) {
+            savedModes[segmentId] = response.data.transportationMode as TravelMode
+          }
+        } catch (error: any) {
+          // 404 is expected if no segment exists, use default
+          if (error.response?.status !== 404) {
+            console.error('Error loading transportation mode:', error)
+          }
+        }
+      }
+      if (Object.keys(savedModes).length > 0) {
+        setSegmentModes((prev) => ({ ...prev, ...savedModes }))
+      }
+    }
+    
+    if (activities.length > 1) {
+      loadSavedModes()
+    }
+  }, [activities])
   
   // Update segment modes when initialSegmentModes changes (e.g., when a new activity is created with a transport mode)
   useEffect(() => {
@@ -936,6 +1203,7 @@ export default function ItineraryDay({
             destLat: to.lat,
             destLng: to.lng,
             mode,
+            language: language, // 傳遞語言參數以獲取本地化的路線名稱
           })
 
           if (cancelled) return
@@ -1018,9 +1286,9 @@ export default function ItineraryDay({
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
           <h3 className="text-xl font-bold">{formattedDate}</h3>
-          {scheduleConflicts > 0 && (
+          {scheduleConflicts.count > 0 && (
             <span className="text-xs font-semibold px-2 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-              {t.route.scheduleConflicts}: {scheduleConflicts}
+              {t.route.scheduleConflicts}: {scheduleConflicts.count}
             </span>
           )}
           {dayPlaces.length > 0 && (
@@ -1203,7 +1471,6 @@ export default function ItineraryDay({
                   {index < activities.length - 1 && (
                     (() => {
                       const segmentId = `${activity.id}-${activities[index + 1].id}`
-                      const mode = segmentModes[segmentId] || 'driving'
                       return (
                     <RouteSegment
                       from={activity}
@@ -1211,10 +1478,22 @@ export default function ItineraryDay({
                       showDragPlaceholder={canEdit}
                       canEdit={canEdit}
                       segmentId={segmentId}
-                      mode={mode}
-                      onModeChange={(nextMode) =>
+                      mode={segmentModes[segmentId] || 'driving'}
+                      onModeChange={async (nextMode) => {
                         setSegmentModes((prev) => ({ ...prev, [segmentId]: nextMode }))
-                      }
+                        // Save mode to backend
+                        try {
+                          await updateSegment.mutateAsync({
+                            fromActivityId: activity.id,
+                            toActivityId: activities[index + 1].id,
+                            data: { transportationMode: nextMode },
+                          })
+                        } catch (error) {
+                          console.error('Failed to save transportation mode:', error)
+                          // Revert on error
+                          setSegmentModes((prev) => ({ ...prev, [segmentId]: prev[segmentId] || 'driving' }))
+                        }
+                      }}
                       paceBuffer={paceBuffer}
                       onRouteData={(id, data) =>
                         setSegmentRoutes((prev) => ({ ...prev, [id]: data }))

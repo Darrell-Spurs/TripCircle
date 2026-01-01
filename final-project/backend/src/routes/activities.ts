@@ -1896,6 +1896,7 @@ router.get('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       manualStartTime: segment.manualStartTime?.toISOString() || null,
       manualEndTime: segment.manualEndTime?.toISOString() || null,
       isManualOverride: segment.isManualOverride,
+      transportationMode: segment.transportationMode || 'driving', // Default to 'driving' if null
     });
   } catch (error) {
     console.error('Error fetching transportation segment:', error);
@@ -1951,7 +1952,13 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       return;
     }
 
-    const { manualStartTime, manualEndTime, isManualOverride } = req.body;
+    const { manualStartTime, manualEndTime, isManualOverride, transportationMode } = req.body;
+
+    // Validate transportationMode if provided
+    const validModes = ['driving', 'walking', 'bicycling', 'transit'];
+    const modeToSave = transportationMode && validModes.includes(transportationMode) 
+      ? transportationMode 
+      : null; // If invalid or not provided, set to null (will default to 'driving' when reading)
 
     // Upsert transportation segment
     const segment = await prisma.transportationSegment.upsert({
@@ -1965,6 +1972,7 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
         manualStartTime: manualStartTime ? new Date(manualStartTime) : null,
         manualEndTime: manualEndTime ? new Date(manualEndTime) : null,
         isManualOverride: isManualOverride !== undefined ? isManualOverride : false,
+        transportationMode: modeToSave,
       },
       create: {
         fromActivityId,
@@ -1972,6 +1980,7 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
         manualStartTime: manualStartTime ? new Date(manualStartTime) : null,
         manualEndTime: manualEndTime ? new Date(manualEndTime) : null,
         isManualOverride: isManualOverride !== undefined ? isManualOverride : false,
+        transportationMode: modeToSave,
       },
     });
 
@@ -1982,6 +1991,7 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       manualStartTime: segment.manualStartTime?.toISOString() || null,
       manualEndTime: segment.manualEndTime?.toISOString() || null,
       isManualOverride: segment.isManualOverride,
+      transportationMode: segment.transportationMode || 'driving', // Default to 'driving' if null
     });
   } catch (error) {
     console.error('Error updating transportation segment:', error);
