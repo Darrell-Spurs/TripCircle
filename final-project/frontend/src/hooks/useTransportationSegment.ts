@@ -8,7 +8,7 @@ interface TransportationSegment {
   manualStartTime: string | null
   manualEndTime: string | null
   isManualOverride: boolean
-  transportationMode: string // 'driving', 'walking', 'bicycling', 'transit' (defaults to 'driving' if null in DB)
+  transportationMode?: string // 'driving', 'walking', 'bicycling', 'transit' (optional for backward compatibility, defaults to 'driving' if null/undefined)
 }
 
 interface UpdateTransportationSegmentData {

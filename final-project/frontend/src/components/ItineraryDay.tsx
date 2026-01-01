@@ -245,6 +245,13 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
       return
     }
 
+    // Don't fetch route if manual override is active
+    if (hasManualOverride) {
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
     let cancelled = false
 
     const fetchRoute = async () => {
@@ -319,7 +326,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
     return () => {
       cancelled = true
     }
-  }, [from.lat, from.lng, to.lat, to.lng, mode, from.endTime, from.startTime, t.route.error, hasCoordinates])
+  }, [from.lat, from.lng, to.lat, to.lng, mode, from.endTime, from.startTime, t.route.error, hasCoordinates, hasManualOverride, language, segmentId, onRouteData])
 
   const fromLabel = from.locationName || from.title
   const toLabel = to.locationName || to.title
@@ -401,9 +408,6 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
               <span className="whitespace-nowrap tabular-nums">
                 {manualEndTime ? formatTime(new Date(manualEndTime)) : formatTime(transportEnd!)}
               </span>
-              {hasManualOverride && (
-                <span className="text-xs text-violet-600 mt-1">({t.route.manual || 'Manual'})</span>
-              )}
             </div>
           ) : (
             <span className="text-xs text-slate-700 font-semibold text-center">
@@ -434,9 +438,9 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                 </span>
               </div>
               <div className="mt-1 text-xs text-slate-500">
-                {isLoading && <span>{t.route.loading}</span>}
-                {!isLoading && error && <span>{error}</span>}
-                {!isLoading && !error && distanceText && durationText && (
+                {!hasManualOverride && isLoading && <span>{t.route.loading}</span>}
+                {!hasManualOverride && !isLoading && error && <span>{error}</span>}
+                {!hasManualOverride && !isLoading && !error && distanceText && durationText && (
                   <span>
                     {durationText}
                     {buffered && buffered.bufferSec > 0 && (
@@ -450,10 +454,10 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                     {' '}({distanceText})
                   </span>
                 )}
-                {!isLoading && !error && !distanceText && !durationText && hasCoordinates && (
+                {!hasManualOverride && !isLoading && !error && !distanceText && !durationText && hasCoordinates && (
                   <span>{t.route.noRouteData}</span>
                 )}
-                {!hasCoordinates && (
+                {!hasManualOverride && !hasCoordinates && (
                   <span>{t.route.noRouteData}</span>
                 )}
               </div>
@@ -708,16 +712,24 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
               <div className="flex items-center gap-1 text-xs text-slate-600">
                 <span>{t.route.modeLabel}:</span>
                 <select
-                  value={savedMode}
+                  value={hasManualOverride ? 'custom' : savedMode}
                   onChange={async (e) => {
-                    const newMode = e.target.value as TravelMode
+                    const selectedValue = e.target.value
+                    if (selectedValue === 'custom') {
+                      // Don't allow selecting 'custom' directly
+                      return
+                    }
+                    const newMode = selectedValue as TravelMode
                     onModeChange(newMode)
-                    // Save mode to backend
+                    // Save mode to backend and clear manual override if switching from custom
                     try {
                       await updateSegment.mutateAsync({
                         fromActivityId: from.id,
                         toActivityId: to.id,
-                        data: { transportationMode: newMode },
+                        data: { 
+                          transportationMode: newMode,
+                          isManualOverride: false, // Clear manual override when selecting a mode
+                        },
                       })
                     } catch (error) {
                       console.error('Failed to save transportation mode:', error)
@@ -727,6 +739,9 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                   }}
                   className="border border-violet-200/55 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
                 >
+                  {hasManualOverride && (
+                    <option value="custom">{t.route.custom}</option>
+                  )}
                   <option value="driving">{t.route.driving}</option>
                   <option value="walking">{t.route.walking}</option>
                   <option value="bicycling">{t.route.bicycling || 'Bicycling'}</option>

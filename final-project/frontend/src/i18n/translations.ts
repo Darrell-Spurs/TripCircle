@@ -283,6 +283,7 @@ export interface Translations {
     resetToAuto: string
     editTime: string
     manual: string
+    custom: string
     endTimeAfterStart: string
     saveFailed: string
     resetFailed: string
@@ -765,6 +766,7 @@ export const translations: Record<Language, Translations> = {
       resetToAuto: '重置為自動',
       editTime: '編輯時間',
       manual: '手動',
+      custom: '自訂',
       endTimeAfterStart: '結束時間必須在開始時間之後',
       saveFailed: '儲存交通時間失敗',
       resetFailed: '重置交通時間失敗',
@@ -1200,6 +1202,8 @@ export const translations: Record<Language, Translations> = {
       paceNeutral: 'Neutral',
       paceRelaxed: 'Relaxed',
       scheduleConflicts: 'Schedule conflicts',
+      conflict: 'Conflict',
+      conflictWarning: 'Schedule conflict warning',
       buffer: 'buffer',
       bicycling: 'Bicycling',
       train: 'Train',
@@ -1230,6 +1234,7 @@ export const translations: Record<Language, Translations> = {
       resetToAuto: 'Reset to Auto',
       editTime: 'Edit time',
       manual: 'Manual',
+      custom: 'Custom',
       endTimeAfterStart: 'End time must be after start time',
       saveFailed: 'Failed to save transportation time',
       resetFailed: 'Failed to reset transportation time',
