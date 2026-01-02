@@ -4,6 +4,8 @@ import { useLanguage } from '../context/LanguageContext'
 import { useTripComments, useCreateTripComment, useUpdateTripComment, useDeleteTripComment } from '../hooks/useTripComments'
 import { useAuth } from '../context/AuthContext'
 import { TripComment } from '../types'
+import LocationSearchModal from './LocationSearchModal'
+import { formatCommentText } from '../utils/formatComment'
 
 interface TripCommentsSectionProps {
   tripId: number
@@ -22,6 +24,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
   const [newComment, setNewComment] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editContent, setEditContent] = useState('')
+  const [showLocationSearch, setShowLocationSearch] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +58,13 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
   const handleCancelEdit = () => {
     setEditingId(null)
     setEditContent('')
+  }
+
+  const handleLocationSelect = (formattedText: string) => {
+    setNewComment((prev) => {
+      const separator = prev.trim() ? '\n\n' : ''
+      return prev + separator + formattedText
+    })
   }
 
   const handleDelete = async (commentId: number) => {
@@ -122,7 +132,16 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
                 rows={3}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
               />
-              <div className="mt-2 flex justify-end">
+              <div className="mt-2 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowLocationSearch(true)}
+                  className="px-3 py-1.5 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1"
+                  title={t.comment?.addLocation || 'Add Location'}
+                >
+                  <span>📍</span>
+                  <span>{t.comment?.addLocation || 'Add Location'}</span>
+                </button>
                 <button
                   type="submit"
                   disabled={!newComment.trim() || createComment.isPending}
@@ -200,7 +219,7 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
                   </div>
                 ) : (
                   <>
-                    <p className="text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">{formatCommentText(comment.content)}</p>
                     {comment.updatedAt !== comment.createdAt && (
                       <span className="text-xs text-gray-400 mt-1 block">(edited)</span>
                     )}
@@ -238,6 +257,13 @@ export default function TripCommentsSection({ tripId, tripOwnerId }: TripComment
           </div>
         )}
       </div>
+
+      {/* Location Search Modal */}
+      <LocationSearchModal
+        isOpen={showLocationSearch}
+        onClose={() => setShowLocationSearch(false)}
+        onSelect={handleLocationSelect}
+      />
     </div>
   )
 }

@@ -396,6 +396,14 @@ export interface Translations {
     tryDifferentFilters: string
   }
 
+  // Comment location search
+  comment: {
+    addLocation: string
+    searchLocationPlaceholder: string
+    searchLocationHint: string
+    noLocationsFound: string
+  }
+
   // Photos
   photos: {
     addPhoto: string
@@ -867,6 +875,12 @@ export const translations: Record<Language, Translations> = {
       searchInExplore: '在探索頁面搜尋',
       noResults: '找不到符合條件的旅程',
       tryDifferentFilters: '請嘗試調整搜尋條件或篩選',
+    },
+    comment: {
+      addLocation: '新增地點',
+      searchLocationPlaceholder: '搜尋地點...',
+      searchLocationHint: '開始輸入以搜尋地點',
+      noLocationsFound: '找不到地點',
     },
     photos: {
       addPhoto: '新增照片',

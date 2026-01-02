@@ -3,6 +3,8 @@ import { useLanguage } from '../context/LanguageContext'
 import { useActivityComments, useCreateActivityComment, useUpdateActivityComment, useDeleteActivityComment } from '../hooks/useActivityComments'
 import { useAuth } from '../context/AuthContext'
 import { ActivityComment } from '../types'
+import LocationSearchModal from './LocationSearchModal'
+import { formatCommentText } from '../utils/formatComment'
 
 interface ActivityCommentsPanelProps {
   activityId: number
@@ -18,6 +20,7 @@ export default function ActivityCommentsPanel({ activityId }: ActivityCommentsPa
   const [newComment, setNewComment] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editContent, setEditContent] = useState('')
+  const [showLocationSearch, setShowLocationSearch] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,6 +54,13 @@ export default function ActivityCommentsPanel({ activityId }: ActivityCommentsPa
   const handleCancelEdit = () => {
     setEditingId(null)
     setEditContent('')
+  }
+
+  const handleLocationSelect = (formattedText: string) => {
+    setNewComment((prev) => {
+      const separator = prev.trim() ? '\n\n' : ''
+      return prev + separator + formattedText
+    })
   }
 
   const handleDelete = async (commentId: number) => {
@@ -131,7 +141,7 @@ export default function ActivityCommentsPanel({ activityId }: ActivityCommentsPa
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{formatCommentText(comment.content)}</p>
                     {user && comment.userId === user.id && (
                       <div className="flex gap-2 mt-2">
                         <button
@@ -169,15 +179,33 @@ export default function ActivityCommentsPanel({ activityId }: ActivityCommentsPa
             rows={2}
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           />
-          <button
-            type="submit"
-            disabled={!newComment.trim() || createComment.isPending}
-            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t.activity.addComment || 'Add Comment'}
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setShowLocationSearch(true)}
+              className="px-2 py-1 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors flex items-center gap-1"
+              title={t.comment?.addLocation || 'Add Location'}
+            >
+              <span>📍</span>
+              <span>{t.comment?.addLocation || 'Add Location'}</span>
+            </button>
+            <button
+              type="submit"
+              disabled={!newComment.trim() || createComment.isPending}
+              className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {t.activity.addComment || 'Add Comment'}
+            </button>
+          </div>
         </form>
       )}
+
+      {/* Location Search Modal */}
+      <LocationSearchModal
+        isOpen={showLocationSearch}
+        onClose={() => setShowLocationSearch(false)}
+        onSelect={handleLocationSelect}
+      />
     </div>
   )
 }

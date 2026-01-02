@@ -929,6 +929,11 @@ export default function ItineraryDay({
   const [selectedMarkerId, setSelectedMarkerId] = useState<number | null>(null)
   const [mapInstance, setMapInstance] = useState<any>(null)
   const mapMarkersRef = useRef<any[]>([])
+
+  // Memoize onRouteData to prevent infinite loops in RouteSegment useEffect
+  const handleRouteData = useCallback((segmentId: string, data: SegmentRouteState) => {
+    setSegmentRoutes((prev) => ({ ...prev, [segmentId]: data }))
+  }, [])
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -1510,9 +1515,7 @@ export default function ItineraryDay({
                         }
                       }}
                       paceBuffer={paceBuffer}
-                      onRouteData={(id, data) =>
-                        setSegmentRoutes((prev) => ({ ...prev, [id]: data }))
-                      }
+                      onRouteData={handleRouteData}
                     />
                       )
                     })()
