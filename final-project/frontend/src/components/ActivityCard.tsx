@@ -5,6 +5,7 @@ import ActivityPreferenceButtons from './ActivityPreferenceButtons'
 import ActivityCommentsPanel from './ActivityCommentsPanel'
 import { useActivityPreferences } from '../hooks/useActivityPreferences'
 import { useAuth } from '../context/AuthContext'
+import { formatCommentText } from '../utils/formatComment'
 
 interface ActivityCardProps {
   activity: Activity
@@ -210,7 +211,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
             )}
             
             {activity.notes && (
-              <p className="text-sm text-gray-700 mt-2">{activity.notes}</p>
+              <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{formatCommentText(activity.notes)}</p>
             )}
           </div>
         

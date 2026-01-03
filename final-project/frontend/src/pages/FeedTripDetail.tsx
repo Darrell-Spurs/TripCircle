@@ -4,6 +4,7 @@ import { useFeedTrip } from '../hooks/useFeed'
 import { useLanguage } from '../context/LanguageContext'
 import { Activity, FeedTripPhoto } from '../types'
 import TripCommentsSection from '../components/TripCommentsSection'
+import { formatCommentText } from '../utils/formatComment'
 
 export default function FeedTripDetail() {
   const { id } = useParams<{ id: string }>()
@@ -219,7 +220,7 @@ export default function FeedTripDetail() {
 
                         {/* Notes (if no body) */}
                         {!activity.body && activity.notes && (
-                          <p className="text-sm text-gray-600 mt-2">{activity.notes}</p>
+                          <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{formatCommentText(activity.notes)}</p>
                         )}
                       </div>
                     ))}

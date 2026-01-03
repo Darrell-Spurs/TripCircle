@@ -34,17 +34,37 @@ export function formatCommentText(text: string): React.ReactNode {
     // Add the link
     const linkText = match[1]
     const linkUrl = match[2]
-    parts.push(
-      <a
-        key={`link-${keyCounter++}`}
-        href={linkUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-indigo-600 hover:text-indigo-800 underline"
-      >
-        {linkText}
-      </a>
-    )
+    
+    // Check if this is a Google Maps link (location tag)
+    const isGoogleMapsLink = linkUrl.includes('google.com/maps')
+    
+    if (isGoogleMapsLink) {
+      // Render as a tag-like badge
+      parts.push(
+        <a
+          key={`link-${keyCounter++}`}
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors cursor-pointer mb-1 mr-1"
+        >
+          {linkText}
+        </a>
+      )
+    } else {
+      // Render as regular link
+      parts.push(
+        <a
+          key={`link-${keyCounter++}`}
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 hover:text-indigo-800 underline"
+        >
+          {linkText}
+        </a>
+      )
+    }
 
     lastIndex = linkRegex.lastIndex
   }

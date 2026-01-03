@@ -48,9 +48,9 @@ export default function LocationSearchModal({
   }, [isOpen])
 
   const handleSelectPlace = (place: Place) => {
-    // Format: [Location Name](Google Maps Link) - Address
+    // Format: [Location Name](Google Maps Link)
     const googleMapsUrl = `https://www.google.com/maps/place/?q=place_id:${place.placeId}`
-    const formattedText = `[${place.name}](${googleMapsUrl}) - ${place.address}`
+    const formattedText = `[${place.name}](${googleMapsUrl})`
     onSelect(formattedText)
     onClose()
   }

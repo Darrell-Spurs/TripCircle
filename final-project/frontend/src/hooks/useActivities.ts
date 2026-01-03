@@ -76,10 +76,14 @@ export function useUpdateActivity() {
         throw error
       }
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       if (result.activity) {
+        // Invalidate the specific trip query to refresh all activities
         queryClient.invalidateQueries({ queryKey: ['trips', result.activity.tripId] })
         queryClient.invalidateQueries({ queryKey: ['trips'] })
+      } else if (variables.currentActivity) {
+        // Even if there's a conflict, still invalidate to ensure data is fresh
+        queryClient.invalidateQueries({ queryKey: ['trips', variables.currentActivity.tripId] })
       }
     },
   })

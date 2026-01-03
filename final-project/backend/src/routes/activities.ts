@@ -1897,6 +1897,7 @@ router.get('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       manualEndTime: segment.manualEndTime?.toISOString() || null,
       isManualOverride: segment.isManualOverride,
       transportationMode: segment.transportationMode || 'driving', // Default to 'driving' if null
+      note: segment.note || null,
     });
   } catch (error) {
     console.error('Error fetching transportation segment:', error);
@@ -1952,13 +1953,34 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       return;
     }
 
-    const { manualStartTime, manualEndTime, isManualOverride, transportationMode } = req.body;
+    const { manualStartTime, manualEndTime, isManualOverride, transportationMode, note } = req.body;
 
     // Validate transportationMode if provided
-    const validModes = ['driving', 'walking', 'bicycling', 'transit'];
-    const modeToSave = transportationMode && validModes.includes(transportationMode) 
-      ? transportationMode 
-      : null; // If invalid or not provided, set to null (will default to 'driving' when reading)
+    let modeToSave: string | null | undefined = undefined
+    if (transportationMode !== undefined) {
+      const validModes = ['driving', 'walking', 'bicycling', 'transit'];
+      modeToSave = transportationMode && validModes.includes(transportationMode) 
+        ? transportationMode 
+        : null; // If invalid, set to null (will default to 'driving' when reading)
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {}
+    if (manualStartTime !== undefined) {
+      updateData.manualStartTime = manualStartTime ? new Date(manualStartTime) : null
+    }
+    if (manualEndTime !== undefined) {
+      updateData.manualEndTime = manualEndTime ? new Date(manualEndTime) : null
+    }
+    if (isManualOverride !== undefined) {
+      updateData.isManualOverride = isManualOverride
+    }
+    if (modeToSave !== undefined) {
+      updateData.transportationMode = modeToSave
+    }
+    if (note !== undefined) {
+      updateData.note = note
+    }
 
     // Upsert transportation segment
     const segment = await prisma.transportationSegment.upsert({
@@ -1968,19 +1990,15 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
           toActivityId,
         },
       },
-      update: {
-        manualStartTime: manualStartTime ? new Date(manualStartTime) : null,
-        manualEndTime: manualEndTime ? new Date(manualEndTime) : null,
-        isManualOverride: isManualOverride !== undefined ? isManualOverride : false,
-        transportationMode: modeToSave,
-      },
+      update: updateData,
       create: {
         fromActivityId,
         toActivityId,
         manualStartTime: manualStartTime ? new Date(manualStartTime) : null,
         manualEndTime: manualEndTime ? new Date(manualEndTime) : null,
         isManualOverride: isManualOverride !== undefined ? isManualOverride : false,
-        transportationMode: modeToSave,
+        transportationMode: modeToSave !== undefined ? modeToSave : null,
+        note: note !== undefined ? note : null,
       },
     });
 
@@ -1992,6 +2010,7 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       manualEndTime: segment.manualEndTime?.toISOString() || null,
       isManualOverride: segment.isManualOverride,
       transportationMode: segment.transportationMode || 'driving', // Default to 'driving' if null
+      note: segment.note || null,
     });
   } catch (error) {
     console.error('Error updating transportation segment:', error);

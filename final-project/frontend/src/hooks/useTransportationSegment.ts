@@ -9,6 +9,7 @@ interface TransportationSegment {
   manualEndTime: string | null
   isManualOverride: boolean
   transportationMode?: string // 'driving', 'walking', 'bicycling', 'transit' (optional for backward compatibility, defaults to 'driving' if null/undefined)
+  note?: string | null // Note for this transportation segment
 }
 
 interface UpdateTransportationSegmentData {
@@ -16,6 +17,7 @@ interface UpdateTransportationSegmentData {
   manualEndTime?: string | null
   isManualOverride?: boolean
   transportationMode?: string // 'driving', 'walking', 'bicycling', 'transit'
+  note?: string | null // Note for this transportation segment
 }
 
 export function useTransportationSegment(fromActivityId: number, toActivityId: number) {

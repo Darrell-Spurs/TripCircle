@@ -32,8 +32,7 @@ interface ItineraryDayProps {
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
   onReorder: (activityIds: number[]) => void
-  onAddActivity?: () => void
-  onUpdateActivity?: (activityId: number, data: { startTime?: string; endTime?: string }) => Promise<void>
+  onAddActivity?: (afterActivityId?: number) => void
   canEdit: boolean
   paceBuffer?: {
     prePct: number
@@ -207,6 +206,29 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   const [steps, setSteps] = useState<import('../types').RouteStep[]>([])
   const [showSteps, setShowSteps] = useState(false)
   const [showTimeEditor, setShowTimeEditor] = useState(false)
+  const [showNoteEditor, setShowNoteEditor] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  
+  // Use ref to store onRouteData callback to avoid dependency issues
+  const onRouteDataRef = useRef(onRouteData)
+  useEffect(() => {
+    onRouteDataRef.current = onRouteData
+  }, [onRouteData])
+
+  // Reset state when segmentId changes (e.g., when switching dates)
+  useEffect(() => {
+    setIsLoading(false)
+    setError(null)
+    setDistanceText(null)
+    setDurationText(null)
+    setDurationValue(null)
+    setDistanceValue(null)
+    setSteps([])
+    setShowSteps(false)
+    setShowTimeEditor(false)
+    setShowNoteEditor(false)
+    setNoteText('')
+  }, [segmentId, from.id, to.id])
   
   // Load transportation segment from backend
   const { data: segment } = useTransportationSegment(from.id, to.id)
@@ -220,12 +242,22 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   // Use saved transportation mode from database, or fall back to prop mode, or default to 'driving'
   const savedMode = segment?.transportationMode || mode || 'driving'
   
-  // Sync saved mode with parent component when segment loads
+  // Track if we've already synced to prevent overwriting user changes
+  const hasSyncedRef = useRef(false)
+  
+  // Sync saved mode with parent component only on initial load
   useEffect(() => {
-    if (segment?.transportationMode && segment.transportationMode !== mode) {
+    // Only sync once when segment first loads, not on every change
+    if (segment?.transportationMode && !hasSyncedRef.current && segment.transportationMode !== mode) {
+      hasSyncedRef.current = true
       onModeChange(segment.transportationMode as TravelMode)
     }
   }, [segment?.transportationMode, mode, onModeChange])
+  
+  // Reset sync flag when segmentId changes (new segment)
+  useEffect(() => {
+    hasSyncedRef.current = false
+  }, [segmentId, from.id, to.id])
 
   const hasCoordinates =
     typeof from.lat === 'number' &&
@@ -306,7 +338,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
         setDurationValue(data.durationValue)
         setSteps(data.steps || [])
 
-        onRouteData(segmentId, { mode, ...data })
+        onRouteDataRef.current(segmentId, { mode, ...data })
       } catch (err: any) {
         if (cancelled) return
         setError(err.response?.data?.detail || t.route.error)
@@ -326,7 +358,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
     return () => {
       cancelled = true
     }
-  }, [from.lat, from.lng, to.lat, to.lng, mode, from.endTime, from.startTime, t.route.error, hasCoordinates, hasManualOverride, language, segmentId, onRouteData])
+  }, [from.lat, from.lng, to.lat, to.lng, mode, from.endTime, from.startTime, t.route.error, hasCoordinates, hasManualOverride, language, segmentId])
 
   const fromLabel = from.locationName || from.title
   const toLabel = to.locationName || to.title
@@ -437,6 +469,14 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                   {t.route.between} {fromLabel} {t.route.and} {toLabel}
                 </span>
               </div>
+              {/* Note display - right below "交通 路線：" */}
+              {segment?.note && (
+                <div className="mt-1 mb-1">
+                  <div className="text-sm text-slate-600 whitespace-pre-wrap">
+                    {segment.note}
+                  </div>
+                </div>
+              )}
               <div className="mt-1 text-xs text-slate-500">
                 {!hasManualOverride && isLoading && <span>{t.route.loading}</span>}
                 {!hasManualOverride && !isLoading && error && <span>{error}</span>}
@@ -748,18 +788,83 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                   <option value="transit">{t.route.transit}</option>
                 </select>
               </div>
-              <button
-                type="button"
-                onClick={handleOpenInMaps}
-                className="inline-flex items-center px-3 py-1.5 border border-violet-200/55 text-xs font-medium rounded-full text-slate-700 bg-violet-50/60 hover:bg-violet-100/40 transition"
-              >
-                {t.route.openInMaps}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenInMaps}
+                  className="inline-flex items-center px-3 py-1.5 border border-violet-200/55 text-xs font-medium rounded-full text-slate-700 bg-violet-50/60 hover:bg-violet-100/40 transition"
+                >
+                  {t.route.openInMaps}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNoteEditor(true)}
+                  className={`inline-flex items-center justify-center w-8 h-8 rounded-full border transition ${
+                    segment?.note
+                      ? 'border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200'
+                      : 'border-violet-200/55 bg-violet-50/60 text-slate-600 hover:bg-violet-100/40'
+                  }`}
+                  title={segment?.note ? t.route.editNote || 'Edit Note' : t.route.addNote || 'Add Note'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
       
+      {/* Note Editor Modal */}
+      {showNoteEditor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">{t.route.note || 'Note'}</h3>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder={t.route.notePlaceholder || 'Add a note for this transportation...'}
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNoteEditor(false)
+                  setNoteText(segment?.note || '')
+                }}
+                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                {t.common.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const noteValue = noteText.trim() || null
+                    await updateSegment.mutateAsync({
+                      fromActivityId: from.id,
+                      toActivityId: to.id,
+                      data: { note: noteValue },
+                    })
+                    setShowNoteEditor(false)
+                  } catch (error: any) {
+                    console.error('Failed to save note:', error)
+                    const errorMessage = error?.response?.data?.detail || error?.message || t.route.saveFailed || 'Failed to save note'
+                    alert(errorMessage)
+                  }
+                }}
+                className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              >
+                {t.common.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Transportation Time Editor Modal */}
       <TransportationTimeEditor
         isOpen={showTimeEditor}
@@ -870,7 +975,6 @@ export default function ItineraryDay({
   onDelete,
   onReorder,
   onAddActivity,
-  onUpdateActivity,
   canEdit,
   paceBuffer = { prePct: 0.075, postPct: 0.075 },
   initialSegmentModes = {},
@@ -888,16 +992,26 @@ export default function ItineraryDay({
   const [isUpdatingAllScheduleTimes, setIsUpdatingAllScheduleTimes] = useState(false)
   const updateSegment = useUpdateTransportationSegment()
   
+  // Track user-initiated mode changes to prevent overwriting
+  const userChangedModesRef = useRef<Set<string>>(new Set())
+  
   // Load saved transportation modes from backend for all segments
   useEffect(() => {
+    let cancelled = false
     const loadSavedModes = async () => {
       const savedModes: Record<string, TravelMode> = {}
       for (let i = 0; i < activities.length - 1; i++) {
+        if (cancelled) return
         const from = activities[i]
         const to = activities[i + 1]
         const segmentId = `${from.id}-${to.id}`
+        // Skip loading if user just changed this mode
+        if (userChangedModesRef.current.has(segmentId)) {
+          continue
+        }
         try {
           const response = await api.get(`/activities/transportation/${from.id}/${to.id}`)
+          if (cancelled) return
           if (response.data?.transportationMode) {
             savedModes[segmentId] = response.data.transportationMode as TravelMode
           }
@@ -908,15 +1022,33 @@ export default function ItineraryDay({
           }
         }
       }
-      if (Object.keys(savedModes).length > 0) {
-        setSegmentModes((prev) => ({ ...prev, ...savedModes }))
+      if (!cancelled && Object.keys(savedModes).length > 0) {
+        // Only update modes that weren't changed by user
+        setSegmentModes((prev) => {
+          const updated = { ...prev }
+          Object.keys(savedModes).forEach((segmentId) => {
+            if (!userChangedModesRef.current.has(segmentId)) {
+              updated[segmentId] = savedModes[segmentId]
+            }
+          })
+          return updated
+        })
       }
     }
     
     if (activities.length > 1) {
       loadSavedModes()
     }
-  }, [activities])
+    
+    return () => {
+      cancelled = true
+    }
+  }, [activities, date])
+  
+  // Clear user changed modes when date changes
+  useEffect(() => {
+    userChangedModesRef.current.clear()
+  }, [date])
   
   // Update segment modes when initialSegmentModes changes (e.g., when a new activity is created with a transport mode)
   useEffect(() => {
@@ -929,6 +1061,28 @@ export default function ItineraryDay({
   const [selectedMarkerId, setSelectedMarkerId] = useState<number | null>(null)
   const [mapInstance, setMapInstance] = useState<any>(null)
   const mapMarkersRef = useRef<any[]>([])
+
+  // Reset state when date changes to prevent resource leaks and crashes
+  useEffect(() => {
+    // Reset all state related to the day when date changes
+    setSegmentRoutes({})
+    setSegmentModes({}) // Reset to allow fresh load from activities
+    setShowMap(false)
+    setSelectedMarkerId(null)
+    // Clear map markers
+    mapMarkersRef.current.forEach((m) => {
+      try {
+        if (m && m.map) {
+          m.map = null
+        }
+      } catch {
+        // ignore
+      }
+    })
+    mapMarkersRef.current = []
+    // Reset map instance to force cleanup
+    setMapInstance(null)
+  }, [date])
 
   // Memoize onRouteData to prevent infinite loops in RouteSegment useEffect
   const handleRouteData = useCallback((segmentId: string, data: SegmentRouteState) => {
@@ -1110,70 +1264,6 @@ export default function ItineraryDay({
     return { count: totalConflicts, map: conflictMap }
   })()
 
-  // Auto-update subsequent activities' start times when transportation time changes
-  const previousRoutesRef = useRef<Record<string, SegmentRouteState>>({})
-  useEffect(() => {
-    if (!onUpdateActivity || !canEdit) return
-
-    // Compare current routes with previous routes to detect changes
-    const hasChanged = Object.keys(segmentRoutes).some((segmentId) => {
-      const current = segmentRoutes[segmentId]
-      const previous = previousRoutesRef.current[segmentId]
-      if (!current || !previous) return false
-      // Check if duration changed significantly (more than 1 minute difference)
-      if (current.durationValue !== null && previous.durationValue !== null) {
-        const diff = Math.abs(current.durationValue - previous.durationValue)
-        return diff > 60 // More than 1 minute difference
-      }
-      return current.durationValue !== previous.durationValue
-    })
-
-    if (!hasChanged) {
-      previousRoutesRef.current = { ...segmentRoutes }
-      return
-    }
-
-    // Update subsequent activities' start times based on new transportation times
-    const updateSubsequentActivities = async () => {
-      for (let i = 0; i < activities.length - 1; i++) {
-        const from = activities[i]
-        const to = activities[i + 1]
-        const segmentId = `${from.id}-${to.id}`
-        const route = segmentRoutes[segmentId]
-
-        if (!route || route.durationValue === null) continue
-
-        const departStr = (from.endTime || from.startTime) as string | undefined
-        if (!departStr) continue
-
-        const depart = new Date(departStr)
-        if (Number.isNaN(depart.getTime())) continue
-
-        // Calculate new arrival time (departure + transportation time + 1 minute buffer)
-        const transportTimeMs = (route.durationValue + 60) * 1000
-        const newStartTime = new Date(depart.getTime() + transportTimeMs)
-
-        // Only update if the new time is different from current time (more than 1 minute difference)
-        if (to.startTime) {
-          const currentStartTime = new Date(to.startTime)
-          const timeDiff = Math.abs(newStartTime.getTime() - currentStartTime.getTime())
-          if (timeDiff < 60000) continue // Less than 1 minute difference, skip update
-        }
-
-        try {
-          await onUpdateActivity(to.id, {
-            startTime: newStartTime.toISOString(),
-          })
-        } catch (error) {
-          console.error('Failed to update activity start time:', error)
-        }
-      }
-    }
-
-    updateSubsequentActivities()
-    previousRoutesRef.current = { ...segmentRoutes }
-  }, [segmentRoutes, activities, onUpdateActivity, canEdit])
-
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID
   const useAdvancedMarkers = !!mapId
 
@@ -1301,10 +1391,22 @@ export default function ItineraryDay({
     }
   }, [mapInstance, dayPlaces])
 
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="flex-shrink-0 w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-transform"
+            style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
           <h3 className="text-xl font-bold">{formattedDate}</h3>
           {scheduleConflicts.count > 0 && (
             <span className="text-xs font-semibold px-2 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
@@ -1351,7 +1453,7 @@ export default function ItineraryDay({
           )}
           {canEdit && onAddActivity && (
             <button
-              onClick={onAddActivity}
+              onClick={() => onAddActivity?.()}
               className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
             >
               + {t.activity.addActivity}
@@ -1360,6 +1462,8 @@ export default function ItineraryDay({
         </div>
       </div>
 
+      {!isCollapsed && (
+        <>
       {dayPlaces.length > 0 && (
         <div className="mb-4">
           <button
@@ -1480,7 +1584,7 @@ export default function ItineraryDay({
                     >
                       <button
                         type="button"
-                        onClick={() => onAddActivity?.()}
+                        onClick={() => onAddActivity?.(activity.id)}
                         className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm"
                         title={t.activity.addActivity}
                       >
@@ -1493,6 +1597,7 @@ export default function ItineraryDay({
                       const segmentId = `${activity.id}-${activities[index + 1].id}`
                       return (
                     <RouteSegment
+                      key={`${date}-${segmentId}`}
                       from={activity}
                       to={activities[index + 1]}
                       showDragPlaceholder={canEdit}
@@ -1500,6 +1605,8 @@ export default function ItineraryDay({
                       segmentId={segmentId}
                       mode={segmentModes[segmentId] || 'driving'}
                       onModeChange={async (nextMode) => {
+                        // Mark this segment as user-changed to prevent overwriting
+                        userChangedModesRef.current.add(segmentId)
                         setSegmentModes((prev) => ({ ...prev, [segmentId]: nextMode }))
                         // Save mode to backend
                         try {
@@ -1510,7 +1617,8 @@ export default function ItineraryDay({
                           })
                         } catch (error) {
                           console.error('Failed to save transportation mode:', error)
-                          // Revert on error
+                          // Revert on error and remove from user-changed set
+                          userChangedModesRef.current.delete(segmentId)
                           setSegmentModes((prev) => ({ ...prev, [segmentId]: prev[segmentId] || 'driving' }))
                         }
                       }}
@@ -1525,6 +1633,8 @@ export default function ItineraryDay({
             </div>
           </SortableContext>
         </DndContext>
+      )}
+        </>
       )}
     </div>
   )

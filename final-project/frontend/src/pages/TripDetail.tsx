@@ -21,6 +21,7 @@ import InviteMemberModal from '../components/InviteMemberModal'
 import TripPhotosTab from '../components/TripPhotosTab'
 import ImportLocationModal from '../components/ImportLocationModal'
 import ExportPlanModal from '../components/ExportPlanModal'
+import ItineraryCalendar from '../components/ItineraryCalendar'
 import { Activity } from '../types'
 import api from '../lib/api'
 
@@ -29,16 +30,17 @@ export default function TripDetail() {
   const { isGuest } = useAuth()
   const { t } = useLanguage()
   const tripId = id ? parseInt(id) : 0
-  const { data: trip, isLoading } = useTrip(tripId)
+  const { data: trip, isLoading, refetch: refetchTrip } = useTrip(tripId)
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [importDate, setImportDate] = useState<string>('')
-  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [pace, setPace] = useState<'tight' | 'neutral' | 'relaxed'>('neutral')
   const [activeTab, setActiveTab] = useState<'itinerary' | 'photos'>('itinerary')
+  const [afterActivityId, setAfterActivityId] = useState<number | undefined>(undefined)
   const createActivity = useCreateActivity()
   const updateActivity = useUpdateActivity()
   const deleteActivity = useDeleteActivity()
@@ -202,10 +204,11 @@ export default function TripDetail() {
     return grouped
   }, [trip?.activities])
 
-  const handleAddActivity = (date: string) => {
+  const handleAddActivity = (date: string, afterActivityId?: number) => {
     setSelectedDate(date)
     setSelectedActivity(undefined)
     setIsModalOpen(true)
+    setAfterActivityId(afterActivityId)
   }
 
   const handleEditActivity = (activity: Activity) => {
@@ -222,18 +225,29 @@ export default function TripDetail() {
   }
 
   const handleSaveActivity = async (data: CreateActivityData | UpdateActivityData) => {
-    if (selectedActivity) {
-      await updateActivity.mutateAsync({
-        activityId: selectedActivity.id,
-        data: data as UpdateActivityData,
-      })
-    } else {
-      await createActivity.mutateAsync(data as CreateActivityData)
-      // The pending transport mode will be applied via initialSegmentModes prop
-      // Clear it after a short delay to allow the segment to be created
-      if (pendingTransportMode) {
-        setTimeout(() => setPendingTransportMode(null), 1000)
+    try {
+      if (selectedActivity) {
+        await updateActivity.mutateAsync({
+          activityId: selectedActivity.id,
+          data: data as UpdateActivityData,
+          currentActivity: selectedActivity,
+        })
+      } else {
+        await createActivity.mutateAsync(data as CreateActivityData)
+        // The pending transport mode will be applied via initialSegmentModes prop
+        // Clear it after a short delay to allow the segment to be created
+        if (pendingTransportMode) {
+          setTimeout(() => setPendingTransportMode(null), 1000)
+        }
       }
+      // Wait a bit for React Query to invalidate and refetch
+      await new Promise(resolve => setTimeout(resolve, 100))
+      // Refetch trip data to ensure all days are visible
+      await refetchTrip()
+    } finally {
+      // Always reset selectedDate after saving to show all days
+      // This ensures that when editing activities, all days remain visible
+      setSelectedDate(null)
     }
   }
 
@@ -839,29 +853,6 @@ export default function TripDetail() {
                         📁 {t.locationFolders.importFromFolder}
                       </button>
                     )}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setViewMode('list')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          viewMode === 'list'
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
-                      >
-                        {t.trip.listView}
-                      </button>
-                      <button
-                        onClick={() => setViewMode('calendar')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          viewMode === 'calendar'
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
-                      >
-                        {t.trip.calendarView}
-                      </button>
-                    </div>
-
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-600">{t.route.paceLabel}:</span>
                       <div className="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -897,8 +888,24 @@ export default function TripDetail() {
                   </div>
               </div>
 
-              {days.map((date) => {
+              {/* Calendar View - Only show when calendar view is selected */}
+              {viewMode === 'calendar' && (
+                <ItineraryCalendar
+                  days={days}
+                  activitiesByDate={activitiesByDate}
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                />
+              )}
+
+              {/* Filtered Days List */}
+              {(selectedDate === null ? days : [selectedDate]).map((date) => {
                 const activities = activitiesByDate[date] || []
+                
+                // Skip if no activities and a specific date is selected
+                if (selectedDate !== null && activities.length === 0) {
+                  return null
+                }
 
                 return (
                   <ItineraryDay
@@ -908,8 +915,7 @@ export default function TripDetail() {
                     onEdit={handleEditActivity}
                     onDelete={handleDeleteActivity}
                     onReorder={handleReorder}
-                    onAddActivity={() => handleAddActivity(date)}
-                    onUpdateActivity={canEdit ? handleUpdateActivity : undefined}
+                    onAddActivity={(afterActivityId) => handleAddActivity(date, afterActivityId)}
                     canEdit={canEdit}
                     paceBuffer={paceBuffer}
                     onUpdateScheduleTime={canEdit ? handleUpdateScheduleTime : undefined}
@@ -947,6 +953,9 @@ export default function TripDetail() {
           onClose={() => {
             setIsModalOpen(false)
             setSelectedActivity(undefined)
+            setAfterActivityId(undefined)
+            // Reset selectedDate when closing modal to show all days
+            setSelectedDate(null)
           }}
           onSave={handleSaveActivity}
           activity={selectedActivity}
@@ -957,7 +966,14 @@ export default function TripDetail() {
           defaultStartTime={
             !selectedActivity && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0
               ? (() => {
-                  // Get the last activity's end time
+                  // If afterActivityId is set, use that activity's end time
+                  if (afterActivityId) {
+                    const afterActivity = activitiesByDate[selectedDate].find(a => a.id === afterActivityId)
+                    if (afterActivity) {
+                      return afterActivity.endTime || afterActivity.startTime || undefined
+                    }
+                  }
+                  // Otherwise, get the last activity's end time
                   const lastActivity = activitiesByDate[selectedDate][activitiesByDate[selectedDate].length - 1]
                   return lastActivity.endTime || lastActivity.startTime || undefined
                 })()
@@ -967,8 +983,14 @@ export default function TripDetail() {
           onTransportModeChange={(mode) => {
             // Store the transport mode for the new activity being created
             if (!selectedActivity && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0) {
-              const lastActivity = activitiesByDate[selectedDate][activitiesByDate[selectedDate].length - 1]
-              setPendingTransportMode({ fromActivityId: lastActivity.id, mode })
+              // If afterActivityId is set, use that activity
+              const activityToUse = afterActivityId 
+                ? activitiesByDate[selectedDate].find(a => a.id === afterActivityId)
+                : activitiesByDate[selectedDate][activitiesByDate[selectedDate].length - 1]
+              
+              if (activityToUse) {
+                setPendingTransportMode({ fromActivityId: activityToUse.id, mode })
+              }
             }
           }}
           members={

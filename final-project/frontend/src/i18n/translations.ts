@@ -23,6 +23,7 @@ export interface Translations {
     filter: string
     close: string
     createSuccess: string
+    showAll: string
   }
 
   // Navigation
@@ -287,6 +288,10 @@ export interface Translations {
     endTimeAfterStart: string
     saveFailed: string
     resetFailed: string
+    note: string
+    addNote: string
+    editNote: string
+    notePlaceholder: string
   }
 
   // Explore
@@ -528,6 +533,7 @@ export const translations: Record<Language, Translations> = {
       filter: '篩選',
       close: '關閉',
       createSuccess: '建立成功',
+      showAll: '顯示全部',
     },
     nav: {
       dashboard: '我的旅程',
@@ -778,6 +784,10 @@ export const translations: Record<Language, Translations> = {
       endTimeAfterStart: '結束時間必須在開始時間之後',
       saveFailed: '儲存交通時間失敗',
       resetFailed: '重置交通時間失敗',
+      note: '備註',
+      addNote: '新增備註',
+      editNote: '編輯備註',
+      notePlaceholder: '為此交通方式新增備註...',
     },
     explore: {
       title: '探索地點',
@@ -1002,6 +1012,7 @@ export const translations: Record<Language, Translations> = {
       filter: 'Filter',
       close: 'Close',
       createSuccess: 'Create Success',
+      showAll: 'Show All',
     },
     nav: {
       dashboard: 'My Trips',
@@ -1252,6 +1263,10 @@ export const translations: Record<Language, Translations> = {
       endTimeAfterStart: 'End time must be after start time',
       saveFailed: 'Failed to save transportation time',
       resetFailed: 'Failed to reset transportation time',
+      note: 'Note',
+      addNote: 'Add Note',
+      editNote: 'Edit Note',
+      notePlaceholder: 'Add a note for this transportation...',
     },
     explore: {
       title: 'Explore Places',

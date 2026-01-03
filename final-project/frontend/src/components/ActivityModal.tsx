@@ -404,6 +404,10 @@ export default function ActivityModal({
     const e2 = new Date(end2).getTime()
 
     // Check if ranges overlap: (s1 < e2) && (s2 < e1)
+    // Two ranges [s1, e1] and [s2, e2] overlap if and only if:
+    // s1 < e2 AND s2 < e1
+    // Note: If one ends exactly when another starts (e.g., 14:27-14:28 and 14:28-19:30),
+    // that's not an overlap, just adjacency. The condition s2 < e1 ensures this.
     return s1 < e2 && s2 < e1
   }
 
@@ -423,14 +427,31 @@ export default function ActivityModal({
     )
 
     for (const existingActivity of activitiesToCheck) {
+      const existingStartTime = existingActivity.startTime || undefined
+      const existingEndTime = existingActivity.endTime || undefined
+      
+      // Skip if existing activity has no time
+      if (!existingStartTime || !existingEndTime) {
+        continue
+      }
+
       if (
         checkTimeOverlap(
           newStartTime,
           newEndTime,
-          existingActivity.startTime || undefined,
-          existingActivity.endTime || undefined
+          existingStartTime,
+          existingEndTime
         )
       ) {
+        console.log('Overlap detected:', {
+          newActivity: { start: newStartTime, end: newEndTime },
+          existingActivity: { 
+            id: existingActivity.id,
+            title: existingActivity.title,
+            start: existingStartTime, 
+            end: existingEndTime 
+          }
+        })
         return { hasOverlap: true, overlappingActivity: existingActivity }
       }
     }
