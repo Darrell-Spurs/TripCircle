@@ -384,6 +384,16 @@ export default function TripDetail() {
         activityId,
         data: updateData,
       })
+      
+      // Scroll to the updated activity after a short delay to ensure DOM is updated
+      setTimeout(() => {
+        const activityElement = document.getElementById(`activity-${activityId}`)
+        if (activityElement) {
+          activityElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          // Add a small offset to account for any fixed headers
+          window.scrollBy(0, -20)
+        }
+      }, 100)
     }
   }
 
@@ -393,6 +403,9 @@ export default function TripDetail() {
 
     const activities = activitiesByDate[date]
     if (activities.length === 0) return
+    
+    // Store the first activity ID to scroll to it after update
+    const firstActivityId = activities[0]?.id
 
     // Process activities in order
     for (let i = 0; i < activities.length; i++) {
@@ -435,6 +448,18 @@ export default function TripDetail() {
           data: updateData,
         })
       }
+    }
+    
+    // Scroll to the first activity of the day after a short delay to ensure DOM is updated
+    if (firstActivityId) {
+      setTimeout(() => {
+        const activityElement = document.getElementById(`activity-${firstActivityId}`)
+        if (activityElement) {
+          activityElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          // Add a small offset to account for any fixed headers
+          window.scrollBy(0, -20)
+        }
+      }, 100)
     }
   }
 

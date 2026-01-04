@@ -181,6 +181,11 @@ export interface Translations {
     overlapErrorTitle: string
     overlapErrorMessage: string
     overlapErrorGeneric: string
+    addAnyway: string
+    simpleView: string
+    detailView: string
+    enableDetailView: string
+    disableDetailView: string
     participants: string
     selectAll: string
     deselectAll: string
@@ -292,6 +297,8 @@ export interface Translations {
     addNote: string
     editNote: string
     notePlaceholder: string
+    deleteTransportation: string
+    restoreTransportation: string
   }
 
   // Explore
@@ -679,6 +686,11 @@ export const translations: Record<Language, Translations> = {
       overlapErrorTitle: '時間衝突',
       overlapErrorMessage: '此活動與另一個活動時間重疊，請調整時間。',
       overlapErrorGeneric: '此活動與現有活動時間重疊，請調整時間。',
+      addAnyway: '仍要新增',
+      simpleView: '簡潔檢視',
+      detailView: '詳細檢視',
+      enableDetailView: '啟用詳細檢視',
+      disableDetailView: '停用詳細檢視',
       participants: '參與者',
       selectAll: '全選',
       deselectAll: '取消全選',
@@ -788,6 +800,8 @@ export const translations: Record<Language, Translations> = {
       addNote: '新增備註',
       editNote: '編輯備註',
       notePlaceholder: '為此交通方式新增備註...',
+      deleteTransportation: '刪除交通',
+      restoreTransportation: '恢復交通',
     },
     explore: {
       title: '探索地點',
@@ -1158,6 +1172,11 @@ export const translations: Record<Language, Translations> = {
       overlapErrorTitle: 'Time Conflict',
       overlapErrorMessage: 'This activity overlaps with another activity. Please adjust the time.',
       overlapErrorGeneric: 'This activity overlaps with an existing activity. Please adjust the time.',
+      addAnyway: 'Add Anyway',
+      simpleView: 'Simple View',
+      detailView: 'Detail View',
+      enableDetailView: 'Enable Detail View',
+      disableDetailView: 'Disable Detail View',
       participants: 'Participants',
       selectAll: 'Select All',
       deselectAll: 'Deselect All',
@@ -1267,6 +1286,8 @@ export const translations: Record<Language, Translations> = {
       addNote: 'Add Note',
       editNote: 'Edit Note',
       notePlaceholder: 'Add a note for this transportation...',
+      deleteTransportation: 'Delete Transportation',
+      restoreTransportation: 'Restore Transportation',
     },
     explore: {
       title: 'Explore Places',

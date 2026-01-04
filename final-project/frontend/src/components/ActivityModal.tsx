@@ -7,6 +7,7 @@ import ActivityParticipantSelector from './ActivityParticipantSelector'
 import ActivityTagSelector from './ActivityTagSelector'
 import ActivityCostShareEditor from './ActivityCostShareEditor'
 import LocationSelectorModal from './LocationSelectorModal'
+import LocationSearchModal from './LocationSearchModal'
 import { useUpdateActivity } from '../hooks/useActivities'
 import { SavedLocation } from '../types'
 import api from '../lib/api'
@@ -77,6 +78,7 @@ export default function ActivityModal({
   const [transportMode, setTransportMode] = useState<TravelMode>('driving')
   const [transportDuration, setTransportDuration] = useState<number | null>(null)
   const [isCalculatingTransport, setIsCalculatingTransport] = useState(false)
+  const [showLocationSearch, setShowLocationSearch] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -197,6 +199,13 @@ export default function ActivityModal({
     setShowSuggestions(false)
     setSubmitError(null)
   }, [activity, isOpen, members])
+
+  const handleLocationSelect = (formattedText: string) => {
+    setFormData((prev) => {
+      const separator = prev.notes.trim() ? '\n\n' : ''
+      return { ...prev, notes: prev.notes + separator + formattedText }
+    })
+  }
 
   const calculateTransportTime = async (fromLat: number, fromLng: number, toLat: number, toLng: number, mode: TravelMode) => {
     try {
@@ -459,15 +468,15 @@ export default function ActivityModal({
     return { hasOverlap: false, overlappingActivity: null }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Check for time overlaps
-    const { hasOverlap, overlappingActivity } = checkForOverlaps()
-    if (hasOverlap && overlappingActivity) {
-      setOverlapActivity(overlappingActivity)
-      setShowOverlapAlert(true)
-      return
+  const submitActivity = async (skipOverlapCheck = false) => {
+    // Check for time overlaps (unless skipping the check)
+    if (!skipOverlapCheck) {
+      const { hasOverlap, overlappingActivity } = checkForOverlaps()
+      if (hasOverlap && overlappingActivity) {
+        setOverlapActivity(overlappingActivity)
+        setShowOverlapAlert(true)
+        return
+      }
     }
 
     // Use locationName as title if no title field exists
@@ -579,6 +588,11 @@ export default function ActivityModal({
     }
 
     onClose()
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await submitActivity(false)
   }
 
   const handleOverwriteConflict = async () => {
@@ -988,6 +1002,21 @@ export default function ActivityModal({
                 placeholder={t.activity.quickNotesPlaceholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowLocationSearch(true)
+                  }}
+                  className="px-2 py-1 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+                  title={t.comment?.addLocation || 'Add Location'}
+                >
+                  <span>📍</span>
+                  <span>{t.comment?.addLocation || 'Add Location'}</span>
+                </button>
+              </div>
             </div>
 
             <div>
@@ -1092,6 +1121,13 @@ export default function ActivityModal({
             : t.activity.overlapErrorGeneric
         }
         type="error"
+        showCancel={true}
+        cancelText={t.common.cancel}
+        onConfirm={() => {
+          // Add anyway - skip overlap check
+          submitActivity(true)
+        }}
+        confirmText={t.activity.addAnyway || 'Add Anyway'}
       />
 
       {/* Location Selector Modal */}
@@ -1168,6 +1204,13 @@ export default function ActivityModal({
           </div>
         </div>
       )}
+
+      {/* Location Search Modal */}
+      <LocationSearchModal
+        isOpen={showLocationSearch}
+        onClose={() => setShowLocationSearch(false)}
+        onSelect={handleLocationSelect}
+      />
     </div>
   )
 }

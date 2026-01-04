@@ -159,6 +159,8 @@ interface RouteSegmentProps {
   }
   onRouteData: (segmentId: string, data: SegmentRouteState) => void
   canEdit?: boolean
+  onHiddenChange?: (segmentId: string, hidden: boolean) => void
+  isHiddenFromParent?: boolean
 }
 
 // 通用的路線名稱本地化映射表（處理 API 返回英文的情況）
@@ -195,7 +197,7 @@ function localizeRouteName(lineName: string, language: string): string {
   return lineName
 }
 
-function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData, canEdit = false }: RouteSegmentProps) {
+function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData, canEdit = false, onHiddenChange, isHiddenFromParent = false }: RouteSegmentProps) {
   const { t, language } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -208,6 +210,11 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   const [showTimeEditor, setShowTimeEditor] = useState(false)
   const [showNoteEditor, setShowNoteEditor] = useState(false)
   const [noteText, setNoteText] = useState('')
+  
+  // Load transportation segment from backend
+  const { data: segment } = useTransportationSegment(from.id, to.id)
+  const updateSegment = useUpdateTransportationSegment()
+  const deleteSegment = useDeleteTransportationSegment()
   
   // Use ref to store onRouteData callback to avoid dependency issues
   const onRouteDataRef = useRef(onRouteData)
@@ -230,17 +237,15 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
     setNoteText('')
   }, [segmentId, from.id, to.id])
   
-  // Load transportation segment from backend
-  const { data: segment } = useTransportationSegment(from.id, to.id)
-  const updateSegment = useUpdateTransportationSegment()
-  const deleteSegment = useDeleteTransportationSegment()
-  
   const manualStartTime = segment?.manualStartTime || null
   const manualEndTime = segment?.manualEndTime || null
   const hasManualOverride = segment?.isManualOverride || false
   
   // Use saved transportation mode from database, or fall back to prop mode, or default to 'driving'
   const savedMode = segment?.transportationMode || mode || 'driving'
+  
+  // Use isHidden from backend (most reliable), fallback to isHiddenFromParent if segment not loaded yet
+  const isHidden = segment?.isHidden ?? isHiddenFromParent ?? false
   
   // Track if we've already synced to prevent overwriting user changes
   const hasSyncedRef = useRef(false)
@@ -392,12 +397,18 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
 
     // Include departure time if available
     const transportStart = (from.endTime || from.startTime) ? new Date((from.endTime || from.startTime) as string) : null
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${mode}`
+    // Default to transit for Google Maps link, but use actual mode if user has changed it
+    // If mode is driving or walking, use that; otherwise default to transit
+    const mapMode = (mode === 'driving' || mode === 'walking') ? mode : 'transit'
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${mapMode}`
     
     if (transportStart && !isNaN(transportStart.getTime())) {
-      // Format as ISO 8601 for Google Maps
-      const isoTime = transportStart.toISOString()
-      url += `&departure_time=${isoTime}`
+      // Use Unix timestamp (seconds) for departure_time - more reliable than ISO 8601
+      // Only add departure_time for transit mode as it's more reliable
+      if (mapMode === 'transit') {
+        const unixTimestamp = Math.floor(transportStart.getTime() / 1000)
+        url += `&departure_time=${unixTimestamp}`
+      }
     }
 
     return url
@@ -409,6 +420,11 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   }
 
   if (!fromLabel || !toLabel) {
+    return null
+  }
+
+  // If hidden, return null (no display)
+  if (isHidden) {
     return null
   }
 
@@ -810,6 +826,29 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateSegment.mutateAsync({
+                          fromActivityId: from.id,
+                          toActivityId: to.id,
+                          data: { isHidden: true },
+                        })
+                        onHiddenChange?.(segmentId, true)
+                      } catch (error) {
+                        console.error('Failed to hide transportation segment:', error)
+                      }
+                    }}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-red-200/55 bg-red-50/60 text-red-600 hover:bg-red-100/40 transition"
+                    title={t.route.deleteTransportation || 'Delete Transportation'}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -911,13 +950,14 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   )
 }
 
-function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict, onUpdateScheduleTime }: {
+function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict, onUpdateScheduleTime, simpleView }: {
   activity: Activity
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
   canEdit: boolean
   hasConflict?: boolean
   onUpdateScheduleTime?: (activityId: number) => Promise<void>
+  simpleView?: boolean
 }) {
   const {
     attributes,
@@ -962,6 +1002,7 @@ function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict
           canEdit={canEdit}
           hasConflict={hasConflict}
           onUpdateScheduleTime={onUpdateScheduleTime}
+          simpleView={simpleView}
         />
       </div>
     </div>
@@ -982,6 +1023,7 @@ export default function ItineraryDay({
   onUpdateAllScheduleTimes,
 }: ItineraryDayProps) {
   const { t, language } = useLanguage()
+  const [simpleView, setSimpleView] = useState(true)
   const applyBufferedDurationSec = (baseSec: number) => {
     const pre = Math.round(baseSec * paceBuffer.prePct)
     const post = Math.round(baseSec * paceBuffer.postPct)
@@ -995,11 +1037,12 @@ export default function ItineraryDay({
   // Track user-initiated mode changes to prevent overwriting
   const userChangedModesRef = useRef<Set<string>>(new Set())
   
-  // Load saved transportation modes from backend for all segments
+  // Load saved transportation modes and hidden states from backend for all segments
   useEffect(() => {
     let cancelled = false
     const loadSavedModes = async () => {
       const savedModes: Record<string, TravelMode> = {}
+      const hiddenSegmentIds = new Set<string>()
       for (let i = 0; i < activities.length - 1; i++) {
         if (cancelled) return
         const from = activities[i]
@@ -1015,6 +1058,9 @@ export default function ItineraryDay({
           if (response.data?.transportationMode) {
             savedModes[segmentId] = response.data.transportationMode as TravelMode
           }
+          if (response.data?.isHidden) {
+            hiddenSegmentIds.add(segmentId)
+          }
         } catch (error: any) {
           // 404 is expected if no segment exists, use default
           if (error.response?.status !== 404) {
@@ -1022,17 +1068,29 @@ export default function ItineraryDay({
           }
         }
       }
-      if (!cancelled && Object.keys(savedModes).length > 0) {
+      if (!cancelled) {
         // Only update modes that weren't changed by user
-        setSegmentModes((prev) => {
-          const updated = { ...prev }
-          Object.keys(savedModes).forEach((segmentId) => {
-            if (!userChangedModesRef.current.has(segmentId)) {
-              updated[segmentId] = savedModes[segmentId]
-            }
+        if (Object.keys(savedModes).length > 0) {
+          setSegmentModes((prev) => {
+            const updated = { ...prev }
+            Object.keys(savedModes).forEach((segmentId) => {
+              if (!userChangedModesRef.current.has(segmentId)) {
+                updated[segmentId] = savedModes[segmentId]
+              }
+            })
+            return updated
           })
-          return updated
-        })
+        }
+        // Update hidden segments from backend
+        if (hiddenSegmentIds.size > 0) {
+          setHiddenSegments((prev) => {
+            const next = new Set(prev)
+            hiddenSegmentIds.forEach((segmentId) => {
+              next.add(segmentId)
+            })
+            return next
+          })
+        }
       }
     }
     
@@ -1061,6 +1119,7 @@ export default function ItineraryDay({
   const [selectedMarkerId, setSelectedMarkerId] = useState<number | null>(null)
   const [mapInstance, setMapInstance] = useState<any>(null)
   const mapMarkersRef = useRef<any[]>([])
+  const [hiddenSegments, setHiddenSegments] = useState<Set<string>>(new Set())
 
   // Reset state when date changes to prevent resource leaks and crashes
   useEffect(() => {
@@ -1069,6 +1128,7 @@ export default function ItineraryDay({
     setSegmentModes({}) // Reset to allow fresh load from activities
     setShowMap(false)
     setSelectedMarkerId(null)
+    setHiddenSegments(new Set())
     // Clear map markers
     mapMarkersRef.current.forEach((m) => {
       try {
@@ -1391,7 +1451,26 @@ export default function ItineraryDay({
     }
   }, [mapInstance, dayPlaces])
 
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  // Use localStorage to persist collapsed state across page reloads and component remounts
+  // Key is based on date to ensure each day has its own collapsed state
+  const collapsedStorageKey = `itinerary-day-collapsed-${date}`
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(collapsedStorageKey)
+      return saved === 'true'
+    } catch {
+      return false
+    }
+  })
+  
+  // Save to localStorage whenever collapsed state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(collapsedStorageKey, String(isCollapsed))
+    } catch {
+      // Ignore localStorage errors (e.g., in private browsing mode)
+    }
+  }, [isCollapsed, date])
 
   return (
     <div className="mb-8">
@@ -1451,6 +1530,21 @@ export default function ItineraryDay({
               {t.activity.updateAllScheduleTimes || 'Update All Times'}
             </button>
           )}
+          <button
+            onClick={() => setSimpleView(!simpleView)}
+            className={`text-gray-600 hover:text-gray-700 text-sm font-medium flex items-center gap-1 transition ${
+              !simpleView ? 'text-indigo-600' : ''
+            }`}
+            title={!simpleView ? (t.activity.disableDetailView || 'Disable Detail View') : (t.activity.enableDetailView || 'Enable Detail View')}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={!simpleView 
+                ? "M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                : "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              } />
+            </svg>
+            {t.activity.detailView || 'Detail View'}
+          </button>
           {canEdit && onAddActivity && (
             <button
               onClick={() => onAddActivity?.()}
@@ -1573,11 +1667,12 @@ export default function ItineraryDay({
                     canEdit={canEdit}
                     hasConflict={scheduleConflicts.map.get(activity.id)}
                     onUpdateScheduleTime={onUpdateScheduleTime}
+                    simpleView={simpleView}
                   />
-                  {/* Quick Add Button - Below activity card with margin, centered */}
+                  {/* Quick Add Button and Restore Transportation Button - Below activity card with margin, centered */}
                   {canEdit && onAddActivity && (
                     <div 
-                      className="flex justify-center mt-2"
+                      className="flex justify-center gap-2 mt-2"
                       style={{ 
                         marginLeft: 'calc(6rem + 1rem)',
                       }}
@@ -1590,6 +1685,38 @@ export default function ItineraryDay({
                       >
                         +
                       </button>
+                      {/* Restore Transportation Button - Show if next segment is hidden */}
+                      {index < activities.length - 1 && (() => {
+                        const nextSegmentId = `${activity.id}-${activities[index + 1].id}`
+                        const isNextSegmentHidden = hiddenSegments.has(nextSegmentId)
+                        return isNextSegmentHidden ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await updateSegment.mutateAsync({
+                                  fromActivityId: activity.id,
+                                  toActivityId: activities[index + 1].id,
+                                  data: { isHidden: false },
+                                })
+                                setHiddenSegments((prev) => {
+                                  const next = new Set(prev)
+                                  next.delete(nextSegmentId)
+                                  return next
+                                })
+                              } catch (error) {
+                                console.error('Failed to restore transportation segment:', error)
+                              }
+                            }}
+                            className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm"
+                            title={t.route.restoreTransportation}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                          </button>
+                        ) : null
+                      })()}
                     </div>
                   )}
                   {index < activities.length - 1 && (
@@ -1624,6 +1751,18 @@ export default function ItineraryDay({
                       }}
                       paceBuffer={paceBuffer}
                       onRouteData={handleRouteData}
+                      isHiddenFromParent={hiddenSegments.has(segmentId)}
+                      onHiddenChange={(segId, hidden) => {
+                        setHiddenSegments((prev) => {
+                          const next = new Set(prev)
+                          if (hidden) {
+                            next.add(segId)
+                          } else {
+                            next.delete(segId)
+                          }
+                          return next
+                        })
+                      }}
                     />
                       )
                     })()

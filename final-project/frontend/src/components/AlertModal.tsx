@@ -6,6 +6,10 @@ interface AlertModalProps {
   title: string
   message: string
   type?: 'error' | 'warning' | 'info' | 'success'
+  onConfirm?: () => void
+  confirmText?: string
+  showCancel?: boolean
+  cancelText?: string
 }
 
 export default function AlertModal({
@@ -14,6 +18,10 @@ export default function AlertModal({
   title,
   message,
   type = 'error',
+  onConfirm,
+  confirmText,
+  showCancel = false,
+  cancelText,
 }: AlertModalProps) {
   const { t } = useLanguage()
 
@@ -70,12 +78,25 @@ export default function AlertModal({
             </div>
           </div>
         </div>
-        <div className="px-6 pb-6 flex justify-end">
+        <div className="px-6 pb-6 flex justify-end gap-3">
+          {showCancel && (
+            <button
+              onClick={onClose}
+              className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg font-medium transition hover:bg-gray-200"
+            >
+              {cancelText || t.common.cancel}
+            </button>
+          )}
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (onConfirm) {
+                onConfirm()
+              }
+              onClose()
+            }}
             className={`px-6 py-2 text-white rounded-lg font-medium transition ${styles.button}`}
           >
-            {t.common.confirm}
+            {confirmText || t.common.confirm}
           </button>
         </div>
       </div>

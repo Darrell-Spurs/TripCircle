@@ -10,6 +10,7 @@ interface TransportationSegment {
   isManualOverride: boolean
   transportationMode?: string // 'driving', 'walking', 'bicycling', 'transit' (optional for backward compatibility, defaults to 'driving' if null/undefined)
   note?: string | null // Note for this transportation segment
+  isHidden?: boolean // Whether this transportation segment is hidden
 }
 
 interface UpdateTransportationSegmentData {
@@ -18,6 +19,7 @@ interface UpdateTransportationSegmentData {
   isManualOverride?: boolean
   transportationMode?: string // 'driving', 'walking', 'bicycling', 'transit'
   note?: string | null // Note for this transportation segment
+  isHidden?: boolean // Whether this transportation segment is hidden
 }
 
 export function useTransportationSegment(fromActivityId: number, toActivityId: number) {

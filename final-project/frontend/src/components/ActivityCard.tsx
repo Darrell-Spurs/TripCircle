@@ -14,9 +14,10 @@ interface ActivityCardProps {
   canEdit: boolean
   hasConflict?: boolean
   onUpdateScheduleTime?: (activityId: number) => Promise<void>
+  simpleView?: boolean
 }
 
-export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasConflict = false, onUpdateScheduleTime }: ActivityCardProps) {
+export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasConflict = false, onUpdateScheduleTime, simpleView = false }: ActivityCardProps) {
   const { t, language } = useLanguage()
   const { user } = useAuth()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -40,7 +41,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
   const currentUserPreference = preferencesData?.preferences.find((p) => p.userId === user?.id)?.preference || null
 
   return (
-    <div className="flex gap-4 items-center">
+    <div id={`activity-${activity.id}`} className="flex gap-4 items-center">
       {/* Visiting Time - Separate Box/Rectangle */}
       <div className={`flex-shrink-0 w-24 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm ${
         isGatheringPoint 
@@ -102,7 +103,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold text-lg">{activity.title}</h4>
                   {hasConflict && (
-                    <span className="inline-flex items-center px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium" title={t.route.scheduleConflictWarning || 'Schedule conflict detected'}>
+                    <span className="inline-flex items-center px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium" title={t.route.scheduleConflicts || 'Schedule conflict detected'}>
                       ⚠️ {t.route.conflict || 'Conflict'}
                     </span>
                   )}
@@ -111,8 +112,34 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                       {t.activity.gatheringPoint || 'Gathering Point'}
                     </span>
                   )}
+                  {/* Google Maps link button - paper airplane icon */}
+                  {(activity.lat && activity.lng) || activity.placeId || activity.address ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        let url = ''
+                        if (activity.placeId) {
+                          url = `https://www.google.com/maps/place/?q=place_id:${activity.placeId}`
+                        } else if (activity.lat && activity.lng) {
+                          url = `https://www.google.com/maps/?q=${activity.lat},${activity.lng}`
+                        } else if (activity.address) {
+                          url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.address)}`
+                        }
+                        if (url) {
+                          window.open(url, '_blank', 'noopener,noreferrer')
+                        }
+                      }}
+                      className="text-indigo-400 hover:text-indigo-400 p-1 rounded hover:bg-indigo-50 transition"
+                      title={t.route.openInMaps || 'Open in Google Maps'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ transform: 'rotate(45deg)' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </button>
+                  ) : null}
                 </div>
-                {activity.createdBy && (
+                {activity.createdBy && !simpleView && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-gray-500">
                       {t.activity.addedBy || 'Added by'}:
@@ -134,7 +161,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
               </div>
             </div>
             
-            {activity.address && (
+            {activity.address && !simpleView && (
               <p className="text-sm text-gray-600 mb-2">
                 <span className="text-xs text-gray-500">📍{activity.address}</span>
               </p>
@@ -216,87 +243,97 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
           </div>
         
           {/* Preferences and Action Buttons - Inside Activity Box */}
-          <div className="flex-shrink-0 flex items-center gap-2">
-            {/* Preferences */}
-            <ActivityPreferenceButtons
-              activityId={activity.id}
-              preferenceCounts={activity.preferenceCounts}
-              currentUserPreference={currentUserPreference}
-            />
-            {/* Action Buttons */}
-            {canEdit && (
-              <>
-                {onUpdateScheduleTime && (
+          <div className="flex-shrink-0 flex flex-col items-end gap-2">
+            {/* Preferences and Action Buttons */}
+            <div className="flex items-center gap-2">
+              {/* Preferences */}
+              {!simpleView && (
+                <ActivityPreferenceButtons
+                  activityId={activity.id}
+                  preferenceCounts={activity.preferenceCounts}
+                  currentUserPreference={currentUserPreference}
+                />
+              )}
+              {/* Action Buttons */}
+              {canEdit && (
+                <>
+                  {onUpdateScheduleTime && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        setIsUpdatingSchedule(true)
+                        try {
+                          await onUpdateScheduleTime(activity.id)
+                        } catch (error: any) {
+                          console.error('Failed to update schedule time:', error)
+                          alert(error?.response?.data?.detail || error?.message || t.activity.updateScheduleTimeError || 'Failed to update schedule time')
+                        } finally {
+                          setIsUpdatingSchedule(false)
+                        }
+                      }}
+                      disabled={isUpdatingSchedule}
+                      className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-wait"
+                      title={t.activity.updateScheduleTime || 'Update Schedule Time'}
+                    >
+                      {isUpdatingSchedule ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                   <button
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      setIsUpdatingSchedule(true)
-                      try {
-                        await onUpdateScheduleTime(activity.id)
-                      } catch (error: any) {
-                        console.error('Failed to update schedule time:', error)
-                        alert(error?.response?.data?.detail || error?.message || t.activity.updateScheduleTimeError || 'Failed to update schedule time')
-                      } finally {
-                        setIsUpdatingSchedule(false)
-                      }
-                    }}
-                    disabled={isUpdatingSchedule}
-                    className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-wait"
-                    title={t.activity.updateScheduleTime || 'Update Schedule Time'}
-                  >
-                    {isUpdatingSchedule ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    )}
-                  </button>
-                )}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEdit(activity)
+                  }}
+                  className="text-indigo-600 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50 transition"
+                  title={t.common.edit}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
                 <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit(activity)
-                }}
-                className="text-indigo-600 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50 transition"
-                title={t.common.edit}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(activity.id)
-                }}
-                className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"
-                title={t.common.delete}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-              </>
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete(activity.id)
+                  }}
+                  className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition"
+                  title={t.common.delete}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+                </>
+              )}
+            </div>
+            {/* Comments button - below edit/delete buttons, aligned to right */}
+            {((activity.commentsCount !== undefined && activity.commentsCount > 0) || user) && (
+              <div className="flex justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                >
+                  {isExpanded ? (t.activity.hideComments || 'Hide Comments') : (t.activity.showComments || 'Show Comments')}
+                </button>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Expandable section for comments */}
-        {(activity.commentsCount !== undefined && activity.commentsCount > 0) || user ? (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-sm text-indigo-600 hover:text-indigo-700"
-            >
-              {isExpanded ? (t.activity.hideComments || 'Hide Comments') : (t.activity.showComments || 'Show Comments')}
-            </button>
-            {isExpanded && <ActivityCommentsPanel activityId={activity.id} />}
+        {/* Expandable section for comments - outside activity box, below the line */}
+        {isExpanded && ((activity.commentsCount !== undefined && activity.commentsCount > 0) || user) && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <ActivityCommentsPanel activityId={activity.id} />
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   )
