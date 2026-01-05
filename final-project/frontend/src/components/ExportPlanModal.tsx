@@ -34,7 +34,7 @@ export default function ExportPlanModal({
       onClose()
     } catch (error) {
       console.error('Failed to export PDF:', error)
-      alert(t.export.exportFailed || 'Failed to export PDF')
+      alert(t.export.exportFailed)
     } finally {
       setIsGenerating(false)
     }
@@ -46,7 +46,7 @@ export default function ExportPlanModal({
         <h2 className="text-2xl font-bold mb-4">{t.export.exportPlan}</h2>
         
         <p className="text-gray-600 mb-6">
-          {t.export.exportDescription || 'Export your trip itinerary as a PDF document.'}
+          {t.export.exportDescription}
         </p>
         
         <div className="space-y-4">
@@ -56,7 +56,7 @@ export default function ExportPlanModal({
           </div>
           
           <div>
-            <h3 className="font-semibold mb-2">{t.export.activitiesCount || 'Activities'}:</h3>
+            <h3 className="font-semibold mb-2">{t.export.activitiesCount}:</h3>
             <p className="text-gray-700">
               {Object.values(activitiesByDate).reduce((sum, activities) => sum + activities.length, 0)}
             </p>

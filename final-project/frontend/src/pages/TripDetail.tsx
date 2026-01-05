@@ -37,7 +37,7 @@ export default function TripDetail() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [importDate, setImportDate] = useState<string>('')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [viewMode] = useState<'list' | 'calendar'>('list')
   const [pace, setPace] = useState<'tight' | 'neutral' | 'relaxed'>('neutral')
   const [activeTab, setActiveTab] = useState<'itinerary' | 'photos'>('itinerary')
   const [afterActivityId, setAfterActivityId] = useState<number | undefined>(undefined)
@@ -251,12 +251,13 @@ export default function TripDetail() {
     }
   }
 
-  const handleUpdateActivity = async (activityId: number, data: { startTime?: string; endTime?: string }) => {
-    await updateActivity.mutateAsync({
-      activityId,
-      data: data as UpdateActivityData,
-    })
-  }
+  // Unused function - kept for potential future use
+  // const handleUpdateActivity = async (activityId: number, data: { startTime?: string; endTime?: string }) => {
+  //   await updateActivity.mutateAsync({
+  //     activityId,
+  //     data: data as UpdateActivityData,
+  //   })
+  // }
 
   const handleReorder = async (activityIds: number[]) => {
     await reorderActivities.mutateAsync({ activityIds, tripId })
@@ -985,21 +986,21 @@ export default function TripDetail() {
           onSave={handleSaveActivity}
           activity={selectedActivity}
           tripId={tripId}
-          date={selectedDate}
-          defaultOrderIndex={activitiesByDate[selectedDate]?.length || 0}
-          existingActivities={activitiesByDate[selectedDate] || []}
+          date={selectedDate || ''}
+          defaultOrderIndex={selectedDate ? (activitiesByDate[selectedDate]?.length || 0) : 0}
+          existingActivities={selectedDate ? (activitiesByDate[selectedDate] || []) : []}
           defaultStartTime={
-            !selectedActivity && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0
+            !selectedActivity && selectedDate && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0
               ? (() => {
                   // If afterActivityId is set, use that activity's end time
                   if (afterActivityId) {
-                    const afterActivity = activitiesByDate[selectedDate].find(a => a.id === afterActivityId)
+                    const afterActivity = activitiesByDate[selectedDate]!.find((a: Activity) => a.id === afterActivityId)
                     if (afterActivity) {
                       return afterActivity.endTime || afterActivity.startTime || undefined
                     }
                   }
                   // Otherwise, get the last activity's end time
-                  const lastActivity = activitiesByDate[selectedDate][activitiesByDate[selectedDate].length - 1]
+                  const lastActivity = activitiesByDate[selectedDate]![activitiesByDate[selectedDate]!.length - 1]
                   return lastActivity.endTime || lastActivity.startTime || undefined
                 })()
               : undefined
@@ -1007,11 +1008,11 @@ export default function TripDetail() {
           paceBuffer={paceBuffer}
           onTransportModeChange={(mode) => {
             // Store the transport mode for the new activity being created
-            if (!selectedActivity && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0) {
+            if (!selectedActivity && selectedDate && activitiesByDate[selectedDate] && activitiesByDate[selectedDate].length > 0) {
               // If afterActivityId is set, use that activity
               const activityToUse = afterActivityId 
-                ? activitiesByDate[selectedDate].find(a => a.id === afterActivityId)
-                : activitiesByDate[selectedDate][activitiesByDate[selectedDate].length - 1]
+                ? activitiesByDate[selectedDate]!.find((a: Activity) => a.id === afterActivityId)
+                : activitiesByDate[selectedDate]![activitiesByDate[selectedDate]!.length - 1]
               
               if (activityToUse) {
                 setPendingTransportMode({ fromActivityId: activityToUse.id, mode })

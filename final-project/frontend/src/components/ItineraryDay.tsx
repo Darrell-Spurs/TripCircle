@@ -165,39 +165,6 @@ interface RouteSegmentProps {
   isHiddenFromParent?: boolean
 }
 
-// 通用的路線名稱本地化映射表（處理 API 返回英文的情況）
-function localizeRouteName(lineName: string, language: string): string {
-  if (!lineName || language !== 'zh-TW') {
-    return lineName
-  }
-  
-  // 常見的台灣捷運/地鐵路線名稱映射
-  const routeNameMap: Record<string, string> = {
-    'Bannan Line': '板南線',
-    'Wenhu Line': '文湖線',
-    'Songshan-Xindian Line': '松山新店線',
-    'Zhonghe-Xinlu Line': '中和新蘆線',
-    'Tamsui-Xinyi Line': '淡水信義線',
-    'Circular Line': '環狀線',
-    'Airport Line': '機場線',
-    'Taoyuan Airport MRT': '桃園機場捷運',
-    // 可以繼續添加更多映射
-  }
-  
-  // 檢查是否有映射
-  const mapped = routeNameMap[lineName]
-  if (mapped) {
-    return mapped
-  }
-  
-  // 如果包含 "Line"，嘗試提取並轉換
-  if (lineName.includes(' Line')) {
-    const baseName = lineName.replace(' Line', '')
-    // 可以添加更多智能轉換邏輯
-  }
-  
-  return lineName
-}
 
 function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData, canEdit = false, onHiddenChange, isHiddenFromParent = false }: RouteSegmentProps) {
   const { t, language } = useLanguage()
@@ -1110,7 +1077,7 @@ export default function ItineraryDay({
 
 
   // Track first and last activity of each branch (for transportation display)
-  const { firstActivitiesOfBranches, lastActivitiesOfBranches } = useMemo(() => {
+  const { firstActivitiesOfBranches } = useMemo(() => {
     if (branchPointIndex === null || selectedParticipantId !== 'all') {
       return { firstActivitiesOfBranches: new Set<number>(), lastActivitiesOfBranches: new Set<number>() }
     }
@@ -1121,7 +1088,6 @@ export default function ItineraryDay({
     )
     
     const firstActivityOfEachBranch = new Set<number>()
-    const lastActivityOfEachBranch = new Set<number>()
     const participantGroups = new Map<string, Activity[]>()
     
     duringBranchActivities.forEach(activity => {
@@ -1136,17 +1102,8 @@ export default function ItineraryDay({
       participantGroups.get(participantIds)!.push(activity)
     })
     
-    // Find last activity of each branch
-    participantGroups.forEach((branchActivities) => {
-      if (branchActivities.length > 0) {
-        const lastActivity = branchActivities[branchActivities.length - 1]
-        lastActivityOfEachBranch.add(lastActivity.id)
-      }
-    })
-    
     return { 
-      firstActivitiesOfBranches: firstActivityOfEachBranch, 
-      lastActivitiesOfBranches: lastActivityOfEachBranch 
+      firstActivitiesOfBranches: firstActivityOfEachBranch
     }
   }, [activities, branchPointIndex, mergePointIndex, selectedParticipantId])
 

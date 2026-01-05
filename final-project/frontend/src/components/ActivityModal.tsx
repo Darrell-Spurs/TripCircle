@@ -930,7 +930,7 @@ export default function ActivityModal({
                           {t.route.buffer || 'buffer'})
                         </>
                       )}
-                      {' '}({t.common.total || 'Total'}: {bufferedMinutes} {t.route.minutes})
+                      {' '}({t.common.total}: {bufferedMinutes} {t.route.minutes})
                     </p>
                   )
                 })()}

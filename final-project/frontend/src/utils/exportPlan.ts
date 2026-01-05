@@ -53,7 +53,7 @@ export function exportPlanToPDF({ trip, activitiesByDate, language }: ExportOpti
     
     // Date header
     doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
+    doc.setFont('helvetica', 'bold')
     doc.text(dateLabel, 14, yPos)
     yPos += 10
     

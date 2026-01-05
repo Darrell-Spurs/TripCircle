@@ -24,6 +24,7 @@ export interface Translations {
     close: string
     createSuccess: string
     showAll: string
+    total: string
   }
 
   // Navigation
@@ -518,6 +519,9 @@ export interface Translations {
     exportToPDF: string
     generating: string
     download: string
+    exportFailed: string
+    exportDescription: string
+    activitiesCount: string
   }
 }
 
@@ -542,10 +546,11 @@ export const translations: Record<Language, Translations> = {
       submit: '提交',
       search: '搜尋',
       filter: '篩選',
-      close: '關閉',
-      createSuccess: '建立成功',
-      showAll: '顯示全部',
-    },
+    close: '關閉',
+    createSuccess: '建立成功',
+    showAll: '顯示全部',
+    total: '總計',
+  },
     nav: {
       dashboard: '我的旅程',
       explore: '探索',
@@ -1035,6 +1040,7 @@ export const translations: Record<Language, Translations> = {
       close: 'Close',
       createSuccess: 'Create Success',
       showAll: 'Show All',
+      total: 'Total',
     },
     nav: {
       dashboard: 'My Trips',
@@ -1494,6 +1500,12 @@ export const translations: Record<Language, Translations> = {
       exportDescription: 'Export your trip itinerary as a PDF document.',
       activitiesCount: 'Activities',
       exportFailed: 'Failed to export PDF',
+    },
+    comment: {
+      addLocation: 'Add Location',
+      searchLocationPlaceholder: 'Search location...',
+      searchLocationHint: 'Search for a location to add to your comment',
+      noLocationsFound: 'No locations found',
     },
   },
 }

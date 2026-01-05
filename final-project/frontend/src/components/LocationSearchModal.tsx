@@ -13,7 +13,7 @@ export default function LocationSearchModal({
   onClose,
   onSelect,
 }: LocationSearchModalProps) {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
