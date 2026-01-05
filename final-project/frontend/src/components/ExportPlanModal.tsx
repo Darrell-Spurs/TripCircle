@@ -21,7 +21,7 @@ export default function ExportPlanModal({
 
   if (!isOpen) return null
 
-  const handleExport = async () => {
+  const handleExport = () => {
     try {
       setIsGenerating(true)
       exportPlanToPDF({
@@ -30,12 +30,13 @@ export default function ExportPlanModal({
         language: language as 'zh-TW' | 'en',
       })
       // Small delay to show generating state
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      onClose()
+      setTimeout(() => {
+        setIsGenerating(false)
+        onClose()
+      }, 500)
     } catch (error) {
       console.error('Failed to export PDF:', error)
       alert(t.export.exportFailed)
-    } finally {
       setIsGenerating(false)
     }
   }
