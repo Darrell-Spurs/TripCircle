@@ -139,9 +139,12 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                       onClick={(e) => {
                         e.stopPropagation()
                         let url = ''
+                        // 優先使用 place_id（能顯示地點資訊）
                         if (activity.placeId) {
-                          url = `https://www.google.com/maps/place/?q=place_id:${activity.placeId}`
+                          // 使用正確的 place_id 格式（適用於移動設備和桌面）
+                          url = `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${activity.placeId}`
                         } else if (activity.lat && activity.lng) {
+                          // 如果沒有 place_id，使用座標作為備選
                           url = `https://www.google.com/maps/?q=${activity.lat},${activity.lng}`
                         } else if (activity.address) {
                           url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.address)}`
