@@ -30,7 +30,7 @@ const activityCreateSchema = z.object({
   cost: z.number().optional(),
   currency: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  activityType: z.enum(['regular', 'gathering_point']).optional().default('regular'),
+  activityType: z.enum(['regular', 'gathering_point', 'branch_point', 'merge_point']).optional().default('regular'),
 }).refine(
   (data) => {
     // Gathering points don't require endTime
@@ -61,7 +61,7 @@ const activityUpdateSchema = z.object({
   tags: z.array(z.string()).optional(),
   lastModifiedAt: dateStringSchema.optional(),
   costShares: z.array(z.object({ userId: z.number(), amount: z.number() })).optional(),
-  activityType: z.enum(['regular', 'gathering_point']).optional(),
+  activityType: z.enum(['regular', 'gathering_point', 'branch_point', 'merge_point']).optional(),
 });
 
 router.post('/trips/:tripId/activities', authenticate, async (req: Request, res: Response) => {
@@ -1898,7 +1898,6 @@ router.get('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       isManualOverride: segment.isManualOverride,
       transportationMode: segment.transportationMode || 'driving', // Default to 'driving' if null
       note: segment.note || null,
-      isHidden: segment.isHidden || false,
     });
   } catch (error) {
     console.error('Error fetching transportation segment:', error);
@@ -1954,7 +1953,7 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       return;
     }
 
-    const { manualStartTime, manualEndTime, isManualOverride, transportationMode, note, isHidden } = req.body;
+    const { manualStartTime, manualEndTime, isManualOverride, transportationMode, note } = req.body;
 
     // Validate transportationMode if provided
     let modeToSave: string | null | undefined = undefined
@@ -1982,9 +1981,6 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
     if (note !== undefined) {
       updateData.note = note
     }
-    if (isHidden !== undefined) {
-      updateData.isHidden = isHidden
-    }
 
     // Upsert transportation segment
     const segment = await prisma.transportationSegment.upsert({
@@ -2003,7 +1999,6 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
         isManualOverride: isManualOverride !== undefined ? isManualOverride : false,
         transportationMode: modeToSave !== undefined ? modeToSave : null,
         note: note !== undefined ? note : null,
-        isHidden: isHidden !== undefined ? isHidden : false,
       },
     });
 
@@ -2016,7 +2011,6 @@ router.put('/transportation/:fromActivityId/:toActivityId', authenticate, async 
       isManualOverride: segment.isManualOverride,
       transportationMode: segment.transportationMode || 'driving', // Default to 'driving' if null
       note: segment.note || null,
-      isHidden: segment.isHidden || false,
     });
   } catch (error) {
     console.error('Error updating transportation segment:', error);

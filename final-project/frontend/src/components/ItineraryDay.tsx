@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { Activity } from '../types'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { Activity, User } from '../types'
 import ActivityCard from './ActivityCard'
 import { useLanguage } from '../context/LanguageContext'
+import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 import TransportationTimeEditor from './TransportationTimeEditor'
 import { useTransportationSegment, useUpdateTransportationSegment, useDeleteTransportationSegment } from '../hooks/useTransportationSegment'
+import ParticipantSelectorModal from './ParticipantSelectorModal'
 import { GoogleMap, LoadScript, Polyline, InfoWindow, Marker } from '@react-google-maps/api'
 import {
   DndContext,
@@ -244,8 +246,8 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   // Use saved transportation mode from database, or fall back to prop mode, or default to 'driving'
   const savedMode = segment?.transportationMode || mode || 'driving'
   
-  // Use isHidden from backend (most reliable), fallback to isHiddenFromParent if segment not loaded yet
-  const isHidden = segment?.isHidden ?? isHiddenFromParent ?? false
+  // Use isHiddenFromParent (from localStorage) - no longer stored in database
+  const isHidden = isHiddenFromParent ?? false
   
   // Track if we've already synced to prevent overwriting user changes
   const hasSyncedRef = useRef(false)
@@ -829,17 +831,9 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                 {canEdit && (
                   <button
                     type="button"
-                    onClick={async () => {
-                      try {
-                        await updateSegment.mutateAsync({
-                          fromActivityId: from.id,
-                          toActivityId: to.id,
-                          data: { isHidden: true },
-                        })
-                        onHiddenChange?.(segmentId, true)
-                      } catch (error) {
-                        console.error('Failed to hide transportation segment:', error)
-                      }
+                    onClick={() => {
+                      // Update frontend state only (no API call)
+                      onHiddenChange?.(segmentId, true)
                     }}
                     className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-red-200/55 bg-red-50/60 text-red-600 hover:bg-red-100/40 transition"
                     title={t.route.deleteTransportation || 'Delete Transportation'}
@@ -1023,12 +1017,220 @@ export default function ItineraryDay({
   onUpdateAllScheduleTimes,
 }: ItineraryDayProps) {
   const { t, language } = useLanguage()
+  const { user } = useAuth()
   const [simpleView, setSimpleView] = useState(true)
+  const [selectedParticipantId, setSelectedParticipantId] = useState<number | 'all' | null>(null)
+  const [showParticipantSelector, setShowParticipantSelector] = useState(false)
+  
+  // Find branch point and merge point
+  const { branchPointIndex, mergePointIndex } = useMemo(() => {
+    const branchIndex = activities.findIndex(a => a.activityType === 'branch_point')
+    
+    if (branchIndex === -1) {
+      return { branchPointIndex: null, mergePointIndex: null }
+    }
+    
+    // Collect all participants before branch point
+    const allParticipantsBeforeBranch = new Set<number>()
+    for (let i = 0; i <= branchIndex; i++) {
+      activities[i].participants?.forEach(p => allParticipantsBeforeBranch.add(p.userId))
+    }
+    
+    // If branch point itself has no participants, use previous activity's participants
+    if (allParticipantsBeforeBranch.size === 0 && branchIndex > 0) {
+      activities[branchIndex - 1].participants?.forEach(p => 
+        allParticipantsBeforeBranch.add(p.userId)
+      )
+    }
+    
+    // Only check for manual merge point (no auto-detection)
+    const manualMergeIndex = activities.findIndex(
+      (a, i) => i > branchIndex && a.activityType === 'merge_point'
+    )
+    
+    return { branchPointIndex: branchIndex, mergePointIndex: manualMergeIndex !== -1 ? manualMergeIndex : null }
+  }, [activities])
+
+  // Auto-select current user when branch point is detected
+  useEffect(() => {
+    if (branchPointIndex !== null && selectedParticipantId === null && user?.id) {
+      // Check if current user has activities in the branch
+      const duringBranchActivities = activities.slice(
+        branchPointIndex + 1, 
+        mergePointIndex !== null ? mergePointIndex : undefined
+      )
+      const hasUserActivities = duringBranchActivities.some(activity => 
+        activity.participants?.some(p => p.userId === user.id)
+      )
+      
+      // Only auto-select if user has activities in the branch
+      if (hasUserActivities) {
+        setSelectedParticipantId(user.id)
+      }
+    }
+  }, [branchPointIndex, mergePointIndex, activities, selectedParticipantId, user])
+  
   const applyBufferedDurationSec = (baseSec: number) => {
     const pre = Math.round(baseSec * paceBuffer.prePct)
     const post = Math.round(baseSec * paceBuffer.postPct)
     return baseSec + pre + post
   }
+
+  // Helper function to check if two activities have overlapping participants
+  const hasParticipantOverlap = (activity1: Activity, activity2: Activity): boolean => {
+    const participantIds1 = new Set(activity1.participants?.map((p) => p.userId) || [])
+    const participantIds2 = new Set(activity2.participants?.map((p) => p.userId) || [])
+    const hasParticipants1 = participantIds1.size > 0
+    const hasParticipants2 = participantIds2.size > 0
+
+    if (!hasParticipants1 && !hasParticipants2) {
+      // Both have no participants - treat as overlap (both are "all participants")
+      return true
+    } else if (!hasParticipants1 || !hasParticipants2) {
+      // One has no participants - treat as overlap (no participants = all participants)
+      return true
+    } else {
+      // Both have participants - check if there's any overlap
+      return Array.from(participantIds1).some((id) => participantIds2.has(id))
+    }
+  }
+
+  // Extract all unique participants from activities
+  const allParticipants = useMemo(() => {
+    const participantMap = new Map<number, User>()
+    activities.forEach(activity => {
+      activity.participants?.forEach(p => {
+        if (p.user && !participantMap.has(p.userId)) {
+          participantMap.set(p.userId, p.user)
+        }
+      })
+    })
+    return Array.from(participantMap.values())
+  }, [activities])
+
+
+  // Track first and last activity of each branch (for transportation display)
+  const { firstActivitiesOfBranches, lastActivitiesOfBranches } = useMemo(() => {
+    if (branchPointIndex === null || selectedParticipantId !== 'all') {
+      return { firstActivitiesOfBranches: new Set<number>(), lastActivitiesOfBranches: new Set<number>() }
+    }
+    
+    const duringBranchActivities = activities.slice(
+      branchPointIndex + 1, 
+      mergePointIndex !== null ? mergePointIndex : undefined
+    )
+    
+    const firstActivityOfEachBranch = new Set<number>()
+    const lastActivityOfEachBranch = new Set<number>()
+    const participantGroups = new Map<string, Activity[]>()
+    
+    duringBranchActivities.forEach(activity => {
+      if (!activity.participants || activity.participants.length === 0) {
+        return
+      }
+      const participantIds = activity.participants.map(p => p.userId).sort().join(',')
+      if (!participantGroups.has(participantIds)) {
+        participantGroups.set(participantIds, [])
+        firstActivityOfEachBranch.add(activity.id)
+      }
+      participantGroups.get(participantIds)!.push(activity)
+    })
+    
+    // Find last activity of each branch
+    participantGroups.forEach((branchActivities) => {
+      if (branchActivities.length > 0) {
+        const lastActivity = branchActivities[branchActivities.length - 1]
+        lastActivityOfEachBranch.add(lastActivity.id)
+      }
+    })
+    
+    return { 
+      firstActivitiesOfBranches: firstActivityOfEachBranch, 
+      lastActivitiesOfBranches: lastActivityOfEachBranch 
+    }
+  }, [activities, branchPointIndex, mergePointIndex, selectedParticipantId])
+
+  // Filter activities based on branch point and selected participant
+  const filteredActivities = useMemo(() => {
+    // If no branch point, show all activities
+    if (branchPointIndex === null) {
+      return activities
+    }
+    
+    // If selected "all", show DFS-style: all branches with their transportation
+    if (selectedParticipantId === 'all') {
+      // Activities before branch point (exclusive) - show all
+      const beforeBranch = activities.slice(0, branchPointIndex)
+      
+      // Branch point itself - always show
+      const branchPoint = activities[branchPointIndex]
+      
+      // Activities between branch and merge
+      const duringBranchActivities = activities.slice(
+        branchPointIndex + 1, 
+        mergePointIndex !== null ? mergePointIndex : undefined
+      )
+      
+      // Group activities by participant sets (each branch)
+      const participantGroups = new Map<string, Activity[]>()
+      duringBranchActivities.forEach(activity => {
+        if (!activity.participants || activity.participants.length === 0) {
+          return // Skip activities with no participants
+        }
+        // Create a key from sorted participant IDs
+        const participantIds = activity.participants.map(p => p.userId).sort().join(',')
+        if (!participantGroups.has(participantIds)) {
+          participantGroups.set(participantIds, [])
+        }
+        participantGroups.get(participantIds)!.push(activity)
+      })
+      
+      // Build DFS-style result: show each branch's complete path
+      const dfsResult: Activity[] = []
+      
+      // Add all branches in order
+      participantGroups.forEach((branchActivities) => {
+        // Add branch activities
+        dfsResult.push(...branchActivities)
+      })
+      
+      // Activities after merge point - show all (everyone reunited)
+      const afterMerge = mergePointIndex !== null 
+        ? activities.slice(mergePointIndex)
+        : []
+      
+      return [...beforeBranch, branchPoint, ...dfsResult, ...afterMerge]
+    }
+    
+    // If selected specific participant, filter normally
+    if (selectedParticipantId === null) {
+      return activities
+    }
+    
+    // Activities before branch point (exclusive) - show all
+    const beforeBranch = activities.slice(0, branchPointIndex)
+    
+    // Branch point itself - always show (it's the branching point)
+    const branchPoint = activities[branchPointIndex]
+    
+    // Activities between branch and merge - filter by selected participant
+    // Start from branchPointIndex + 1 (exclude branch point itself)
+    const duringBranch = activities
+      .slice(branchPointIndex + 1, mergePointIndex !== null ? mergePointIndex : undefined)
+      .filter(activity => {
+        if (!activity.participants || activity.participants.length === 0) {
+          return false // No participants = don't show
+        }
+        return activity.participants.some(p => p.userId === selectedParticipantId)
+      })
+    
+    // Activities after merge point - show all (everyone reunited)
+    const afterMerge = mergePointIndex !== null 
+      ? activities.slice(mergePointIndex)
+      : []
+    
+    return [...beforeBranch, branchPoint, ...duringBranch, ...afterMerge]
+  }, [activities, branchPointIndex, mergePointIndex, selectedParticipantId])
 
   const [segmentModes, setSegmentModes] = useState<Record<string, TravelMode>>(initialSegmentModes)
   const [isUpdatingAllScheduleTimes, setIsUpdatingAllScheduleTimes] = useState(false)
@@ -1037,12 +1239,11 @@ export default function ItineraryDay({
   // Track user-initiated mode changes to prevent overwriting
   const userChangedModesRef = useRef<Set<string>>(new Set())
   
-  // Load saved transportation modes and hidden states from backend for all segments
+  // Load saved transportation modes from backend for all segments
   useEffect(() => {
     let cancelled = false
     const loadSavedModes = async () => {
       const savedModes: Record<string, TravelMode> = {}
-      const hiddenSegmentIds = new Set<string>()
       for (let i = 0; i < activities.length - 1; i++) {
         if (cancelled) return
         const from = activities[i]
@@ -1057,9 +1258,6 @@ export default function ItineraryDay({
           if (cancelled) return
           if (response.data?.transportationMode) {
             savedModes[segmentId] = response.data.transportationMode as TravelMode
-          }
-          if (response.data?.isHidden) {
-            hiddenSegmentIds.add(segmentId)
           }
         } catch (error: any) {
           // 404 is expected if no segment exists, use default
@@ -1079,16 +1277,6 @@ export default function ItineraryDay({
               }
             })
             return updated
-          })
-        }
-        // Update hidden segments from backend
-        if (hiddenSegmentIds.size > 0) {
-          setHiddenSegments((prev) => {
-            const next = new Set(prev)
-            hiddenSegmentIds.forEach((segmentId) => {
-              next.add(segmentId)
-            })
-            return next
           })
         }
       }
@@ -1119,7 +1307,30 @@ export default function ItineraryDay({
   const [selectedMarkerId, setSelectedMarkerId] = useState<number | null>(null)
   const [mapInstance, setMapInstance] = useState<any>(null)
   const mapMarkersRef = useRef<any[]>([])
-  const [hiddenSegments, setHiddenSegments] = useState<Set<string>>(new Set())
+  
+  // Use localStorage to persist hidden segments (frontend-only, not saved to database)
+  const hiddenSegmentsStorageKey = `itinerary-hidden-segments-${date}`
+  const [hiddenSegments, setHiddenSegments] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(hiddenSegmentsStorageKey)
+      if (saved) {
+        const segmentIds = JSON.parse(saved) as string[]
+        return new Set(segmentIds)
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return new Set<string>()
+  })
+  
+  // Save to localStorage whenever hidden segments change
+  useEffect(() => {
+    try {
+      localStorage.setItem(hiddenSegmentsStorageKey, JSON.stringify(Array.from(hiddenSegments)))
+    } catch {
+      // Ignore localStorage errors (e.g., in private browsing mode)
+    }
+  }, [hiddenSegments, date])
 
   // Reset state when date changes to prevent resource leaks and crashes
   useEffect(() => {
@@ -1128,7 +1339,7 @@ export default function ItineraryDay({
     setSegmentModes({}) // Reset to allow fresh load from activities
     setShowMap(false)
     setSelectedMarkerId(null)
-    setHiddenSegments(new Set())
+    // Don't reset hiddenSegments on date change - let localStorage handle persistence
     // Clear map markers
     mapMarkersRef.current.forEach((m) => {
       try {
@@ -1262,8 +1473,8 @@ export default function ItineraryDay({
     let totalDurationSec = 0
     let totalDistanceM = 0
 
-    for (let i = 0; i < activities.length - 1; i++) {
-      const segmentId = `${activities[i].id}-${activities[i + 1].id}`
+    for (let i = 0; i < filteredActivities.length - 1; i++) {
+      const segmentId = `${filteredActivities[i].id}-${filteredActivities[i + 1].id}`
       const mode = segmentModes[segmentId] || 'driving'
       const route = segmentRoutes[segmentId]
       if (!route || route.mode !== mode) continue
@@ -1297,9 +1508,9 @@ export default function ItineraryDay({
     const conflictMap = new Map<number, boolean>() // activityId -> hasConflict
     let totalConflicts = 0
 
-    for (let i = 0; i < activities.length - 1; i++) {
-      const from = activities[i]
-      const to = activities[i + 1]
+    for (let i = 0; i < filteredActivities.length - 1; i++) {
+      const from = filteredActivities[i]
+      const to = filteredActivities[i + 1]
 
       const departStr = (from.endTime || from.startTime) as string | undefined
       const arriveTargetStr = to.startTime as string | undefined
@@ -1654,11 +1865,21 @@ export default function ItineraryDay({
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={activities.map((a) => a.id)}
+            items={filteredActivities.map((a) => a.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-3">
-              {activities.map((activity, index) => (
+              {filteredActivities.map((activity, index) => {
+                const originalIndex = activities.findIndex(a => a.id === activity.id)
+                const isBranchPoint = branchPointIndex !== null && originalIndex === branchPointIndex
+                const isInBranchView = branchPointIndex !== null && 
+                                       mergePointIndex !== null &&
+                                       originalIndex > branchPointIndex && 
+                                       originalIndex < mergePointIndex &&
+                                       selectedParticipantId !== null && 
+                                       selectedParticipantId !== 'all'
+                
+                return (
                 <div key={activity.id}>
                   <SortableActivityItem
                     activity={activity}
@@ -1685,28 +1906,34 @@ export default function ItineraryDay({
                       >
                         +
                       </button>
+                      {/* Participant Selector Button - Show below branch point */}
+                      {isBranchPoint && (
+                        <button
+                          type="button"
+                          onClick={() => setShowParticipantSelector(true)}
+                          className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm"
+                          title={t.activity.selectParticipantView || 'Select Participant View'}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </button>
+                      )}
                       {/* Restore Transportation Button - Show if next segment is hidden */}
-                      {index < activities.length - 1 && (() => {
-                        const nextSegmentId = `${activity.id}-${activities[index + 1].id}`
+                      {index < filteredActivities.length - 1 && (() => {
+                        const nextActivity = filteredActivities[index + 1]
+                        const nextSegmentId = `${activity.id}-${nextActivity.id}`
                         const isNextSegmentHidden = hiddenSegments.has(nextSegmentId)
                         return isNextSegmentHidden ? (
                           <button
                             type="button"
-                            onClick={async () => {
-                              try {
-                                await updateSegment.mutateAsync({
-                                  fromActivityId: activity.id,
-                                  toActivityId: activities[index + 1].id,
-                                  data: { isHidden: false },
-                                })
-                                setHiddenSegments((prev) => {
-                                  const next = new Set(prev)
-                                  next.delete(nextSegmentId)
-                                  return next
-                                })
-                              } catch (error) {
-                                console.error('Failed to restore transportation segment:', error)
-                              }
+                            onClick={() => {
+                              // Update frontend state only (no API call)
+                              setHiddenSegments((prev) => {
+                                const next = new Set(prev)
+                                next.delete(nextSegmentId)
+                                return next
+                              })
                             }}
                             className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm"
                             title={t.route.restoreTransportation}
@@ -1719,62 +1946,125 @@ export default function ItineraryDay({
                       })()}
                     </div>
                   )}
-                  {index < activities.length - 1 && (
-                    (() => {
-                      const segmentId = `${activity.id}-${activities[index + 1].id}`
-                      return (
-                    <RouteSegment
-                      key={`${date}-${segmentId}`}
-                      from={activity}
-                      to={activities[index + 1]}
-                      showDragPlaceholder={canEdit}
-                      canEdit={canEdit}
-                      segmentId={segmentId}
-                      mode={segmentModes[segmentId] || 'driving'}
-                      onModeChange={async (nextMode) => {
-                        // Mark this segment as user-changed to prevent overwriting
-                        userChangedModesRef.current.add(segmentId)
-                        setSegmentModes((prev) => ({ ...prev, [segmentId]: nextMode }))
-                        // Save mode to backend
-                        try {
-                          await updateSegment.mutateAsync({
-                            fromActivityId: activity.id,
-                            toActivityId: activities[index + 1].id,
-                            data: { transportationMode: nextMode },
-                          })
-                        } catch (error) {
-                          console.error('Failed to save transportation mode:', error)
-                          // Revert on error and remove from user-changed set
-                          userChangedModesRef.current.delete(segmentId)
-                          setSegmentModes((prev) => ({ ...prev, [segmentId]: prev[segmentId] || 'driving' }))
+                  {/* Transportation Segment */}
+                  {(() => {
+                    // Determine if we should show transportation
+                    const shouldShowTransport = (() => {
+                      // Normal case: show transportation between consecutive activities
+                      if (index < filteredActivities.length - 1) {
+                        const nextActivity = filteredActivities[index + 1]
+                        if (!nextActivity) {
+                          return false
                         }
-                      }}
-                      paceBuffer={paceBuffer}
-                      onRouteData={handleRouteData}
-                      isHiddenFromParent={hiddenSegments.has(segmentId)}
-                      onHiddenChange={(segId, hidden) => {
-                        setHiddenSegments((prev) => {
-                          const next = new Set(prev)
-                          if (hidden) {
-                            next.add(segId)
-                          } else {
-                            next.delete(segId)
-                          }
-                          return next
-                        })
-                      }}
-                    />
-                      )
+                        
+                        const nextOriginalIndex = activities.findIndex(a => a.id === nextActivity.id)
+                        const isNextMergePoint = mergePointIndex !== null && nextOriginalIndex === mergePointIndex
+                        const isCurrentBranchPoint = branchPointIndex !== null && originalIndex === branchPointIndex
+                        const isFirstActivityOfBranch = firstActivitiesOfBranches.has(nextActivity.id)
+                        
+                        // Special cases for branch/merge points:
+                        // 1. From branch point to first activity of each branch - always show
+                        if (isCurrentBranchPoint && isFirstActivityOfBranch) {
+                          return true
+                        }
+                        
+                        // 2. From any activity in branch to merge point - always show
+                        // This applies even when in branch view (single participant selected)
+                        if (isNextMergePoint) {
+                          return true
+                        }
+                        
+                        // 3. If in branch view (specific participant selected), only show if not in branch section
+                        // But allow transportation to merge point (handled above)
+                        if (isInBranchView) {
+                          return false
+                        }
+                        
+                        // 4. Normal case: check if activities have overlapping participants
+                        // If they don't overlap, don't show transportation (different groups)
+                        if (!hasParticipantOverlap(activity, nextActivity)) {
+                          return false
+                        }
+                        
+                        return true
+                      }
+                      
+                      return false
                     })()
-                  )}
+                    
+                    if (!shouldShowTransport) {
+                      return null
+                    }
+                    
+                    const nextActivity = filteredActivities[index + 1]
+                    if (!nextActivity) {
+                      return null
+                    }
+                    
+                    const segmentId = `${activity.id}-${nextActivity.id}`
+                    return (
+                      <RouteSegment
+                        key={`${date}-${segmentId}`}
+                        from={activity}
+                        to={nextActivity}
+                        showDragPlaceholder={canEdit}
+                        canEdit={canEdit}
+                        segmentId={segmentId}
+                        mode={segmentModes[segmentId] || 'driving'}
+                        onModeChange={async (nextMode) => {
+                          // Mark this segment as user-changed to prevent overwriting
+                          userChangedModesRef.current.add(segmentId)
+                          setSegmentModes((prev) => ({ ...prev, [segmentId]: nextMode }))
+                          // Save mode to backend - use activity IDs from filtered activities
+                          const fromActivityId = activity.id
+                          const toActivityId = nextActivity.id
+                          try {
+                            await updateSegment.mutateAsync({
+                              fromActivityId,
+                              toActivityId,
+                              data: { transportationMode: nextMode },
+                            })
+                          } catch (error) {
+                            console.error('Failed to save transportation mode:', error)
+                            // Revert on error and remove from user-changed set
+                            userChangedModesRef.current.delete(segmentId)
+                            setSegmentModes((prev) => ({ ...prev, [segmentId]: prev[segmentId] || 'driving' }))
+                          }
+                        }}
+                        paceBuffer={paceBuffer}
+                        onRouteData={handleRouteData}
+                        isHiddenFromParent={hiddenSegments.has(segmentId)}
+                        onHiddenChange={(segId, hidden) => {
+                          setHiddenSegments((prev) => {
+                            const next = new Set(prev)
+                            if (hidden) {
+                              next.add(segId)
+                            } else {
+                              next.delete(segId)
+                            }
+                            return next
+                          })
+                        }}
+                      />
+                    )
+                  })()}
                 </div>
-              ))}
+              )})}
             </div>
           </SortableContext>
         </DndContext>
       )}
         </>
       )}
+      
+      {/* Participant Selector Modal */}
+      <ParticipantSelectorModal
+        isOpen={showParticipantSelector}
+        onClose={() => setShowParticipantSelector(false)}
+        participants={allParticipants}
+        selectedParticipantId={selectedParticipantId}
+        onSelect={setSelectedParticipantId}
+      />
     </div>
   )
 }

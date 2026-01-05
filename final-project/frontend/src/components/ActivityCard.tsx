@@ -37,6 +37,8 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
   const start = activity.startTime ? formatTime(activity.startTime) : ''
   const end = activity.endTime ? formatTime(activity.endTime) : ''
   const isGatheringPoint = activity.activityType === 'gathering_point'
+  const isBranchPoint = activity.activityType === 'branch_point'
+  const isMergePoint = activity.activityType === 'merge_point'
 
   const currentUserPreference = preferencesData?.preferences.find((p) => p.userId === user?.id)?.preference || null
 
@@ -46,7 +48,11 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
       <div className={`flex-shrink-0 w-24 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm ${
         isGatheringPoint 
           ? 'bg-gradient-to-b from-green-50/80 to-white border border-green-200/50' 
-          : 'bg-gradient-to-b from-sky-50/80 to-white border border-sky-200/50'
+          : isBranchPoint
+            ? 'bg-gradient-to-b from-purple-50/80 to-white border border-purple-200/50'
+            : isMergePoint
+              ? 'bg-gradient-to-b from-orange-50/80 to-white border border-orange-200/50'
+              : 'bg-gradient-to-b from-sky-50/80 to-white border border-sky-200/50'
       }`}>
         {isGatheringPoint ? (
           // Gathering point: single time only
@@ -94,7 +100,11 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
           ? 'bg-gradient-to-b from-white to-yellow-50/35 border-2 border-yellow-400/60 hover:border-yellow-500/60'
           : isGatheringPoint
             ? 'bg-gradient-to-b from-white to-green-50/35 border border-green-200/45 hover:border-green-300/45'
-            : 'bg-gradient-to-b from-white to-sky-50/35 border border-sky-200/45 hover:border-sky-300/45'
+            : isBranchPoint
+              ? 'bg-gradient-to-b from-white to-purple-50/35 border border-purple-200/45 hover:border-purple-300/45'
+              : isMergePoint
+                ? 'bg-gradient-to-b from-white to-orange-50/35 border border-orange-200/45 hover:border-orange-300/45'
+                : 'bg-gradient-to-b from-white to-sky-50/35 border border-sky-200/45 hover:border-sky-300/45'
       }`}>
         <div className="flex gap-4 items-start">
           <div className="flex-1 flex flex-col">
@@ -110,6 +120,16 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                   {isGatheringPoint && (
                     <span className="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full font-medium">
                       {t.activity.gatheringPoint || 'Gathering Point'}
+                    </span>
+                  )}
+                  {isBranchPoint && (
+                    <span className="inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
+                      {t.activity.branchPoint || 'Branch Point'}
+                    </span>
+                  )}
+                  {isMergePoint && (
+                    <span className="inline-flex items-center px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
+                      {t.activity.mergePoint || 'Merge Point'}
                     </span>
                   )}
                   {/* Google Maps link button - paper airplane icon */}

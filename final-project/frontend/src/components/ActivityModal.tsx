@@ -57,7 +57,7 @@ export default function ActivityModal({
     placeId: undefined as string | undefined,
     noTime: false,
   })
-  const [activityType, setActivityType] = useState<'regular' | 'gathering_point'>('regular')
+  const [activityType, setActivityType] = useState<'regular' | 'gathering_point' | 'branch_point' | 'merge_point'>('regular')
   const [participantIds, setParticipantIds] = useState<number[]>([])
   const [cost, setCost] = useState<number | undefined>(undefined)
   const [currency, setCurrency] = useState<string | undefined>(undefined)
@@ -420,6 +420,27 @@ export default function ActivityModal({
     return s1 < e2 && s2 < e1
   }
 
+  // Helper function to check if two activities have overlapping participants
+  const hasParticipantOverlap = (activity1: Activity | null, activity2: Activity | null): boolean => {
+    if (!activity1 || !activity2) return true // If either has no participants, treat as overlap (all participants)
+    
+    const participantIds1 = new Set(activity1.participants?.map((p) => p.userId) || [])
+    const participantIds2 = new Set(activity2.participants?.map((p) => p.userId) || [])
+    const hasParticipants1 = participantIds1.size > 0
+    const hasParticipants2 = participantIds2.size > 0
+
+    if (!hasParticipants1 && !hasParticipants2) {
+      // Both have no participants - treat as overlap (both are "all participants")
+      return true
+    } else if (!hasParticipants1 || !hasParticipants2) {
+      // One has no participants - treat as overlap (no participants = all participants)
+      return true
+    } else {
+      // Both have participants - check if there's any overlap
+      return Array.from(participantIds1).some((id) => participantIds2.has(id))
+    }
+  }
+
   // Check for overlaps with existing activities
   const checkForOverlaps = (): { hasOverlap: boolean; overlappingActivity: Activity | null } => {
     const newStartTime = combineDateTime(date, formData.startTime)
@@ -429,6 +450,24 @@ export default function ActivityModal({
     if (!newStartTime || !newEndTime) {
       return { hasOverlap: false, overlappingActivity: null }
     }
+
+    // Create a temporary activity object for the new activity being created/edited
+    // newStartTime and newEndTime are already ISO strings from combineDateTime
+    const newActivity: Activity | null = {
+      id: activity?.id || -1,
+      tripId: tripId,
+      date: date,
+      startTime: newStartTime, // Already an ISO string
+      endTime: newEndTime, // Already an ISO string
+      title: formData.locationName || 'New Activity',
+      participants: participantIds.length > 0 
+        ? participantIds.map(id => {
+            const member = members.find(m => m.userId === id)
+            return member?.user ? { userId: id, user: member.user } : null
+          }).filter((p): p is { userId: number; user: any } => p !== null) as any
+        : undefined,
+      activityType: activityType,
+    } as Activity
 
     // Check against existing activities (exclude the current activity if editing)
     const activitiesToCheck = existingActivities.filter(
@@ -444,14 +483,35 @@ export default function ActivityModal({
         continue
       }
 
-      if (
-        checkTimeOverlap(
-          newStartTime,
-          newEndTime,
-          existingStartTime,
-          existingEndTime
-        )
-      ) {
+      // Check time overlap first
+      const hasTimeOverlap = checkTimeOverlap(
+        newStartTime,
+        newEndTime,
+        existingStartTime,
+        existingEndTime
+      )
+
+      if (hasTimeOverlap) {
+        // If there's time overlap, check participant overlap
+        // If participants don't overlap, it's not a conflict (different people can have activities at the same time)
+        if (!hasParticipantOverlap(newActivity, existingActivity)) {
+          console.log('Time overlap but no participant overlap - no conflict:', {
+            newActivity: { 
+              start: newStartTime, 
+              end: newEndTime,
+              participants: participantIds 
+            },
+            existingActivity: { 
+              id: existingActivity.id,
+              title: existingActivity.title,
+              start: existingStartTime, 
+              end: existingEndTime,
+              participants: existingActivity.participants?.map(p => p.userId) || []
+            }
+          })
+          continue // Skip this activity - no conflict
+        }
+
         console.log('Overlap detected:', {
           newActivity: { start: newStartTime, end: newEndTime },
           existingActivity: { 
@@ -665,7 +725,7 @@ export default function ActivityModal({
                     value="regular"
                     checked={activityType === 'regular'}
                     onChange={(e) => {
-                      setActivityType(e.target.value as 'regular' | 'gathering_point')
+                      setActivityType(e.target.value as 'regular' | 'gathering_point' | 'branch_point' | 'merge_point')
                       if (e.target.value === 'gathering_point') {
                         setFormData((prev) => ({ ...prev, endTime: '' }))
                       }
@@ -680,7 +740,7 @@ export default function ActivityModal({
                     value="gathering_point"
                     checked={activityType === 'gathering_point'}
                     onChange={(e) => {
-                      setActivityType(e.target.value as 'regular' | 'gathering_point')
+                      setActivityType(e.target.value as 'regular' | 'gathering_point' | 'branch_point' | 'merge_point')
                       if (e.target.value === 'gathering_point') {
                         setFormData((prev) => ({ ...prev, endTime: '' }))
                       }
@@ -688,6 +748,30 @@ export default function ActivityModal({
                     className="mr-2"
                   />
                   <span className="text-sm text-gray-700">{t.activity.gatheringPoint || 'Gathering Point'}</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="branch_point"
+                    checked={activityType === 'branch_point'}
+                    onChange={(e) => {
+                      setActivityType(e.target.value as 'regular' | 'gathering_point' | 'branch_point' | 'merge_point')
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">{t.activity.branchPoint || 'Branch Point'}</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="merge_point"
+                    checked={activityType === 'merge_point'}
+                    onChange={(e) => {
+                      setActivityType(e.target.value as 'regular' | 'gathering_point' | 'branch_point' | 'merge_point')
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">{t.activity.mergePoint || 'Merge Point'}</span>
                 </label>
               </div>
             </div>

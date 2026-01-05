@@ -224,7 +224,11 @@ export interface Translations {
     reload: string
     activityType: string
     gatheringPoint: string
+    branchPoint: string
+    mergePoint: string
     regularActivity: string
+    selectParticipantView: string
+    viewAll: string
     time: string
     updateScheduleTime: string
     updateAllScheduleTimes: string
@@ -729,7 +733,11 @@ export const translations: Record<Language, Translations> = {
       reload: '重新載入',
       activityType: '活動類型',
       gatheringPoint: '集合點',
+      branchPoint: '分支點',
+      mergePoint: '合併點',
       regularActivity: '一般活動',
+      selectParticipantView: '選擇參與者檢視',
+      viewAll: '檢視所有人',
       time: '時間',
       updateScheduleTime: '更新排程時間',
       updateAllScheduleTimes: '更新所有排程時間',
@@ -1215,7 +1223,11 @@ export const translations: Record<Language, Translations> = {
       reload: 'Reload',
       activityType: 'Activity Type',
       gatheringPoint: 'Gathering Point',
-    regularActivity: 'Regular Activity',
+      branchPoint: 'Branch Point',
+      mergePoint: 'Merge Point',
+      regularActivity: 'Regular Activity',
+      selectParticipantView: 'Select Participant View',
+      viewAll: 'View All Participants',
     time: 'Time',
     updateScheduleTime: 'Update Schedule Time',
     updateAllScheduleTimes: 'Update All Schedule Times',

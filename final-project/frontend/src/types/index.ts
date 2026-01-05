@@ -53,7 +53,7 @@ export interface Activity {
   createdBy?: User
   cost?: number
   currency?: string
-  activityType?: 'regular' | 'gathering_point'
+  activityType?: 'regular' | 'gathering_point' | 'branch_point' | 'merge_point'
   participants?: ActivityParticipant[]
   comments?: ActivityComment[]
   costShares?: ActivityCostShare[]
@@ -175,7 +175,7 @@ export interface CreateActivityData {
   cost?: number
   currency?: string
   tags?: string[]
-  activityType?: 'regular' | 'gathering_point'
+  activityType?: 'regular' | 'gathering_point' | 'branch_point' | 'merge_point'
 }
 
 export interface UpdateActivityData {
@@ -197,7 +197,7 @@ export interface UpdateActivityData {
   tags?: string[]
   lastModifiedAt?: string
   costShares?: { userId: number; amount: number }[]
-  activityType?: 'regular' | 'gathering_point'
+  activityType?: 'regular' | 'gathering_point' | 'branch_point' | 'merge_point'
 }
 
 export interface CreateTripData {
