@@ -126,18 +126,45 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                     </span>
                   )}
                   {isGatheringPoint && (
-                    <span className="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                      {t.activity.gatheringPoint || 'Gathering Point'}
+                    <span className={`inline-flex items-center ${isViewOnly ? 'px-1.5 py-0.5 sm:px-2' : 'px-2'} py-0.5 bg-green-100 text-green-800 text-xs rounded-full font-medium`} title={t.activity.gatheringPoint || 'Gathering Point'}>
+                      {isViewOnly ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <span className="hidden sm:inline">{t.activity.gatheringPoint || 'Gathering Point'}</span>
+                        </>
+                      ) : (
+                        <span>{t.activity.gatheringPoint || 'Gathering Point'}</span>
+                      )}
                     </span>
                   )}
                   {isBranchPoint && (
-                    <span className="inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
-                      {t.activity.branchPoint || 'Branch Point'}
+                    <span className={`inline-flex items-center ${isViewOnly ? 'px-1.5 py-0.5 sm:px-2' : 'px-2'} py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full font-medium`} title={t.activity.branchPoint || 'Branch Point'}>
+                      {isViewOnly ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                          <span className="hidden sm:inline">{t.activity.branchPoint || 'Branch Point'}</span>
+                        </>
+                      ) : (
+                        <span>{t.activity.branchPoint || 'Branch Point'}</span>
+                      )}
                     </span>
                   )}
                   {isMergePoint && (
-                    <span className="inline-flex items-center px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
-                      {t.activity.mergePoint || 'Merge Point'}
+                    <span className={`inline-flex items-center ${isViewOnly ? 'px-1.5 py-0.5 sm:px-2' : 'px-2'} py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full font-medium`} title={t.activity.mergePoint || 'Merge Point'}>
+                      {isViewOnly ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4 4m4-4l-4-4m0 6H4m0 0l4-4m-4 4l4 4" />
+                          </svg>
+                          <span className="hidden sm:inline">{t.activity.mergePoint || 'Merge Point'}</span>
+                        </>
+                      ) : (
+                        <span>{t.activity.mergePoint || 'Merge Point'}</span>
+                      )}
                     </span>
                   )}
                   {/* Google Maps link button - paper airplane icon */}
