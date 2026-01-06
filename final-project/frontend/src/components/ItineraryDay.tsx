@@ -36,6 +36,9 @@ interface ItineraryDayProps {
   onReorder: (activityIds: number[]) => void
   onAddActivity?: (afterActivityId?: number) => void
   canEdit: boolean
+  isViewOnly?: boolean
+  hideParticipants?: boolean
+  onToggleHideParticipants?: () => void
   paceBuffer?: {
     prePct: number
     postPct: number
@@ -43,6 +46,7 @@ interface ItineraryDayProps {
   initialSegmentModes?: Record<string, TravelMode> // Initial segment modes (e.g., from ActivityModal)
   onUpdateScheduleTime?: (activityId: number) => Promise<void> // Update schedule time for a single activity
   onUpdateAllScheduleTimes?: (date: string) => Promise<void> // Update schedule times for all activities in the day
+  forceExpanded?: boolean // Force the day to be expanded (for view-only mode when a specific date is selected)
 }
 
 type TravelMode = 'driving' | 'walking' | 'bicycling' | 'transit'
@@ -161,12 +165,13 @@ interface RouteSegmentProps {
   }
   onRouteData: (segmentId: string, data: SegmentRouteState) => void
   canEdit?: boolean
+  isViewOnly?: boolean
   onHiddenChange?: (segmentId: string, hidden: boolean) => void
   isHiddenFromParent?: boolean
 }
 
 
-function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData, canEdit = false, onHiddenChange, isHiddenFromParent = false }: RouteSegmentProps) {
+function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeChange, paceBuffer, onRouteData, canEdit = false, isViewOnly = false, onHiddenChange, isHiddenFromParent = false }: RouteSegmentProps) {
   const { t, language } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -415,9 +420,13 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
 
       <div className="flex-1 flex gap-4 items-center">
         {/* Transportation Time Block */}
-        <div className="flex-shrink-0 w-24 bg-gradient-to-b from-violet-50/80 to-white border border-violet-200/55 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm relative">
+        <div className={`flex-shrink-0 w-20 bg-gradient-to-b from-violet-50/80 to-white border border-violet-200/55 rounded-xl px-2 py-2 flex items-center justify-center shadow-sm relative ${
+          isViewOnly
+            ? (((manualStartTime && manualEndTime) || (transportStart && transportEnd)) ? 'min-h-[64px]' : 'min-h-[48px]')
+            : 'min-h-[64px]'
+        }`}>
           {(manualStartTime && manualEndTime) || (transportStart && transportEnd) ? (
-            <div className="text-sm text-slate-800 font-semibold text-center leading-tight flex flex-col items-center justify-center">
+            <div className="text-xs text-slate-800 font-semibold text-center leading-tight flex flex-col items-center justify-center">
               <span className="whitespace-nowrap tabular-nums">
                 {manualStartTime ? formatTime(new Date(manualStartTime)) : formatTime(transportStart!)}
               </span>
@@ -432,7 +441,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
             </span>
           )}
           {/* Edit button */}
-          {canEdit && (transportStart || transportEnd) && (
+          {canEdit && !isViewOnly && (transportStart || transportEnd) && (
             <button
               type="button"
               onClick={() => setShowTimeEditor(true)}
@@ -445,8 +454,8 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
         </div>
 
         {/* Transportation Content */}
-        <div className="flex-1 bg-gradient-to-b from-violet-50/35 to-white border border-violet-200/45 rounded-xl px-4 py-2 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div className="flex-1 bg-gradient-to-b from-violet-50/35 to-white border border-violet-200/45 rounded-xl px-2 sm:px-4 py-2 shadow-sm flex items-center gap-2">
+          <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <div className="text-sm text-slate-600">
               <div className="font-semibold text-slate-800">
                 {t.route.title}{' '}
@@ -733,85 +742,95 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-xs text-slate-600">
-                <span>{t.route.modeLabel}:</span>
-                <select
-                  value={hasManualOverride ? 'custom' : savedMode}
-                  onChange={async (e) => {
-                    const selectedValue = e.target.value
-                    if (selectedValue === 'custom') {
-                      // Don't allow selecting 'custom' directly
-                      return
-                    }
-                    const newMode = selectedValue as TravelMode
-                    onModeChange(newMode)
-                    // Save mode to backend and clear manual override if switching from custom
-                    try {
-                      await updateSegment.mutateAsync({
-                        fromActivityId: from.id,
-                        toActivityId: to.id,
-                        data: { 
-                          transportationMode: newMode,
-                          isManualOverride: false, // Clear manual override when selecting a mode
-                        },
-                      })
-                    } catch (error) {
-                      console.error('Failed to save transportation mode:', error)
-                      // Revert on error
-                      onModeChange(savedMode as TravelMode)
-                    }
-                  }}
-                  className="border border-violet-200/55 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
-                >
-                  {hasManualOverride && (
-                    <option value="custom">{t.route.custom}</option>
-                  )}
-                  <option value="driving">{t.route.driving}</option>
-                  <option value="walking">{t.route.walking}</option>
-                  <option value="bicycling">{t.route.bicycling || 'Bicycling'}</option>
-                  <option value="transit">{t.route.transit}</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleOpenInMaps}
-                  className="inline-flex items-center px-3 py-1.5 border border-violet-200/55 text-xs font-medium rounded-full text-slate-700 bg-violet-50/60 hover:bg-violet-100/40 transition"
-                >
-                  {t.route.openInMaps}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowNoteEditor(true)}
-                  className={`inline-flex items-center justify-center w-8 h-8 rounded-full border transition ${
-                    segment?.note
-                      ? 'border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200'
-                      : 'border-violet-200/55 bg-violet-50/60 text-slate-600 hover:bg-violet-100/40'
-                  }`}
-                  title={segment?.note ? t.route.editNote || 'Edit Note' : t.route.addNote || 'Add Note'}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </button>
-                {canEdit && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              {!isViewOnly && (
+                <div className="flex items-center gap-1 text-xs sm:text-sm text-slate-600">
+                  <span>{t.route.modeLabel}:</span>
+                  <select
+                    value={hasManualOverride ? 'custom' : savedMode}
+                    onChange={async (e) => {
+                      const selectedValue = e.target.value
+                      if (selectedValue === 'custom') {
+                        // Don't allow selecting 'custom' directly
+                        return
+                      }
+                      const newMode = selectedValue as TravelMode
+                      onModeChange(newMode)
+                      // Save mode to backend and clear manual override if switching from custom
+                      try {
+                        await updateSegment.mutateAsync({
+                          fromActivityId: from.id,
+                          toActivityId: to.id,
+                          data: { 
+                            transportationMode: newMode,
+                            isManualOverride: false, // Clear manual override when selecting a mode
+                          },
+                        })
+                      } catch (error) {
+                        console.error('Failed to save transportation mode:', error)
+                        // Revert on error
+                        onModeChange(savedMode as TravelMode)
+                      }
+                    }}
+                    className="border border-violet-200/55 rounded px-2 py-1.5 sm:py-1 text-xs sm:text-sm bg-white focus:outline-none focus:ring-1 focus:ring-violet-400 min-h-[36px] sm:min-h-0"
+                  >
+                    {hasManualOverride && (
+                      <option value="custom">{t.route.custom}</option>
+                    )}
+                    <option value="driving">{t.route.driving}</option>
+                    <option value="walking">{t.route.walking}</option>
+                    <option value="bicycling">{t.route.bicycling || 'Bicycling'}</option>
+                    <option value="transit">{t.route.transit}</option>
+                  </select>
+                </div>
+              )}
+              {!isViewOnly && (
+                <>
                   <button
                     type="button"
-                    onClick={() => {
-                      // Update frontend state only (no API call)
-                      onHiddenChange?.(segmentId, true)
-                    }}
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-red-200/55 bg-red-50/60 text-red-600 hover:bg-red-100/40 transition"
-                    title={t.route.deleteTransportation || 'Delete Transportation'}
+                    onClick={() => setShowNoteEditor(true)}
+                    className={`inline-flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-full border transition ${
+                      segment?.note
+                        ? 'border-violet-300 bg-violet-100 text-violet-700 hover:bg-violet-200'
+                        : 'border-violet-200/55 bg-violet-50/60 text-slate-600 hover:bg-violet-100/40'
+                    }`}
+                    title={segment?.note ? t.route.editNote || 'Edit Note' : t.route.addNote || 'Add Note'}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </button>
-                )}
-              </div>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Update frontend state only (no API call)
+                        onHiddenChange?.(segmentId, true)
+                      }}
+                      className="inline-flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-full border border-red-200/55 bg-red-50/60 text-red-600 hover:bg-red-100/40 transition"
+                      title={t.route.deleteTransportation || 'Delete Transportation'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
+          </div>
+          {/* Map button - right side, vertically centered */}
+          <div className="flex-shrink-0 flex items-center">
+            <button
+              type="button"
+              onClick={handleOpenInMaps}
+              className="inline-flex items-center justify-center p-1.5 rounded-lg border border-violet-200/55 text-slate-700 bg-violet-50/60 hover:bg-violet-100/40 transition"
+              title={t.route.openInMaps || 'Open in Google Maps'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -911,7 +930,7 @@ function RouteSegment({ from, to, showDragPlaceholder, segmentId, mode, onModeCh
   )
 }
 
-function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict, onUpdateScheduleTime, simpleView }: {
+function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict, onUpdateScheduleTime, simpleView, hideParticipants = false, isViewOnly = false }: {
   activity: Activity
   onEdit: (activity: Activity) => void
   onDelete: (activityId: number) => void
@@ -919,6 +938,8 @@ function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict
   hasConflict?: boolean
   onUpdateScheduleTime?: (activityId: number) => Promise<void>
   simpleView?: boolean
+  hideParticipants?: boolean
+  isViewOnly?: boolean
 }) {
   const {
     attributes,
@@ -964,6 +985,8 @@ function SortableActivityItem({ activity, onEdit, onDelete, canEdit, hasConflict
           hasConflict={hasConflict}
           onUpdateScheduleTime={onUpdateScheduleTime}
           simpleView={simpleView}
+          hideParticipants={hideParticipants}
+          isViewOnly={isViewOnly}
         />
       </div>
     </div>
@@ -978,16 +1001,23 @@ export default function ItineraryDay({
   onReorder,
   onAddActivity,
   canEdit,
+  isViewOnly = false,
+  hideParticipants = false,
+  onToggleHideParticipants,
   paceBuffer = { prePct: 0.075, postPct: 0.075 },
   initialSegmentModes = {},
   onUpdateScheduleTime,
   onUpdateAllScheduleTimes,
+  forceExpanded = false,
 }: ItineraryDayProps) {
   const { t, language } = useLanguage()
   const { user } = useAuth()
-  const [simpleView, setSimpleView] = useState(true)
+  const simpleView = true // Always use simple view (detail view feature removed)
   const [selectedParticipantId, setSelectedParticipantId] = useState<number | 'all' | null>(null)
   const [showParticipantSelector, setShowParticipantSelector] = useState(false)
+  
+  // Override canEdit when in view-only mode
+  const effectiveCanEdit = isViewOnly ? false : canEdit
   
   // Find branch point and merge point
   const { branchPointIndex, mergePointIndex } = useMemo(() => {
@@ -1623,6 +1653,10 @@ export default function ItineraryDay({
   // Key is based on date to ensure each day has its own collapsed state
   const collapsedStorageKey = `itinerary-day-collapsed-${date}`
   const [isCollapsed, setIsCollapsed] = useState(() => {
+    // If forceExpanded is true (view-only mode with specific date selected), default to expanded
+    if (forceExpanded) {
+      return false
+    }
     try {
       const saved = localStorage.getItem(collapsedStorageKey)
       return saved === 'true'
@@ -1630,6 +1664,13 @@ export default function ItineraryDay({
       return false
     }
   })
+  
+  // When forceExpanded changes, update collapsed state
+  useEffect(() => {
+    if (forceExpanded) {
+      setIsCollapsed(false)
+    }
+  }, [forceExpanded])
   
   // Save to localStorage whenever collapsed state changes
   useEffect(() => {
@@ -1654,13 +1695,13 @@ export default function ItineraryDay({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          <h3 className="text-xl font-bold">{formattedDate}</h3>
+          <h3 className="text-lg sm:text-xl font-bold">{formattedDate}</h3>
           {scheduleConflicts.count > 0 && (
             <span className="text-xs font-semibold px-2 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
               {t.route.scheduleConflicts}: {scheduleConflicts.count}
             </span>
           )}
-          {dayPlaces.length > 0 && (
+          {dayPlaces.length > 0 && !isViewOnly && (
             <div className="text-xs text-gray-500">
               <span className="mr-3">
                 {t.route.travelTime}: <span className="font-medium text-gray-700">{totals.travelTimeText}</span>
@@ -1672,7 +1713,7 @@ export default function ItineraryDay({
           )}
         </div>
         <div className="flex items-center gap-3">
-          {canEdit && onUpdateAllScheduleTimes && activities.length > 0 && (
+          {effectiveCanEdit && onUpdateAllScheduleTimes && activities.length > 0 && !isViewOnly && (
             <button
               onClick={async () => {
                 setIsUpdatingAllScheduleTimes(true)
@@ -1683,7 +1724,7 @@ export default function ItineraryDay({
                 }
               }}
               disabled={isUpdatingAllScheduleTimes}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-wait"
+              className="text-blue-600 hover:text-blue-700 text-sm sm:text-base font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-wait py-2 sm:py-1.5 min-h-[44px] sm:min-h-0"
               title={t.activity.updateAllScheduleTimes || 'Update All Schedule Times'}
             >
               {isUpdatingAllScheduleTimes ? (
@@ -1698,25 +1739,33 @@ export default function ItineraryDay({
               {t.activity.updateAllScheduleTimes || 'Update All Times'}
             </button>
           )}
-          <button
-            onClick={() => setSimpleView(!simpleView)}
-            className={`text-gray-600 hover:text-gray-700 text-sm font-medium flex items-center gap-1 transition ${
-              !simpleView ? 'text-indigo-600' : ''
-            }`}
-            title={!simpleView ? (t.activity.disableDetailView || 'Disable Detail View') : (t.activity.enableDetailView || 'Enable Detail View')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={!simpleView 
-                ? "M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                : "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              } />
-            </svg>
-            {t.activity.detailView || 'Detail View'}
-          </button>
-          {canEdit && onAddActivity && (
+          {onToggleHideParticipants && (
+            <button
+              onClick={onToggleHideParticipants}
+              className={`text-gray-600 hover:text-gray-700 text-sm font-medium flex items-center gap-1 transition ${
+                hideParticipants ? 'text-indigo-600' : ''
+              }`}
+              title={hideParticipants ? (t.activity.showParticipants || 'Show Participants') : (t.activity.hideParticipants || 'Hide Participants')}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {hideParticipants ? (
+                  // User with slash (hidden)
+                  <>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+                  </>
+                ) : (
+                  // User icon (visible)
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                )}
+              </svg>
+              <span className="hidden sm:inline">{hideParticipants ? (t.activity.showParticipants || 'Show Participants') : (t.activity.hideParticipants || 'Hide Participants')}</span>
+            </button>
+          )}
+          {effectiveCanEdit && onAddActivity && !isViewOnly && (
             <button
               onClick={() => onAddActivity?.()}
-              className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+              className="text-indigo-600 hover:text-indigo-700 text-sm sm:text-base font-medium py-2 sm:py-1.5 min-h-[44px] sm:min-h-0"
             >
               + {t.activity.addActivity}
             </button>
@@ -1815,7 +1864,7 @@ export default function ItineraryDay({
       
       {activities.length === 0 ? (
         <p className="text-gray-500 text-sm">{t.activity.noActivitiesForDay}</p>
-      ) : (
+      ) : effectiveCanEdit ? (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -1825,7 +1874,7 @@ export default function ItineraryDay({
             items={filteredActivities.map((a) => a.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-3">
+            <div className="space-y-4 sm:space-y-6">
               {filteredActivities.map((activity, index) => {
                 const originalIndex = activities.findIndex(a => a.id === activity.id)
                 const isBranchPoint = branchPointIndex !== null && originalIndex === branchPointIndex
@@ -1842,13 +1891,14 @@ export default function ItineraryDay({
                     activity={activity}
                     onEdit={onEdit}
                     onDelete={onDelete}
-                    canEdit={canEdit}
+                    canEdit={effectiveCanEdit}
                     hasConflict={scheduleConflicts.map.get(activity.id)}
                     onUpdateScheduleTime={onUpdateScheduleTime}
                     simpleView={simpleView}
+                    hideParticipants={hideParticipants}
                   />
                   {/* Quick Add Button and Restore Transportation Button - Below activity card with margin, centered */}
-                  {canEdit && onAddActivity && (
+                  {effectiveCanEdit && onAddActivity && !isViewOnly && (
                     <div 
                       className="flex justify-center gap-2 mt-2"
                       style={{ 
@@ -1864,11 +1914,11 @@ export default function ItineraryDay({
                         +
                       </button>
                       {/* Participant Selector Button - Show below branch point */}
-                      {isBranchPoint && (
+                      {isBranchPoint && !isViewOnly && (
                         <button
                           type="button"
                           onClick={() => setShowParticipantSelector(true)}
-                          className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm"
+                          className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm min-h-[36px] sm:min-h-0"
                           title={t.activity.selectParticipantView || 'Select Participant View'}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1877,7 +1927,7 @@ export default function ItineraryDay({
                         </button>
                       )}
                       {/* Restore Transportation Button - Show if next segment is hidden */}
-                      {index < filteredActivities.length - 1 && (() => {
+                      {index < filteredActivities.length - 1 && !isViewOnly && (() => {
                         const nextActivity = filteredActivities[index + 1]
                         const nextSegmentId = `${activity.id}-${nextActivity.id}`
                         const isNextSegmentHidden = hiddenSegments.has(nextSegmentId)
@@ -1892,7 +1942,7 @@ export default function ItineraryDay({
                                 return next
                               })
                             }}
-                            className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm"
+                            className="px-3 py-1 rounded-lg border-2 border-gray-300 bg-white text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center text-sm font-medium shadow-sm min-h-[36px] sm:min-h-0"
                             title={t.route.restoreTransportation}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1964,8 +2014,9 @@ export default function ItineraryDay({
                         key={`${date}-${segmentId}`}
                         from={activity}
                         to={nextActivity}
-                        showDragPlaceholder={canEdit}
-                        canEdit={canEdit}
+                        showDragPlaceholder={effectiveCanEdit}
+                        canEdit={effectiveCanEdit}
+                        isViewOnly={isViewOnly}
                         segmentId={segmentId}
                         mode={segmentModes[segmentId] || 'driving'}
                         onModeChange={async (nextMode) => {
@@ -2010,6 +2061,80 @@ export default function ItineraryDay({
             </div>
           </SortableContext>
         </DndContext>
+      ) : (
+        <div className="space-y-4 sm:space-y-6">
+          {filteredActivities.map((activity, index) => {
+            return (
+              <div key={activity.id}>
+                <SortableActivityItem
+                  activity={activity}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  canEdit={effectiveCanEdit}
+                  hasConflict={scheduleConflicts.map.get(activity.id)}
+                  onUpdateScheduleTime={onUpdateScheduleTime}
+                  simpleView={simpleView}
+                  hideParticipants={hideParticipants}
+                  isViewOnly={isViewOnly}
+                />
+                {/* Transportation Segment */}
+                {(() => {
+                  if (index < filteredActivities.length - 1) {
+                    const nextActivity = filteredActivities[index + 1]
+                    if (!nextActivity) {
+                      return null
+                    }
+                    const segmentId = `${activity.id}-${nextActivity.id}`
+                    
+                    return (
+                      <RouteSegment
+                        from={activity}
+                        to={nextActivity}
+                        showDragPlaceholder={effectiveCanEdit}
+                        canEdit={effectiveCanEdit}
+                        isViewOnly={isViewOnly}
+                        segmentId={segmentId}
+                        mode={segmentModes[segmentId] || 'driving'}
+                        onModeChange={async (nextMode) => {
+                          userChangedModesRef.current.add(segmentId)
+                          setSegmentModes((prev) => ({ ...prev, [segmentId]: nextMode }))
+                          const fromActivityId = activity.id
+                          const toActivityId = nextActivity.id
+                          try {
+                            await updateSegment.mutateAsync({
+                              fromActivityId,
+                              toActivityId,
+                              data: { transportationMode: nextMode },
+                            })
+                          } catch (error) {
+                            console.error('Failed to save transportation mode:', error)
+                            userChangedModesRef.current.delete(segmentId)
+                            setSegmentModes((prev) => ({ ...prev, [segmentId]: prev[segmentId] || 'driving' }))
+                          }
+                        }}
+                        paceBuffer={paceBuffer}
+                        onRouteData={handleRouteData}
+                        isHiddenFromParent={hiddenSegments.has(segmentId)}
+                        onHiddenChange={(segId, hidden) => {
+                          setHiddenSegments((prev) => {
+                            const next = new Set(prev)
+                            if (hidden) {
+                              next.add(segId)
+                            } else {
+                              next.delete(segId)
+                            }
+                            return next
+                          })
+                        }}
+                      />
+                    )
+                  }
+                  return null
+                })()}
+              </div>
+            )
+          })}
+        </div>
       )}
         </>
       )}

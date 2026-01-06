@@ -6,9 +6,10 @@ interface MemberListProps {
   members: TripMember[]
   tripId: number
   isOwner: boolean
+  isViewOnly?: boolean
 }
 
-export default function MemberList({ members, tripId, isOwner }: MemberListProps) {
+export default function MemberList({ members, tripId, isOwner, isViewOnly = false }: MemberListProps) {
   const { t } = useLanguage()
   const removeMember = useRemoveMember()
   const updateRole = useUpdateMemberRole()
@@ -21,6 +22,33 @@ export default function MemberList({ members, tripId, isOwner }: MemberListProps
 
   const handleRoleChange = async (memberId: number, newRole: string) => {
     await updateRole.mutateAsync({ memberId, data: { role: newRole } })
+  }
+
+  if (isViewOnly) {
+    // View-only mode: only show avatar and name
+    return (
+      <div className="flex flex-wrap gap-3">
+        {members.map((member) => (
+          <div
+            key={member.id}
+            className="flex items-center gap-2"
+          >
+            {member.user.avatarUrl ? (
+              <img
+                src={member.user.avatarUrl}
+                alt={member.user.name}
+                className="w-8 h-8 rounded-full"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-semibold">
+                {member.user.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm font-medium text-gray-700">{member.user.name}</span>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (

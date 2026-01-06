@@ -52,8 +52,8 @@ export default function LocationSearchModal({
     // 優先使用 place_id（能顯示地點資訊）
     let googleMapsUrl = ''
     if (place.placeId) {
-      // 使用正確的 place_id 格式（適用於移動設備和桌面）
-      googleMapsUrl = `https://www.google.com/maps/place/?place_id=${place.placeId}`
+      // 使用新格式（適用於移動設備和桌面）
+      googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.placeId}`
     } else if (place.lat && place.lng) {
       // 如果沒有 place_id，使用座標作為備選
       googleMapsUrl = `https://www.google.com/maps/?q=${place.lat},${place.lng}`

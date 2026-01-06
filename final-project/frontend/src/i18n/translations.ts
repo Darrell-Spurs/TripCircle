@@ -141,6 +141,8 @@ export interface Translations {
     publishing: string
     describePlaceholder: string
     itinerary: string
+    viewMode: string
+    showAll: string
   }
 
   // Activity
@@ -188,6 +190,8 @@ export interface Translations {
     enableDetailView: string
     disableDetailView: string
     participants: string
+    showParticipants: string
+    hideParticipants: string
     selectAll: string
     deselectAll: string
     noMembers: string
@@ -656,6 +660,8 @@ export const translations: Record<Language, Translations> = {
       publishing: '發布中...',
       describePlaceholder: '描述您的旅程...',
       itinerary: '行程',
+      viewMode: '檢視模式',
+      showAll: '顯示全部',
     },
     activity: {
       addActivity: '新增活動',
@@ -701,6 +707,8 @@ export const translations: Record<Language, Translations> = {
       enableDetailView: '啟用詳細檢視',
       disableDetailView: '停用詳細檢視',
       participants: '參與者',
+      showParticipants: '顯示參與者',
+      hideParticipants: '隱藏參與者',
       selectAll: '全選',
       deselectAll: '取消全選',
       noMembers: '此行程沒有成員',
@@ -1147,6 +1155,8 @@ export const translations: Record<Language, Translations> = {
       publishing: 'Publishing...',
       describePlaceholder: 'Describe your trip...',
       itinerary: 'Itinerary',
+      viewMode: 'View Mode',
+      showAll: 'Show All',
     },
     activity: {
       addActivity: 'Add Activity',
@@ -1192,6 +1202,8 @@ export const translations: Record<Language, Translations> = {
       enableDetailView: 'Enable Detail View',
       disableDetailView: 'Disable Detail View',
       participants: 'Participants',
+      showParticipants: 'Show Participants',
+      hideParticipants: 'Hide Participants',
       selectAll: 'Select All',
       deselectAll: 'Deselect All',
       noMembers: 'No members in this trip',

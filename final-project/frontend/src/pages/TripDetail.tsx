@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useMemo, useEffect } from 'react'
 import { useTrip, useUpdateTrip } from '../hooks/useTrips'
 import { useAuth } from '../context/AuthContext'
@@ -27,8 +27,9 @@ import api from '../lib/api'
 
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const { isGuest } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const tripId = id ? parseInt(id) : 0
   const { data: trip, isLoading, refetch: refetchTrip } = useTrip(tripId)
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>()
@@ -64,8 +65,28 @@ export default function TripDetail() {
   const [editStartDate, setEditStartDate] = useState('')
   const [editEndDate, setEditEndDate] = useState('')
 
+  // View-only mode detection
+  const isViewOnly = searchParams.get('view_only') === 'true'
+  const navigate = useNavigate()
+  
+  // Hide participants state: default to show in edit mode, hide in view-only mode
+  const [hideParticipants, setHideParticipants] = useState(isViewOnly)
+  
+  // View-only mode date selection state
+  // Use 'all' to show all dates, or a specific date string
+  const [viewOnlySelectedDate, setViewOnlySelectedDate] = useState<string | 'all' | null>(null)
+  
   const canEdit = !isGuest && (trip?.role === 'owner' || trip?.role === 'editor')
   const isOwner = !isGuest && trip?.role === 'owner'
+  
+  // Override canEdit and isOwner when in view-only mode
+  const effectiveCanEdit = isViewOnly ? false : canEdit
+  const effectiveIsOwner = isViewOnly ? false : isOwner
+  
+  // Update hideParticipants when view-only mode changes
+  useEffect(() => {
+    setHideParticipants(isViewOnly)
+  }, [isViewOnly])
 
   // Helper to get local date string (YYYY-MM-DD) from a date to avoid timezone issues
   const getLocalDateString = (dateStr: string): string => {
@@ -487,15 +508,17 @@ export default function TripDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <Link
-            to="/dashboard"
-            className="text-indigo-600 hover:text-indigo-700 mb-4 inline-block"
-          >
-            ← {t.common.back} {t.nav.dashboard}
-          </Link>
-        </div>
+      <div className="container mx-auto px-2 sm:px-4 md:px-6 py-8">
+        {!isViewOnly && (
+          <div className="mb-6">
+            <Link
+              to="/dashboard"
+              className="text-indigo-600 hover:text-indigo-700 mb-4 inline-block"
+            >
+              ← {t.common.back} {t.nav.dashboard}
+            </Link>
+          </div>
+        )}
 
         {/* Cover Image */}
         {isEditingDetails ? (
@@ -504,7 +527,7 @@ export default function TripDetail() {
               <img
                 src={editCoverImage}
                 alt={t.trip.coverImage}
-                className="w-full h-64 object-cover rounded-lg mb-2"
+                className="w-full h-48 sm:h-64 object-cover rounded-lg mb-2"
               />
             )}
             <div className="bg-white rounded-lg shadow-md p-4">
@@ -521,11 +544,11 @@ export default function TripDetail() {
             </div>
           </div>
         ) : (
-          trip.coverImage && (
+          trip.coverImage && !isViewOnly && (
             <img
               src={trip.coverImage}
               alt={trip.title}
-              className="w-full h-64 object-cover rounded-lg mb-6"
+              className="w-full h-48 sm:h-64 object-cover rounded-lg mb-6"
             />
           )
         )}
@@ -603,24 +626,43 @@ export default function TripDetail() {
           ) : (
             <>
               <div className="flex justify-between items-start mb-2">
-                <h1 className="text-3xl font-bold">{trip.title}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold">{trip.title}</h1>
+                  {effectiveCanEdit && !isViewOnly && (
+                    <button
+                      onClick={() => {
+                        navigate(`/trips/${tripId}?view_only=true`)
+                      }}
+                      className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center gap-1 min-h-[44px] sm:min-h-0"
+                      title={t.trip.viewMode || '檢視模式'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      <span className="hidden sm:inline">{t.trip.viewMode || '檢視模式'}</span>
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-col items-end gap-2">
-                  {canEdit && (
+                  {effectiveCanEdit && (
                     <button
                       onClick={() => setIsEditingDetails(true)}
-                      className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                      className="text-indigo-600 hover:text-indigo-700 text-sm font-medium min-h-[44px] sm:min-h-0"
                     >
                       {t.trip.editDetails}
                     </button>
                   )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowExportModal(true)}
-                      className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      📄 {t.export.exportPlan}
-                    </button>
-                    {isOwner && (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {!isViewOnly && (
+                      <button
+                        onClick={() => setShowExportModal(true)}
+                        className="px-3 py-2 sm:py-1.5 text-sm text-gray-600 hover:text-gray-800 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-50 transition min-h-[44px] sm:min-h-0"
+                      >
+                        📄 {t.export.exportPlan}
+                      </button>
+                    )}
+                    {effectiveIsOwner && !isViewOnly && (
                       <button
                         onClick={async () => {
                           try {
@@ -635,7 +677,7 @@ export default function TripDetail() {
                             alert(error.response?.data?.detail || t.share.createShareLink + ' ' + t.common.error)
                           }
                         }}
-                        className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                        className="px-3 py-2 sm:py-1.5 text-sm text-gray-600 hover:text-gray-800 bg-transparent border border-gray-300 rounded-lg hover:bg-gray-50 transition min-h-[44px] sm:min-h-0"
                       >
                         🔗 {t.share.createShareLink}
                       </button>
@@ -652,41 +694,45 @@ export default function TripDetail() {
                   {new Date(trip.startDate).toLocaleDateString()} -{' '}
                   {new Date(trip.endDate).toLocaleDateString()}
                 </p>
-                <p>
-                  <span className="font-semibold">{t.trip.status}:</span>{' '}
-                  <span className="capitalize">{trip.status === 'planning' ? t.trip.planning : trip.status === 'upcoming' ? t.trip.upcoming : trip.status === 'ongoing' ? t.trip.ongoing : trip.status === 'completed' ? t.trip.completed : trip.status === 'cancelled' ? t.trip.cancelled : trip.status}</span>
-                </p>
-                {trip.role && (
-                  <p>
-                    <span className="font-semibold">{t.trip.yourRole}:</span>{' '}
-                    <span className="capitalize">{trip.role === 'owner' ? t.trip.owner : trip.role === 'editor' ? t.trip.editor : trip.role === 'viewer' ? t.trip.viewer : trip.role}</span>
-                  </p>
+                {!isViewOnly && (
+                  <>
+                    <p>
+                      <span className="font-semibold">{t.trip.status}:</span>{' '}
+                      <span className="capitalize">{trip.status === 'planning' ? t.trip.planning : trip.status === 'upcoming' ? t.trip.upcoming : trip.status === 'ongoing' ? t.trip.ongoing : trip.status === 'completed' ? t.trip.completed : trip.status === 'cancelled' ? t.trip.cancelled : trip.status}</span>
+                    </p>
+                    {trip.role && (
+                      <p>
+                        <span className="font-semibold">{t.trip.yourRole}:</span>{' '}
+                        <span className="capitalize">{trip.role === 'owner' ? t.trip.owner : trip.role === 'editor' ? t.trip.editor : trip.role === 'viewer' ? t.trip.viewer : trip.role}</span>
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </>
           )}
         </div>
 
-        {(isOwner || (members && members.length > 0)) && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {(effectiveIsOwner || (members && members.length > 0)) && (
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">{t.trip.members}</h2>
-              {isOwner && (
+              <h2 className="text-xl sm:text-2xl font-bold">{t.trip.members}</h2>
+              {effectiveIsOwner && !isViewOnly && (
                 <button
                   onClick={() => setIsInviteModalOpen(true)}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm min-h-[44px] sm:min-h-0"
                 >
                   + {t.members.inviteMember}
                 </button>
               )}
             </div>
-            {members && <MemberList members={members} tripId={tripId} isOwner={isOwner || false} />}
+            {members && <MemberList members={members} tripId={tripId} isOwner={effectiveIsOwner || false} isViewOnly={isViewOnly} />}
           </div>
         )}
 
 
         {/* Publish to Feed Section */}
-        {isOwner && (
+        {effectiveIsOwner && !isViewOnly && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
               <div>
@@ -864,9 +910,36 @@ export default function TripDetail() {
           {activeTab === 'itinerary' && (
             <>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">{t.trip.activities}</h2>
-                  <div className="flex flex-col md:flex-row md:items-center gap-3">
-                    {canEdit && (
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl sm:text-2xl font-bold">{t.trip.activities}</h2>
+                  {isViewOnly && days.length > 0 && (
+                    <select
+                      value={viewOnlySelectedDate || 'all'}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setViewOnlySelectedDate(value === 'all' ? 'all' : value)
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 min-h-[36px] sm:min-h-0"
+                    >
+                      <option value="all">{t.trip.showAll || 'Show All'}</option>
+                      {days.map((date) => {
+                        const dateObj = new Date(date)
+                        const dateLabel = dateObj.toLocaleDateString(language === 'zh-TW' ? 'zh-TW' : 'en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          weekday: 'short',
+                        })
+                        return (
+                          <option key={date} value={date}>
+                            {dateLabel}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  )}
+                </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    {effectiveCanEdit && !isViewOnly && (
                       <button
                         onClick={() => {
                           setShowImportModal(true)
@@ -874,43 +947,45 @@ export default function TripDetail() {
                             setImportDate(days[0])
                           }
                         }}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm"
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm min-h-[44px] sm:min-h-0"
                       >
                         📁 {t.locationFolders.importFromFolder}
                       </button>
                     )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">{t.route.paceLabel}:</span>
-                      <div className="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => setPace('tight')}
-                          className={`px-3 py-1.5 text-sm font-medium transition ${
-                            pace === 'tight' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {t.route.paceTight}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPace('neutral')}
-                          className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
-                            pace === 'neutral' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {t.route.paceNeutral}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPace('relaxed')}
-                          className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
-                            pace === 'relaxed' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {t.route.paceRelaxed}
-                        </button>
+                    {!isViewOnly && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">{t.route.paceLabel}:</span>
+                        <div className="inline-flex rounded-lg border border-gray-200 bg-white overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setPace('tight')}
+                            className={`px-3 py-1.5 text-sm font-medium transition ${
+                              pace === 'tight' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {t.route.paceTight}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPace('neutral')}
+                            className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
+                              pace === 'neutral' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {t.route.paceNeutral}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPace('relaxed')}
+                            className={`px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${
+                              pace === 'relaxed' ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {t.route.paceRelaxed}
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
               </div>
 
@@ -925,11 +1000,15 @@ export default function TripDetail() {
               )}
 
               {/* Filtered Days List */}
-              {(selectedDate === null ? days : [selectedDate]).map((date) => {
+              {(isViewOnly 
+                ? (viewOnlySelectedDate === 'all' ? days : viewOnlySelectedDate ? [viewOnlySelectedDate] : days)
+                : (selectedDate === null ? days : [selectedDate])
+              ).map((date) => {
                 const activities = activitiesByDate[date] || []
                 
-                // Skip if no activities and a specific date is selected
-                if (selectedDate !== null && activities.length === 0) {
+                // Skip if no activities and a specific date is selected (but not when showing all)
+                const currentSelectedDate = isViewOnly ? (viewOnlySelectedDate === 'all' ? null : viewOnlySelectedDate) : selectedDate
+                if (currentSelectedDate !== null && currentSelectedDate !== 'all' && activities.length === 0) {
                   return null
                 }
 
@@ -942,10 +1021,14 @@ export default function TripDetail() {
                     onDelete={handleDeleteActivity}
                     onReorder={handleReorder}
                     onAddActivity={(afterActivityId) => handleAddActivity(date, afterActivityId)}
-                    canEdit={canEdit}
+                    canEdit={effectiveCanEdit}
+                    isViewOnly={isViewOnly}
+                    hideParticipants={hideParticipants}
+                    onToggleHideParticipants={() => setHideParticipants(!hideParticipants)}
                     paceBuffer={paceBuffer}
-                    onUpdateScheduleTime={canEdit ? handleUpdateScheduleTime : undefined}
-                    onUpdateAllScheduleTimes={canEdit ? handleUpdateAllScheduleTimes : undefined}
+                    onUpdateScheduleTime={effectiveCanEdit && !isViewOnly ? handleUpdateScheduleTime : undefined}
+                    onUpdateAllScheduleTimes={effectiveCanEdit && !isViewOnly ? handleUpdateAllScheduleTimes : undefined}
+                    forceExpanded={isViewOnly && viewOnlySelectedDate !== 'all' && viewOnlySelectedDate === date}
                   />
                 )
               })}
@@ -954,7 +1037,7 @@ export default function TripDetail() {
 
           {/* Photos Tab Content */}
           {activeTab === 'photos' && (
-            <TripPhotosTab tripId={tripId} canEdit={canEdit} />
+            <TripPhotosTab tripId={tripId} canEdit={effectiveCanEdit} />
           )}
         </div>
 

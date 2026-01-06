@@ -15,9 +15,11 @@ interface ActivityCardProps {
   hasConflict?: boolean
   onUpdateScheduleTime?: (activityId: number) => Promise<void>
   simpleView?: boolean
+  hideParticipants?: boolean
+  isViewOnly?: boolean
 }
 
-export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasConflict = false, onUpdateScheduleTime, simpleView = false }: ActivityCardProps) {
+export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasConflict = false, onUpdateScheduleTime, simpleView = false, hideParticipants = false, isViewOnly = false }: ActivityCardProps) {
   const { t, language } = useLanguage()
   const { user } = useAuth()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -43,9 +45,13 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
   const currentUserPreference = preferencesData?.preferences.find((p) => p.userId === user?.id)?.preference || null
 
   return (
-    <div id={`activity-${activity.id}`} className="flex gap-4 items-center">
+    <div id={`activity-${activity.id}`} className="flex gap-3 sm:gap-4 items-center">
       {/* Visiting Time - Separate Box/Rectangle */}
-      <div className={`flex-shrink-0 w-24 rounded-xl px-2 py-2 flex items-center justify-center min-h-[64px] shadow-sm ${
+      <div className={`flex-shrink-0 w-20 rounded-xl px-2 py-2 flex items-center justify-center shadow-sm ${
+        isViewOnly 
+          ? ((start && end) ? 'min-h-[64px]' : 'min-h-[48px]')
+          : 'min-h-[64px]'
+      } ${
         isGatheringPoint 
           ? 'bg-gradient-to-b from-green-50/80 to-white border border-green-200/50' 
           : isBranchPoint
@@ -57,45 +63,47 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
         {isGatheringPoint ? (
           // Gathering point: single time only
           start ? (
-            <span className="text-sm text-slate-800 font-semibold whitespace-nowrap text-center tabular-nums">{start}</span>
+            <span className="text-xs text-slate-800 font-semibold whitespace-nowrap text-center tabular-nums">{start}</span>
           ) : canEdit ? (
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit(activity)
               }}
-              className="text-sm text-indigo-500 hover:text-indigo-700 underline text-center"
+              className="text-xs text-indigo-500 hover:text-indigo-700 underline text-center"
             >
               {t.activity.addVisitingTime}
             </button>
           ) : (
-            <span className="text-sm text-gray-400 text-center">{t.activity.noAssignedTime}</span>
+            <span className="text-xs text-gray-400 text-center">{t.activity.noAssignedTime}</span>
           )
         ) : start && end ? (
-          <div className="text-sm text-slate-800 font-semibold text-center leading-tight flex flex-col items-center justify-center">
+          <div className="text-xs text-slate-800 font-semibold text-center leading-tight flex flex-col items-center justify-center">
             <span className="whitespace-nowrap tabular-nums">{start}</span>
             <span className="text-slate-300 text-xs my-0.5 rotate-90 leading-none">~</span>
             <span className="whitespace-nowrap tabular-nums">{end}</span>
           </div>
         ) : start || end ? (
-          <span className="text-sm text-slate-800 font-semibold whitespace-nowrap text-center tabular-nums">{start || end}</span>
+          <span className="text-xs text-slate-800 font-semibold whitespace-nowrap text-center tabular-nums">{start || end}</span>
         ) : canEdit ? (
           <button
             onClick={(e) => {
               e.stopPropagation()
               onEdit(activity)
             }}
-            className="text-sm text-indigo-500 hover:text-indigo-700 underline text-center"
+            className="text-xs text-indigo-500 hover:text-indigo-700 underline text-center"
           >
             {t.activity.addVisitingTime}
           </button>
         ) : (
-          <span className="text-sm text-gray-400 text-center">{t.activity.noAssignedTime}</span>
+          <span className="text-xs text-gray-400 text-center">{t.activity.noAssignedTime}</span>
         )}
       </div>
       
       {/* Activity Content - Separate Box/Rectangle */}
-      <div className={`flex-1 rounded-xl p-4 shadow-sm hover:shadow-md transition ${
+      <div className={`flex-1 rounded-xl p-3 sm:p-4 shadow-sm hover:shadow-md transition ${
+        isViewOnly ? 'flex items-center' : ''
+      } ${
         hasConflict
           ? 'bg-gradient-to-b from-white to-yellow-50/35 border-2 border-yellow-400/60 hover:border-yellow-500/60'
           : isGatheringPoint
@@ -106,12 +114,12 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                 ? 'bg-gradient-to-b from-white to-orange-50/35 border border-orange-200/45 hover:border-orange-300/45'
                 : 'bg-gradient-to-b from-white to-sky-50/35 border border-sky-200/45 hover:border-sky-300/45'
       }`}>
-        <div className="flex gap-4 items-start">
+        <div className={`flex gap-4 ${isViewOnly ? 'items-center w-full' : 'items-start'} `}>
           <div className="flex-1 flex flex-col">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-semibold text-lg">{activity.title}</h4>
+                  <h4 className="font-semibold text-sm sm:text-base">{activity.title}</h4>
                   {hasConflict && (
                     <span className="inline-flex items-center px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium" title={t.route.scheduleConflicts || 'Schedule conflict detected'}>
                       ⚠️ {t.route.conflict || 'Conflict'}
@@ -141,8 +149,9 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                         let url = ''
                         // 優先使用 place_id（能顯示地點資訊）
                         if (activity.placeId) {
-                          // 使用正確的 place_id 格式（適用於移動設備和桌面）
-                          url = `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${activity.placeId}`
+                          // 使用新格式（適用於移動設備和桌面）
+                          const placeName = activity.title || activity.locationName || 'Location'
+                          url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName)}&query_place_id=${activity.placeId}`
                         } else if (activity.lat && activity.lng) {
                           // 如果沒有 place_id，使用座標作為備選
                           url = `https://www.google.com/maps/?q=${activity.lat},${activity.lng}`
@@ -153,7 +162,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                           window.open(url, '_blank', 'noopener,noreferrer')
                         }
                       }}
-                      className="text-indigo-400 hover:text-indigo-400 p-1 rounded hover:bg-indigo-50 transition"
+                      className="text-indigo-400 hover:text-indigo-500 p-0.5 rounded hover:bg-indigo-50 transition"
                       title={t.route.openInMaps || 'Open in Google Maps'}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ transform: 'rotate(45deg)' }}>
@@ -205,7 +214,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
             )}
 
             {/* Participants */}
-            {activity.participants && activity.participants.length > 0 && (
+            {!hideParticipants && activity.participants && activity.participants.length > 0 && (
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-gray-500">
                   {t.activity.participants || 'Participants'}:
@@ -241,7 +250,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
 
             {/* Cost */}
             {activity.cost && (
-              <div className="text-sm text-gray-700 mb-2">
+              <div className="text-xs text-gray-700 mb-2">
                 <span className="font-medium">
                   {activity.currency || 'USD'} {activity.cost.toFixed(2)}
                 </span>
@@ -261,14 +270,27 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
             )}
             
             {activity.notes && (
-              <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{formatCommentText(activity.notes)}</p>
+              <p className={`text-xs text-gray-700 whitespace-pre-wrap ${isViewOnly ? 'mt-0' : 'mt-2'}`}>{formatCommentText(activity.notes)}</p>
             )}
           </div>
         
           {/* Preferences and Action Buttons - Inside Activity Box */}
-          <div className="flex-shrink-0 flex flex-col items-end gap-2">
+          <div className="flex-shrink-0 flex flex-col items-end gap-2 sm:gap-2">
+            {/* Comments button - icon only, aligned to right (view-only mode only) */}
+            {isViewOnly && ((activity.commentsCount !== undefined && activity.commentsCount > 0) || user) && (
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-indigo-600 hover:text-indigo-700 p-0.5 rounded hover:bg-indigo-50 transition"
+                title={isExpanded ? (t.activity.hideComments || 'Hide Comments') : (t.activity.showComments || 'Show Comments')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </button>
+            )}
             {/* Preferences and Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
               {/* Preferences */}
               {!simpleView && (
                 <ActivityPreferenceButtons
@@ -295,7 +317,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                         }
                       }}
                       disabled={isUpdatingSchedule}
-                      className="text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-wait"
+                      className="text-blue-600 hover:text-blue-700 p-2 sm:p-1 rounded hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-wait min-h-[44px] sm:min-h-0"
                       title={t.activity.updateScheduleTime || 'Update Schedule Time'}
                     >
                       {isUpdatingSchedule ? (
@@ -314,7 +336,7 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                     e.stopPropagation()
                     onEdit(activity)
                   }}
-                  className="text-indigo-600 hover:text-indigo-700 p-1 rounded hover:bg-indigo-50 transition"
+                  className="text-indigo-600 hover:text-indigo-700 p-2 sm:p-1 rounded hover:bg-indigo-50 transition min-h-[44px] sm:min-h-0"
                   title={t.common.edit}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -336,20 +358,19 @@ export default function ActivityCard({ activity, onEdit, onDelete, canEdit, hasC
                 </>
               )}
             </div>
-            {/* Comments button - below edit/delete buttons, aligned to right */}
-            {((activity.commentsCount !== undefined && activity.commentsCount > 0) || user) && (
-              <div className="flex justify-end mt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-sm text-indigo-600 hover:text-indigo-700"
-                >
-                  {isExpanded ? (t.activity.hideComments || 'Hide Comments') : (t.activity.showComments || 'Show Comments')}
-                </button>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Comments button - text button below activity box (edit mode only) */}
+        {!isViewOnly && ((activity.commentsCount !== undefined && activity.commentsCount > 0) || user) && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+          >
+            {isExpanded ? (t.activity.hideComments || 'Hide Comments') : (t.activity.showComments || 'Show Comments')}
+          </button>
+        )}
 
         {/* Expandable section for comments - outside activity box, below the line */}
         {isExpanded && ((activity.commentsCount !== undefined && activity.commentsCount > 0) || user) && (
